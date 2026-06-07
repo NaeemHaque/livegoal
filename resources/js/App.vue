@@ -1,11 +1,10 @@
 <script setup>
-import { RouterView } from 'vue-router';
-
+import AppShell from '@/components/AppShell.vue';
 import { useSettingsStore } from '@/stores/settings';
 
 useSettingsStore();
 </script>
 
 <template>
-    <RouterView />
+    <AppShell />
 </template>
