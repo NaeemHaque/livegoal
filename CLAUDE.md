@@ -25,8 +25,8 @@ Run these from the repo root.
 | Single test by name | `php artisan test --compact --filter=testMethodName` |
 | Static analysis | `composer analyse` (PHPStan/Larastan, level `max` — config in `phpstan.neon`) |
 | Format PHP (do this before finishing) | `vendor/bin/pint --dirty --format agent` |
-| Lint/format/typecheck JS | `npm run lint` · `npm run format` · `npm run types:check` |
-| Full CI-equivalent gate | `composer ci:check` (JS lint + format + types + PHPStan + Pint + tests) |
+| Lint/format JS | `npm run lint` · `npm run format` (plain JS — no type-check step) |
+| Full CI-equivalent gate | `composer ci:check` (JS lint + format + PHPStan + Pint + tests) |
 
 The site is also served by Laravel Herd; use the `get-absolute-url` Boost tool to resolve URLs rather than constructing them.
 
@@ -47,8 +47,8 @@ The site is also served by Laravel Herd; use the `get-absolute-url` Boost tool t
 - **Pint preset is `laravel`** (`pint.json`); always run `vendor/bin/pint --dirty --format agent` after touching PHP.
 - **Static analysis is PHPStan via Larastan** (`phpstan.neon`, level `max`, analyses `app/`). Run `composer analyse` before pushing; keep new code passing at max strictness.
 - **PHPUnit, not Pest** — tests are plain PHPUnit classes under `tests/Feature` and `tests/Unit`. Scaffold with `php artisan make:test --phpunit {name}`.
-- **Git hooks live in `.githooks/`** (version-controlled) and are enabled via `core.hooksPath`, set automatically by the composer `post-install-cmd`. `pre-commit` runs Pint + ESLint + Prettier on staged files; `pre-push` runs PHPStan + vue-tsc + the test suite. Bypass with `--no-verify` only when necessary.
-- **CI** is a single workflow, `.github/workflows/pr-checks.yml`, triggered on pull requests to `dev` and `main`. It has three jobs: `code-quality` (Pint, PHPStan, ESLint, Prettier, vue-tsc), `tests` (PHP 8.3/8.4/8.5 matrix, builds assets then runs the suite), and `security` (`composer audit`). A `pull_request_template.md` accompanies it. (`vue-tsc` is dropped from the gate in Phase 0 per [`docs/DECISIONS.md`](docs/DECISIONS.md).)
+- **Git hooks live in `.githooks/`** (version-controlled) and are enabled via `core.hooksPath`, set automatically by the composer `post-install-cmd`. `pre-commit` runs Pint + ESLint + Prettier on staged files; `pre-push` runs PHPStan + ESLint + the test suite. Bypass with `--no-verify` only when necessary.
+- **CI** is a single workflow, `.github/workflows/pr-checks.yml`, triggered on pull requests to `dev` and `main`. It has three jobs: `code-quality` (Pint, PHPStan, ESLint, Prettier), `tests` (PHP 8.3/8.4/8.5 matrix, builds assets then runs the suite), and `security` (`composer audit`). A `pull_request_template.md` accompanies it.
 - **Branching / PRs** — `dev` is the integration root; each build phase ships on its own `phase/<n>-<slug>` branch and is merged to `dev` via PR. `dev → main` is the release PR. See [`docs/PR_PLAN.md`](docs/PR_PLAN.md).
 - **Laravel Boost MCP** is configured in `.mcp.json` (`php artisan boost:mcp`). Prefer Boost tools (`search-docs`, `database-schema`, `database-query`, `browser-logs`) over manual shell equivalents — see the Laravel Boost section below.
 - `AGENTS.md` is kept byte-identical to the Boost-guidelines portion of this file; if you regenerate Boost guidelines, both files update together.

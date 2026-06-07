@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*"]
+        },
+        "checkJs": false,
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "target": "esnext"
+    },
+    "exclude": ["node_modules", "public", "vendor"]
+}

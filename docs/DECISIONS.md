@@ -13,7 +13,7 @@ Wayfinder from the starter scaffold.
 prototype is itself a client-rendered SPA with its own router. User confirmed.
 
 **Impact:** Phase 0 removes `inertiajs/inertia-laravel`, `@inertiajs/*`, `@laravel/vite-plugin-wayfinder`;
-adds `vue-router`, `pinia`, `axios`, `@vueuse/core`, `lucide-vue-next`. CLAUDE.md, the AI agents/skills
+adds `vue-router`, `pinia`, `axios`, `@vueuse/core`, `@lucide/vue` (the current Lucide Vue package; `lucide-vue-next` is end-of-lined at 1.0.0). CLAUDE.md, the AI agents/skills
 (which assume Inertia), and the Boost guideline package list are reconciled.
 
 ## D2 — Frontend language: plain JavaScript (not TypeScript)

@@ -56,9 +56,6 @@ jobs:
       - name: Prettier
         run: npm run format:check
 
-      - name: TypeScript (vue-tsc)
-        run: npm run types:check
-
   tests:
     name: Tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
