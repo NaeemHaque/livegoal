@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+#
+# Pre-push hook: the full quality gate before code leaves the machine.
+# Static analysis + TypeScript types + the test suite.
+#
+# Enabled via `git config core.hooksPath .githooks` (set automatically by
+# composer install — see composer.json scripts).
+set -e
+
+GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
+
+fail() {
+    printf "%b✗ %s%b\n" "$RED" "$1" "$NC"
+    exit 1
+}
+
+printf "%b▶ PHPStan (static analysis)%b\n" "$GREEN" "$NC"
+vendor/bin/phpstan analyse --memory-limit=2G --no-progress || fail "PHPStan found problems."
+
+printf "%b▶ TypeScript (vue-tsc)%b\n" "$GREEN" "$NC"
+npm run types:check || fail "TypeScript type-check failed."
+
+printf "%b▶ Tests%b\n" "$GREEN" "$NC"
+php artisan test --compact || fail "Tests failed."
+
+printf "%b✓ Pre-push checks passed%b\n" "$GREEN" "$NC"

@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+
+    # Highest strictness. The codebase is new, so start strict and keep it strict.
+    level: max
+
+    # Speeds up analysis on CI and locally.
+    parallel:
+        maximumNumberOfProcesses: 4

@@ -19,10 +19,10 @@ Run these from the repo root.
 | All PHP tests | `php artisan test --compact` |
 | Single test file | `php artisan test --compact tests/Feature/ExampleTest.php` |
 | Single test by name | `php artisan test --compact --filter=testMethodName` |
-| Raw PHPUnit (what CI runs) | `./vendor/bin/phpunit` |
+| Static analysis | `composer analyse` (PHPStan/Larastan, level `max` — config in `phpstan.neon`) |
 | Format PHP (do this before finishing) | `vendor/bin/pint --dirty --format agent` |
 | Lint/format/typecheck JS | `npm run lint` · `npm run format` · `npm run types:check` |
-| Full pre-push gate | `composer ci:check` (JS lint + format + types + PHP lint + tests) |
+| Full CI-equivalent gate | `composer ci:check` (JS lint + format + types + PHPStan + Pint + tests) |
 
 The site is also served by Laravel Herd; use the `get-absolute-url` Boost tool to resolve URLs rather than constructing them.
 
@@ -41,8 +41,10 @@ The site is also served by Laravel Herd; use the `get-absolute-url` Boost tool t
 ## Conventions specific to this repo
 
 - **Pint preset is `laravel`** (`pint.json`); always run `vendor/bin/pint --dirty --format agent` after touching PHP.
+- **Static analysis is PHPStan via Larastan** (`phpstan.neon`, level `max`, analyses `app/`). Run `composer analyse` before pushing; keep new code passing at max strictness.
 - **PHPUnit, not Pest** — tests are plain PHPUnit classes under `tests/Feature` and `tests/Unit`. Scaffold with `php artisan make:test --phpunit {name}`.
-- **CI** (`.github/workflows`) runs the linter job and the test matrix (PHP 8.3/8.4/8.5) only on branches `develop`, `main`, `master`, `workos`. Match those branch names when opening PRs you expect CI to run on.
+- **Git hooks live in `.githooks/`** (version-controlled) and are enabled via `core.hooksPath`, set automatically by the composer `post-install-cmd`. `pre-commit` runs Pint + ESLint + Prettier on staged files; `pre-push` runs PHPStan + vue-tsc + the test suite. Bypass with `--no-verify` only when necessary.
+- **CI** is a single workflow, `.github/workflows/pr-checks.yml`, triggered on pull requests to `develop`, `main`, `master`, `workos`. It has three jobs: `code-quality` (Pint, PHPStan, ESLint, Prettier, vue-tsc), `tests` (PHP 8.3/8.4/8.5 matrix, builds assets then runs the suite), and `security` (`composer audit`). A `pull_request_template.md` accompanies it.
 - **Laravel Boost MCP** is configured in `.mcp.json` (`php artisan boost:mcp`). Prefer Boost tools (`search-docs`, `database-schema`, `database-query`, `browser-logs`) over manual shell equivalents — see the Laravel Boost section below.
 - `AGENTS.md` is kept byte-identical to the Boost-guidelines portion of this file; if you regenerate Boost guidelines, both files update together.
 
@@ -62,12 +64,19 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
 - laravel/wayfinder (WAYFINDER) - v0
+- larastan/larastan (LARASTAN) - v3
 - laravel/boost (BOOST) - v2
 - laravel/mcp (MCP) - v0
 - laravel/pail (PAIL) - v1
 - laravel/pint (PINT) - v1
 - laravel/sail (SAIL) - v1
 - phpunit/phpunit (PHPUNIT) - v12
+- @inertiajs/vue3 (INERTIA_VUE) - v3
+- tailwindcss (TAILWINDCSS) - v4
+- vue (VUE) - v3
+- @laravel/vite-plugin-wayfinder (WAYFINDER_VITE) - v0
+- eslint (ESLINT) - v9
+- prettier (PRETTIER) - v3
 
 ## Skills Activation
 
@@ -169,6 +178,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
 - Components live in `resources/js/pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
 - ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
+- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 # Inertia v3
 
@@ -244,5 +254,12 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - To run all tests: `php artisan test --compact`.
 - To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
+
+=== inertia-vue/core rules ===
+
+# Inertia + Vue
+
+Vue components must have a single root element.
+- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 </laravel-boost-guidelines>

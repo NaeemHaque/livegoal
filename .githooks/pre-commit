@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+#
+# Pre-commit hook: fast, staged-file-only checks.
+# Heavier checks (PHPStan, type-check, tests) run in pre-push.
+#
+# Enabled via `git config core.hooksPath .githooks` (set automatically by
+# composer install — see composer.json scripts).
+set -e
+
+GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$STAGED" ] && exit 0
+
+PHP_FILES=$(echo "$STAGED" | grep -E '\.php$' || true)
+FE_FILES=$(echo "$STAGED" | grep -E '^resources/.*\.(js|ts|vue)$' || true)
+
+if [ -n "$PHP_FILES" ]; then
+    printf "%b▶ Pint (code style)%b\n" "$GREEN" "$NC"
+    # shellcheck disable=SC2086
+    if ! vendor/bin/pint --test $PHP_FILES; then
+        printf "%b✗ Pint found style issues. Run 'vendor/bin/pint' to fix, then re-stage.%b\n" "$RED" "$NC"
+        exit 1
+    fi
+fi
+
+if [ -n "$FE_FILES" ]; then
+    printf "%b▶ ESLint%b\n" "$GREEN" "$NC"
+    # shellcheck disable=SC2086
+    if ! npx --no-install eslint $FE_FILES; then
+        printf "%b✗ ESLint failed. Run 'npm run lint' to fix, then re-stage.%b\n" "$RED" "$NC"
+        exit 1
+    fi
+
+    printf "%b▶ Prettier%b\n" "$GREEN" "$NC"
+    # shellcheck disable=SC2086
+    if ! npx --no-install prettier --check $FE_FILES; then
+        printf "%b✗ Prettier found formatting issues. Run 'npm run format', then re-stage.%b\n" "$RED" "$NC"
+        exit 1
+    fi
+fi
+
+printf "%b✓ Pre-commit checks passed%b\n" "$GREEN" "$NC"
