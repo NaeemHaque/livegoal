@@ -1,0 +1,70 @@
+/* ============================================================
+   SocPlay — Icon set (line icons + football glyphs)
+   All inherit currentColor; sized via width/height props.
+   ============================================================ */
+const Icon = ({ children, size = 20, sw = 1.7, fill = 'none', vb = 24, style, ...p }) => (
+  <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`} fill={fill}
+    stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"
+    style={style} aria-hidden="true" {...p}>{children}</svg>
+);
+
+// ---------- Navigation / UI ----------
+const IcLive = (p) => (<Icon {...p}><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" opacity=".7"/></Icon>);
+const IcCalendar = (p) => (<Icon {...p}><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></Icon>);
+const IcTrophy = (p) => (<Icon {...p}><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.7 2.9M17 6h2.5a2.5 2.5 0 0 1-2.7 2.9M9.5 14.5 9 18h6l-.5-3.5M7.5 20.5h9"/></Icon>);
+const IcStar = ({ filled, ...p }) => (<Icon {...p} fill={filled ? 'currentColor' : 'none'}><path d="m12 3.6 2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8Z"/></Icon>);
+const IcGrid = (p) => (<Icon {...p}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></Icon>);
+const IcMore = (p) => (<Icon {...p}><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></Icon>);
+const IcSearch = (p) => (<Icon {...p}><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></Icon>);
+const IcChevL = (p) => (<Icon {...p}><path d="m15 5-7 7 7 7"/></Icon>);
+const IcChevR = (p) => (<Icon {...p}><path d="m9 5 7 7-7 7"/></Icon>);
+const IcChevD = (p) => (<Icon {...p}><path d="m5 9 7 7 7-7"/></Icon>);
+const IcArrowR = (p) => (<Icon {...p}><path d="M4 12h15m-6-6 6 6-6 6"/></Icon>);
+const IcClose = (p) => (<Icon {...p}><path d="m6 6 12 12M18 6 6 18"/></Icon>);
+const IcCheck = (p) => (<Icon {...p}><path d="m4.5 12.5 5 5 10-11"/></Icon>);
+const IcSun = (p) => (<Icon {...p}><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></Icon>);
+const IcMoon = (p) => (<Icon {...p}><path d="M20 14.5A8 8 0 0 1 9.5 4 7 7 0 1 0 20 14.5Z"/></Icon>);
+const IcBell = (p) => (<Icon {...p}><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M9.5 20a2.5 2.5 0 0 0 5 0"/></Icon>);
+const IcSettings = (p) => (<Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.1 13.4a7.6 7.6 0 0 0 0-2.8l1.8-1.4-1.8-3.1-2.1.85a7.5 7.5 0 0 0-2.45-1.4L12.1 3.2H8.9l-.45 2.35A7.5 7.5 0 0 0 6 6.95L3.9 6.1 2.1 9.2l1.8 1.4a7.6 7.6 0 0 0 0 2.8L2.1 14.8l1.8 3.1L6 17.05a7.5 7.5 0 0 0 2.45 1.4L8.9 20.8h3.2l.45-2.35a7.5 7.5 0 0 0 2.45-1.4l2.1.85 1.8-3.1-1.8-1.4Z"/></Icon>);
+const IcClock = (p) => (<Icon {...p}><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></Icon>);
+const IcGlobe = (p) => (<Icon {...p}><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.4 2.5 14.6 0 17M12 3.5c-2.5 2.4-2.5 14.6 0 17"/></Icon>);
+const IcRefresh = (p) => (<Icon {...p}><path d="M20 11a8 8 0 1 0-.5 4"/><path d="M20 4.5V11h-6.5"/></Icon>);
+const IcPin = (p) => (<Icon {...p}><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></Icon>);
+const IcUsers = (p) => (<Icon {...p}><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.2a3.2 3.2 0 0 1 0 6M17 14.4A5.5 5.5 0 0 1 20.5 19"/></Icon>);
+const IcWifiOff = (p) => (<Icon {...p}><path d="M2 8.8a16 16 0 0 1 6-3.4M22 8.8a16 16 0 0 0-5-3.2M5.5 12.4a11 11 0 0 1 3-1.8M18.5 12.4a11 11 0 0 0-3-1.8M9 16a6 6 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"/><path d="m3 3 18 18" stroke="currentColor"/></Icon>);
+const IcAlert = (p) => (<Icon {...p}><path d="M12 3.5 21 19H3l9-15.5Z"/><path d="M12 9.5v4M12 16.5v.4"/></Icon>);
+const IcFilter = (p) => (<Icon {...p}><path d="M3.5 5.5h17l-6.5 7.5V19l-4 2v-7.5L3.5 5.5Z"/></Icon>);
+const IcInbox = (p) => (<Icon {...p}><path d="M3.5 13.5 6 6.5a2 2 0 0 1 1.9-1.4h8.2A2 2 0 0 1 18 6.5l2.5 7v5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5v-5Z"/><path d="M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5"/></Icon>);
+
+// ---------- Football glyphs ----------
+const IcBall = ({ size = 20, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" {...p}>
+    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.6"/>
+    <path d="M12 7.2 9 9.4l1.1 3.5h3.8L15 9.4 12 7.2Z" fill="currentColor"/>
+    <path d="M12 7.2V4M9 9.4 6.2 8M15 9.4 17.8 8M10.1 12.9 8.4 15.8M13.9 12.9l1.7 2.9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>
+);
+const IcCard = ({ variant = 'yellow', size = 18, ...p }) => {
+  const fill = variant === 'red' ? 'var(--loss)' : variant === 'yellow' ? 'var(--draw)' : 'currentColor';
+  return (<svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" {...p}>
+    <rect x="6.5" y="3.5" width="11" height="17" rx="2" transform="rotate(8 12 12)" fill={fill}/>
+  </svg>);
+};
+const IcWhistle = (p) => (<Icon {...p}><path d="M3 11.5h7.5L13 9.5h5.5A3.5 3.5 0 0 1 22 13a4 4 0 0 1-7.9.9H3a1.5 1.5 0 0 1-1.5-1.5v0A1.4 1.4 0 0 1 3 11.5Z"/><circle cx="18" cy="13" r="1.4"/><path d="M6 8.5 4.5 6"/></Icon>);
+const IcSub = ({ size = 18, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...p}>
+    <path d="M4 8h11m-3-3 3 3-3 3" stroke="var(--pitch)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M20 16H9m3 3-3-3 3-3" stroke="var(--loss)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IcPitch = (p) => (<Icon {...p}><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 12h17M12 9.6a2.4 2.4 0 0 0 0 4.8M7 3.5v3.5h10V3.5M7 20.5v-3.5h10v3.5"/><circle cx="12" cy="12" r="0.4" fill="currentColor"/></Icon>);
+const IcChart = (p) => (<Icon {...p}><path d="M4 20V4M4 20h16M8 20v-6M12 20V9M16 20v-9M20 20V6"/></Icon>);
+const IcSwords = (p) => (<Icon {...p}><path d="M14.5 14.5 20 9V4h-5l-5.5 5.5M14.5 14.5 17 17l-1.5 1.5L13 16M14.5 14.5 9.5 9.5M9.5 9.5 4 4v5l5.5 5.5M9.5 9.5 7 12l1.5 1.5L11 11"/></Icon>);
+const IcList = (p) => (<Icon {...p}><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></Icon>);
+
+Object.assign(window, {
+  Icon, IcLive, IcCalendar, IcTrophy, IcStar, IcGrid, IcMore, IcSearch,
+  IcChevL, IcChevR, IcChevD, IcArrowR, IcClose, IcCheck, IcSun, IcMoon, IcBell,
+  IcSettings, IcClock, IcGlobe, IcRefresh, IcPin, IcUsers, IcWifiOff, IcAlert, IcFilter, IcInbox,
+  IcBall, IcCard, IcWhistle, IcSub, IcPitch, IcChart, IcSwords, IcList,
+});

@@ -1,0 +1,238 @@
+/* ============================================================
+   SocPlay — Design Tokens
+   Stadium Night (dark, default) + Daylight (light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ---- Type families ---- */
+  --font-display: 'Saira Condensed', 'Arial Narrow', sans-serif;  /* scores, headings */
+  --font-body: 'Hanken Grotesk', system-ui, sans-serif;           /* body, UI */
+  --font-mono: 'Geist Mono', ui-monospace, monospace;             /* minute, clock */
+
+  /* ---- Type scale (px) ---- */
+  --t-score: 56px;
+  --t-display-xl: 44px;
+  --t-display-lg: 32px;
+  --t-display-md: 24px;
+  --t-h1: 22px;
+  --t-h2: 18px;
+  --t-h3: 15px;
+  --t-body: 14px;
+  --t-sm: 13px;
+  --t-xs: 11px;
+
+  /* ---- Spacing (4px scale) ---- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px;
+  --s-9: 48px; --s-10: 64px;
+
+  /* ---- Radius ---- */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 14px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+
+  /* ---- Brand accents (theme-independent hue, contrast handled per theme) ---- */
+  --volt: #C6FF3A;          /* electric lime — primary energy */
+  --volt-dim: #9ED127;
+  --cyan: #00E5FF;          /* electric cyan — secondary highlight */
+  --pitch: #21C17A;         /* pitch green — positive / win */
+
+  /* ---- Semantic status ---- */
+  --live: #FF3D3D;
+  --win: #21C17A;
+  --draw: #F5A524;
+  --loss: #F4434A;
+  --info: #3B82F6;
+
+  /* ---- Layout ---- */
+  --shell-max: 1400px;
+  --sidebar-w: 248px;
+  --rail-w: 320px;
+  --topbar-h: 56px;
+  --ticker-h: 46px;
+  --tabbar-h: 64px;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
+}
+
+/* ============================================================
+   DARK — Stadium Night (default)
+   ============================================================ */
+:root, [data-theme="dark"] {
+  --bg-base: #0A0D12;
+  --bg-deep: #070A0E;
+  --surface: #131820;
+  --surface-2: #1A212C;
+  --surface-3: #222B38;
+  --border: #232B36;
+  --border-strong: #303a48;
+  --text: #E6EAF0;
+  --text-2: #B6BEC9;
+  --text-muted: #8A93A3;
+  --text-faint: #5E6675;
+
+  --accent: var(--volt);
+  --accent-text: #0A0D12;        /* text on accent fills */
+  --accent-soft: rgba(198,255,58,0.12);
+  --accent-glow: rgba(198,255,58,0.35);
+
+  --on-surface-soft: rgba(255,255,255,0.04);
+  --hover: rgba(255,255,255,0.05);
+  --scrim: rgba(6,9,13,0.72);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 6px 20px rgba(0,0,0,0.45);
+  --shadow-lg: 0 18px 50px rgba(0,0,0,0.55);
+
+  --skeleton-base: #161c25;
+  --skeleton-shine: #20293480;
+
+  --grad-spotlight: radial-gradient(120% 120% at 0% 0%, rgba(198,255,58,0.16), rgba(0,229,255,0.05) 40%, transparent 70%);
+  --grad-pitch: linear-gradient(160deg, #0c2f1f, #06160f);
+  color-scheme: dark;
+}
+
+/* ============================================================
+   LIGHT — Daylight
+   ============================================================ */
+[data-theme="light"] {
+  --bg-base: #EEF1F6;
+  --bg-deep: #E4E9F0;
+  --surface: #FFFFFF;
+  --surface-2: #F6F8FB;
+  --surface-3: #EDF1F6;
+  --border: #DFE4EC;
+  --border-strong: #C9D1DD;
+  --text: #0C1118;
+  --text-2: #38414F;
+  --text-muted: #66707F;
+  --text-faint: #97A0AE;
+
+  --accent: #2FA300;             /* darkened volt for AA on white */
+  --accent-text: #FFFFFF;
+  --accent-soft: rgba(47,163,0,0.12);
+  --accent-glow: rgba(47,163,0,0.28);
+
+  --on-surface-soft: rgba(12,17,24,0.03);
+  --hover: rgba(12,17,24,0.04);
+  --scrim: rgba(20,28,40,0.40);
+
+  --shadow-sm: 0 1px 2px rgba(20,30,50,0.06);
+  --shadow-md: 0 8px 24px rgba(20,30,50,0.10);
+  --shadow-lg: 0 20px 56px rgba(20,30,50,0.16);
+
+  --skeleton-base: #E7ECF3;
+  --skeleton-shine: #F4F7FB;
+
+  --live: #E5121F;
+  --win: #128A53;
+  --draw: #C97B05;
+  --loss: #D32430;
+
+  --grad-spotlight: radial-gradient(120% 120% at 0% 0%, rgba(47,163,0,0.10), rgba(0,150,180,0.05) 40%, transparent 70%);
+  --grad-pitch: linear-gradient(160deg, #1f7a4f, #15633e);
+  color-scheme: light;
+}
+
+/* ============================================================
+   Base reset
+   ============================================================ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text);
+  font-size: var(--t-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input { font-family: inherit; }
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--accent-glow); color: var(--text); }
+
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.mono { font-family: var(--font-mono); }
+.display { font-family: var(--font-display); }
+
+/* scrollbars */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* focus ring — visible, AA */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   Keyframes (motion language)
+   ============================================================ */
+@keyframes pp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 var(--live); }
+  50% { opacity: 0.55; transform: scale(0.82); box-shadow: 0 0 0 5px transparent; }
+}
+@keyframes pp-ring {
+  0% { box-shadow: 0 0 0 0 rgba(255,61,61,0.5); }
+  70% { box-shadow: 0 0 0 9px rgba(255,61,61,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,61,61,0); }
+}
+@keyframes pp-shimmer {
+  0% { background-position: -480px 0; }
+  100% { background-position: 480px 0; }
+}
+@keyframes pp-flip-in {
+  0% { transform: translateY(-60%) rotateX(70deg); opacity: 0; }
+  100% { transform: translateY(0) rotateX(0); opacity: 1; }
+}
+@keyframes pp-goal-in {
+  0% { transform: translateY(-22px) scale(0.9); opacity: 0; }
+  12% { transform: translateY(0) scale(1.04); opacity: 1; }
+  20% { transform: scale(1); }
+  88% { opacity: 1; transform: translateY(0); }
+  100% { transform: translateY(-12px); opacity: 0; }
+}
+@keyframes pp-rise {
+  from { transform: translateY(8px); }
+  to { transform: translateY(0); }
+}
+@keyframes pp-spin { to { transform: rotate(360deg); } }
+@keyframes pp-glow-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px var(--border), 0 0 22px -6px var(--accent-glow); }
+  50% { box-shadow: 0 0 0 1px var(--border), 0 0 30px -2px var(--accent-glow); }
+}
+@keyframes pp-flash {
+  0% { background: var(--accent-soft); }
+  100% { background: transparent; }
+}
+
+/* Visible end-state is the BASE — animation is additive so content never hides
+   if the animation fails to play (iframe/print/PDF/reduced-motion contexts). */
+.pp-rise { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .pp-rise { animation: pp-rise var(--dur) var(--ease-out); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

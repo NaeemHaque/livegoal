@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`socplay` is a Laravel 13 + Inertia v3 + Vue 3 single-page application built from the `laravel/blank-vue-starter-kit`. There is no separate REST API: Laravel routes render Inertia pages that mount Vue components. The repo is currently a near-blank skeleton (one `Welcome` page, the default `User` model), so most "where does X go" answers come from the conventions below rather than existing examples.
+**SocPlay** is a free, non-betting **football live-scores** web app (World Cup 2026–aware + major leagues): live scores, fixtures, results, standings/groups, knockout brackets, competitions, teams. It's a single Laravel app that serves a **decoupled Vue 3 SPA** and a **cached JSON `/api`** from one origin; a single scheduled poller hits football-data.org (free tier) so the browser never does. "Realtime" is polling.
+
+**Authoritative spec:** [`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md). **Plan + design + decisions:** [`docs/PLAN.md`](docs/PLAN.md) and the docs it references (`ARCHITECTURE`, `API`, `DATA_MODEL`, `DESIGN`, `LIVE_POLLING`, `DECISIONS`). Read those before building.
+
+> **Architecture transition (in progress).** The repo started as the `laravel/blank-vue-starter-kit` (**Inertia v3 + Wayfinder + TypeScript**). Per [`docs/DECISIONS.md`](docs/DECISIONS.md), the target is a **Vue Router + Pinia + axios SPA in plain JavaScript** consuming `/api` JSON — **Inertia and Wayfinder are being removed in Phase 0**, and TypeScript (`vue-tsc`) is dropped from the gate. Until Phase 0 lands, parts of the "Architecture" section below still describe the Inertia scaffold; trust `docs/` for the target.
 
 ## Commands
 
@@ -44,7 +48,8 @@ The site is also served by Laravel Herd; use the `get-absolute-url` Boost tool t
 - **Static analysis is PHPStan via Larastan** (`phpstan.neon`, level `max`, analyses `app/`). Run `composer analyse` before pushing; keep new code passing at max strictness.
 - **PHPUnit, not Pest** — tests are plain PHPUnit classes under `tests/Feature` and `tests/Unit`. Scaffold with `php artisan make:test --phpunit {name}`.
 - **Git hooks live in `.githooks/`** (version-controlled) and are enabled via `core.hooksPath`, set automatically by the composer `post-install-cmd`. `pre-commit` runs Pint + ESLint + Prettier on staged files; `pre-push` runs PHPStan + vue-tsc + the test suite. Bypass with `--no-verify` only when necessary.
-- **CI** is a single workflow, `.github/workflows/pr-checks.yml`, triggered on pull requests to `develop`, `main`, `master`, `workos`. It has three jobs: `code-quality` (Pint, PHPStan, ESLint, Prettier, vue-tsc), `tests` (PHP 8.3/8.4/8.5 matrix, builds assets then runs the suite), and `security` (`composer audit`). A `pull_request_template.md` accompanies it.
+- **CI** is a single workflow, `.github/workflows/pr-checks.yml`, triggered on pull requests to `dev` and `main`. It has three jobs: `code-quality` (Pint, PHPStan, ESLint, Prettier, vue-tsc), `tests` (PHP 8.3/8.4/8.5 matrix, builds assets then runs the suite), and `security` (`composer audit`). A `pull_request_template.md` accompanies it. (`vue-tsc` is dropped from the gate in Phase 0 per [`docs/DECISIONS.md`](docs/DECISIONS.md).)
+- **Branching / PRs** — `dev` is the integration root; each build phase ships on its own `phase/<n>-<slug>` branch and is merged to `dev` via PR. `dev → main` is the release PR. See [`docs/PR_PLAN.md`](docs/PR_PLAN.md).
 - **Laravel Boost MCP** is configured in `.mcp.json` (`php artisan boost:mcp`). Prefer Boost tools (`search-docs`, `database-schema`, `database-query`, `browser-logs`) over manual shell equivalents — see the Laravel Boost section below.
 - `AGENTS.md` is kept byte-identical to the Boost-guidelines portion of this file; if you regenerate Boost guidelines, both files update together.
 

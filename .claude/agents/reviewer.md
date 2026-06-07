@@ -22,7 +22,7 @@ Load `laravel-best-practices` (and `inertia-vue-development` / `wayfinder-develo
 |---|---|---|
 | Triggered after the engineer writes | **In-session** | `git status --short` + `git diff HEAD`, then read changed files |
 | "review current changes" / "review my changes" | **Current changes** | `git diff HEAD` (staged + unstaged) |
-| "review current branch" / "review branch" | **Branch** | `git diff main...HEAD` + `git log main..HEAD --oneline` |
+| "review current branch" / "review branch" | **Branch** | `git diff dev...HEAD` + `git log dev..HEAD --oneline` (phase branches target `dev`) |
 | "review PR" / "review PR #N" | **PR** | `gh pr view N` + `gh pr diff N` (or `gh pr list` to find it) |
 | Files/code passed in context | **Targeted** | Review the provided content directly — no git needed |
 
