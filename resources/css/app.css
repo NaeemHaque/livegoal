@@ -1,11 +1,35 @@
 @import 'tailwindcss';
+@import './tokens.css';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@source '../views';
+@source '../js';
 
+/* Expose the design tokens to Tailwind so utilities (bg-surface, text-accent,
+   font-display, …) resolve to the themeable CSS variables in tokens.css. */
 @theme inline {
-    --font-sans:
-        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+    --font-display: 'Saira Condensed', 'Arial Narrow', sans-serif;
+    --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+    --color-bg-base: var(--bg-base);
+    --color-bg-deep: var(--bg-deep);
+    --color-surface: var(--surface);
+    --color-surface-2: var(--surface-2);
+    --color-surface-3: var(--surface-3);
+    --color-border: var(--border);
+    --color-border-strong: var(--border-strong);
+    --color-text: var(--text);
+    --color-text-2: var(--text-2);
+    --color-text-muted: var(--text-muted);
+    --color-text-faint: var(--text-faint);
+    --color-accent: var(--accent);
+    --color-accent-text: var(--accent-text);
+    --color-volt: var(--volt);
+    --color-cyan: var(--cyan);
+    --color-pitch: var(--pitch);
+    --color-live: var(--live);
+    --color-win: var(--win);
+    --color-draw: var(--draw);
+    --color-loss: var(--loss);
+    --color-info: var(--info);
 }
