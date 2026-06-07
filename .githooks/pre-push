@@ -17,8 +17,8 @@ fail() {
 printf "%b▶ PHPStan (static analysis)%b\n" "$GREEN" "$NC"
 vendor/bin/phpstan analyse --memory-limit=2G --no-progress || fail "PHPStan found problems."
 
-printf "%b▶ TypeScript (vue-tsc)%b\n" "$GREEN" "$NC"
-npm run types:check || fail "TypeScript type-check failed."
+printf "%b▶ ESLint%b\n" "$GREEN" "$NC"
+npm run lint:check || fail "ESLint failed."
 
 printf "%b▶ Tests%b\n" "$GREEN" "$NC"
 php artisan test --compact || fail "Tests failed."

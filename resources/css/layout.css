@@ -1,0 +1,556 @@
+/* ============================================================
+   SocPlay — App shell + screen layout
+   Ported from the design export (docs/design-ref/project/app.css).
+   ============================================================ */
+
+/* ---------- Shell (top-nav layout) ---------- */
+:root {
+    --nav-h: 54px;
+}
+.pp-app {
+    min-height: 100vh;
+    background: var(--bg-base);
+}
+.pp-shell {
+    display: block;
+}
+.pp-main {
+    min-width: 0;
+    min-height: 60vh;
+    max-width: var(--shell-max);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* ---------- Top utility bar: logo + search (compact) ---------- */
+.pp-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: color-mix(in srgb, var(--bg-base) 88%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.pp-topbar-inner {
+    height: var(--topbar-h);
+    max-width: var(--shell-max);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 22px;
+}
+.tb-logo {
+    display: flex;
+    align-items: center;
+    flex: none;
+}
+.tb-spacer {
+    flex: 1;
+}
+.pp-search {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 38px;
+    padding: 0 14px;
+    width: 300px;
+    flex: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    color: var(--text-muted);
+    transition: border-color var(--dur-fast);
+    cursor: text;
+}
+.pp-search:hover,
+.pp-search:focus-within {
+    border-color: var(--border-strong);
+}
+.pp-search input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    cursor: text;
+}
+.pp-search input::placeholder {
+    color: var(--text-faint);
+}
+.pp-search .kbd {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 5px;
+}
+.pp-iconbtn {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    transition: all var(--dur-fast);
+    flex: none;
+    position: relative;
+}
+.pp-iconbtn:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+.pp-iconbtn.sm {
+    width: 34px;
+    height: 34px;
+}
+.pp-iconbtn.on {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.pp-iconbtn .badge-dot {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--live);
+    border: 1.5px solid var(--surface);
+}
+
+/* ---------- Logo ---------- */
+.pp-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pp-logo .mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--accent);
+    display: grid;
+    place-items: center;
+    color: var(--accent-text);
+    box-shadow: 0 0 22px -4px var(--accent-glow);
+    position: relative;
+    overflow: hidden;
+}
+.pp-logo .word {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    align-items: flex-start;
+}
+.pp-logo .word b {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+.pp-logo .word b .accent {
+    color: var(--accent);
+}
+.pp-logo .word small {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* ---------- Primary nav (tabs) ---------- */
+.pp-topnav {
+    position: sticky;
+    top: var(--topbar-h);
+    z-index: 58;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+}
+.pp-topnav-inner {
+    max-width: var(--shell-max);
+    margin: 0 auto;
+    height: var(--nav-h);
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    padding: 0 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.pp-topnav-inner::-webkit-scrollbar {
+    display: none;
+}
+.pp-navtab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    position: relative;
+    white-space: nowrap;
+    transition: color var(--dur-fast);
+}
+.pp-navtab:hover {
+    color: var(--text);
+}
+.pp-navtab.on {
+    color: var(--text);
+}
+.pp-navtab.on::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--accent);
+}
+.pp-navtab .nt-ic {
+    display: grid;
+    place-items: center;
+    color: var(--text-faint);
+    transition: color var(--dur-fast);
+}
+.pp-navtab:hover .nt-ic,
+.pp-navtab.on .nt-ic {
+    color: var(--accent);
+}
+.pp-navtab .nt-count {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--live) 16%, transparent);
+    color: var(--live);
+}
+
+/* ---------- Live ticker (full-bleed strip below nav) ---------- */
+.pp-ticker {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--nav-h));
+    z-index: 55;
+    height: var(--ticker-h);
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+}
+.pp-ticker .tk-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 16px;
+    height: 100%;
+    background: color-mix(in srgb, var(--live) 14%, var(--surface));
+    color: var(--live);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    flex: none;
+    border-right: 1px solid var(--border);
+}
+.pp-ticker .tk-label .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--live);
+    animation: pp-pulse 1.4s infinite;
+}
+.pp-ticker .tk-scroll {
+    flex: 1;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+        90deg,
+        transparent,
+        #000 24px,
+        #000 calc(100% - 24px),
+        transparent
+    );
+    mask-image: linear-gradient(
+        90deg,
+        transparent,
+        #000 24px,
+        #000 calc(100% - 24px),
+        transparent
+    );
+}
+.pp-ticker .tk-track {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    animation: tk-marquee 38s linear infinite;
+}
+.pp-ticker:hover .tk-track {
+    animation-play-state: paused;
+}
+@keyframes tk-marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+.tk-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    height: var(--ticker-h);
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+}
+.tk-item:hover {
+    background: var(--hover);
+}
+.tk-item .tk-comp {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.tk-item .tk-teams {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.tk-item .tk-sc {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+.tk-item .tk-min {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--live);
+    font-weight: 600;
+}
+
+/* ---------- Page container ---------- */
+.pp-page {
+    padding: 22px;
+    flex: 1;
+}
+.pp-pagehead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+.pp-pagehead h1 {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1;
+}
+.pp-pagehead .ph-sub {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+.pp-pagehead .ph-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pp-section {
+    margin-bottom: 26px;
+}
+.pp-section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.pp-section-head .sh-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+.pp-section-head .sh-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+.pp-section-head .sh-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.pp-grid {
+    display: grid;
+    gap: 12px;
+}
+.pp-grid.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+.pp-grid.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+.pp-grid.cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+.pp-grid.groups {
+    grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+}
+
+/* ---------- Buttons ---------- */
+.pp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: var(--r-pill);
+    font-size: 13.5px;
+    font-weight: 700;
+    transition: all var(--dur-fast);
+    white-space: nowrap;
+}
+.pp-btn.primary {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+.pp-btn.primary:hover {
+    box-shadow: 0 0 24px -4px var(--accent-glow);
+    transform: translateY(-1px);
+}
+.pp-btn.ghost {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+.pp-btn.ghost:hover {
+    border-color: var(--border-strong);
+}
+.pp-btn.sm {
+    padding: 6px 12px;
+    font-size: 12.5px;
+}
+
+/* ---------- Mobile bottom tab bar (hidden on desktop) ---------- */
+.pp-tabbar {
+    display: none;
+}
+.pp-mobile-top {
+    display: none;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 820px) {
+    .pp-grid.cols-3,
+    .pp-grid.cols-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 640px) {
+    .pp-main {
+        padding-bottom: calc(
+            var(--tabbar-h) + env(safe-area-inset-bottom, 0px)
+        );
+    }
+    .pp-topbar,
+    .pp-topnav {
+        display: none;
+    }
+    .pp-mobile-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 56px;
+        padding: 0 16px;
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        background: color-mix(in srgb, var(--bg-base) 86%, transparent);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+    }
+    .pp-ticker {
+        top: 56px;
+    }
+    .pp-page {
+        padding: 16px;
+    }
+    .pp-pagehead h1 {
+        font-size: 26px;
+    }
+    .pp-grid.cols-2,
+    .pp-grid.cols-3,
+    .pp-grid.cols-4 {
+        grid-template-columns: 1fr;
+    }
+    .pp-grid.groups {
+        grid-template-columns: 1fr;
+    }
+    .pp-tabbar {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 70;
+        height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: color-mix(in srgb, var(--bg-base) 92%, transparent);
+        backdrop-filter: blur(16px);
+        border-top: 1px solid var(--border);
+    }
+    .pp-tabbar .tab {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        color: var(--text-muted);
+        font-size: 10px;
+        font-weight: 700;
+        position: relative;
+    }
+    .pp-tabbar .tab.on {
+        color: var(--accent);
+    }
+    .pp-tabbar .tab .tb-ic {
+        position: relative;
+    }
+    .pp-tabbar .tab .tb-livedot {
+        position: absolute;
+        top: -2px;
+        right: -6px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--live);
+        border: 1.5px solid var(--bg-base);
+    }
+}

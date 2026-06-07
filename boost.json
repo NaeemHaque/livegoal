@@ -10,8 +10,6 @@
     "sail": false,
     "skills": [
         "laravel-best-practices",
-        "wayfinder-development",
-        "inertia-vue-development",
         "tailwindcss-development"
     ]
 }

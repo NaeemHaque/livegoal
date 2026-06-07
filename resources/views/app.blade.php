@@ -1,21 +1,32 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <title>SocPlay — Live Football Scores</title>
+    <meta name="description" content="Live football scores, fixtures, results, standings, and brackets.">
 
-        @fonts
+    {{-- Set the theme before first paint to avoid a flash of the wrong theme. --}}
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('pp_theme')
+                    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (e) {}
+        })();
+    </script>
 
-        @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
-        <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
-        </x-inertia::head>
-    </head>
-    <body class="font-sans antialiased">
-        <x-inertia::app />
-    </body>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    @vite(['resources/css/app.css', 'resources/js/main.js'])
+</head>
+<body>
+    <div id="app"></div>
+</body>
 </html>
