@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 import Bracket from '@/components/Bracket.vue';
 import Crest from '@/components/Crest.vue';
 import GroupCard from '@/components/GroupCard.vue';
-import { IcChevL, IcGlobe, IcTrophy } from '@/components/icons';
+import { IcChevL, IcGlobe, IcStar, IcTrophy } from '@/components/icons';
 import MatchCard from '@/components/MatchCard.vue';
 import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
@@ -16,9 +16,11 @@ import { useCompetition } from '@/composables/useCompetition';
 import { useScorers } from '@/composables/useScorers';
 import { useStandings } from '@/composables/useStandings';
 import { buildKnockoutRounds } from '@/lib/bracket';
+import { useFavoritesStore } from '@/stores/favorites';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
+const favorites = useFavoritesStore();
 
 const id = computed(() => props.id);
 const { data: competition } = useCompetition(id);
@@ -67,6 +69,10 @@ const tab = ref('table');
 watch(hasGroups, (g) => (tab.value = g ? 'groups' : 'table'), {
     immediate: true,
 });
+
+const favKey = computed(() => String(competition.value?.code || id.value));
+const isFav = computed(() => favorites.isFavorite('competition', favKey.value));
+const toggleFav = () => favorites.toggle('competition', favKey.value);
 
 const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
 const openMatch = (m) => router.push(`/match/${m.id}`);
@@ -117,6 +123,16 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
                         >
                     </div>
                 </div>
+            </div>
+            <div class="eh-stats">
+                <button
+                    class="pp-btn"
+                    :class="isFav ? 'ghost' : 'primary'"
+                    type="button"
+                    @click="toggleFav"
+                >
+                    <IcStar :size="16" /> {{ isFav ? 'Following' : 'Follow' }}
+                </button>
             </div>
         </div>
 
