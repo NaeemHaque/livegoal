@@ -28,8 +28,15 @@ class PollLiveScores extends Command
     {
         $raw = $football->get('/matches', ['status' => 'IN_PLAY,PAUSED']);
 
-        // Upstream unavailable: keep the last good cache rather than blanking it.
+        // Upstream unavailable: keep the last good cache and refresh its TTL so it
+        // survives consecutive failures rather than expiring mid-outage.
         if ($raw === null) {
+            $existing = Cache::get(self::CACHE_KEY);
+
+            if ($existing !== null) {
+                Cache::put(self::CACHE_KEY, $existing, Config::integer('football.ttl.live'));
+            }
+
             Log::warning('PollLiveScores: upstream unavailable, keeping last live cache');
             $this->warn('Upstream unavailable; kept last live cache.');
 

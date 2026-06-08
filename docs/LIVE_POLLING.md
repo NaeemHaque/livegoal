@@ -7,7 +7,7 @@ delayed and poll-only. One server poller feeds a cache that the whole site reads
 
 - **Schedule:** `Schedule::command('app:poll-live-scores')->everyMinute()` in `routes/console.php`.
 - **Fetch:** `GET /matches?status=IN_PLAY,PAUSED` — **all** live matches in one request (~1 req/min total).
-- **Diff:** compare each match to the previously cached version; track `priorHomeScore`/`priorAwayScore`
+- **Diff:** compare each match to the previously cached version; track `prevHomeScore`/`prevAwayScore`
   per match so a goal is detectable downstream.
 - **Write:** store the normalized live set in cache (`live:matches`, TTL ~70s) with a `lastUpdated`
   timestamp. `/api/live` serves this cache directly — never fetches per request.

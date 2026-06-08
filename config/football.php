@@ -47,7 +47,7 @@ return [
     | poller; everything else is filled on demand via FootballData::cached().
     */
     'ttl' => [
-        'live' => 70,
+        'live' => 90,                 // > the 60s poll cadence, so a single missed poll never blanks /api/live
         'competitions' => 86400,      // 24h
         'competition' => 86400,
         'standings' => 600,           // 10m
