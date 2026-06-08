@@ -94,9 +94,18 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
             </div>
         </div>
 
-        <div style="margin-bottom: 16px"><DateNavigator v-model="date" /></div>
-        <div style="margin-bottom: 20px">
+        <div
+            style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                flex-wrap: wrap;
+                margin-bottom: 20px;
+            "
+        >
             <FilterTabs v-model="filter" :tabs="TABS" :counts="counts" />
+            <DateNavigator v-model="date" :live-count="counts.live" />
         </div>
 
         <div v-if="loading" class="pp-grid cols-2">
