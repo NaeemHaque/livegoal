@@ -387,3 +387,13 @@ a {
         scroll-behavior: auto !important;
     }
 }
+
+/* Explicit in-app "Reduced motion" setting (see the Settings screen). */
+[data-reduce-motion] *,
+[data-reduce-motion] *::before,
+[data-reduce-motion] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+}

@@ -16,11 +16,21 @@ export const useSettingsStore = defineStore('settings', () => {
         document.documentElement.setAttribute('data-theme', theme.value);
     };
 
+    // Mirror the explicit "reduced motion" preference onto <html> so the global
+    // CSS guard can damp animations even when the OS setting says otherwise.
+    const applyReduceMotion = () => {
+        document.documentElement.toggleAttribute(
+            'data-reduce-motion',
+            reduceMotion.value,
+        );
+    };
+
     const toggleTheme = () => {
         theme.value = theme.value === 'dark' ? 'light' : 'dark';
     };
 
     watch(theme, applyTheme, { immediate: true });
+    watch(reduceMotion, applyReduceMotion, { immediate: true });
 
     return { theme, timezone, refresh, paused, reduceMotion, toggleTheme };
 });
