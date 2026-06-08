@@ -22,6 +22,27 @@ return [
     'competitions' => ['WC', 'CL', 'PL', 'PD', 'SA', 'BL1', 'FL1', 'DED', 'PPL', 'ELC', 'EC', 'BSA', 'CLI'],
 
     /*
+    | Display meta keyed by upstream competition code (short name, brand color,
+    | featured flag). The upstream API doesn't provide these, so the design's
+    | values live here. `kind` falls back to the upstream `type` when absent.
+    */
+    'meta' => [
+        'WC' => ['short' => 'World Cup', 'color' => '#C6FF3A', 'kind' => 'cup', 'featured' => true],
+        'CL' => ['short' => 'Champions Lg', 'color' => '#0B1B6F', 'kind' => 'cup'],
+        'EC' => ['short' => 'Euros', 'color' => '#0B1B6F', 'kind' => 'cup'],
+        'CLI' => ['short' => 'Libertadores', 'color' => '#0B1B6F', 'kind' => 'cup'],
+        'PL' => ['short' => 'Premier Lg', 'color' => '#37003C', 'kind' => 'league'],
+        'ELC' => ['short' => 'Championship', 'color' => '#1B458F', 'kind' => 'league'],
+        'PD' => ['short' => 'LaLiga', 'color' => '#E30613', 'kind' => 'league'],
+        'SA' => ['short' => 'Serie A', 'color' => '#0067B1', 'kind' => 'league'],
+        'BL1' => ['short' => 'Bundesliga', 'color' => '#D20515', 'kind' => 'league'],
+        'FL1' => ['short' => 'Ligue 1', 'color' => '#091C3E', 'kind' => 'league'],
+        'DED' => ['short' => 'Eredivisie', 'color' => '#FF6200', 'kind' => 'league'],
+        'PPL' => ['short' => 'Primeira Liga', 'color' => '#1B7A3D', 'kind' => 'league'],
+        'BSA' => ['short' => 'Brasileirão', 'color' => '#009739', 'kind' => 'league'],
+    ],
+
+    /*
     | Cache TTLs in seconds (see docs/API.md). Live data is written by the
     | poller; everything else is filled on demand via FootballData::cached().
     */
