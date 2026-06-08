@@ -16,6 +16,7 @@ import { useCompetition } from '@/composables/useCompetition';
 import { useScorers } from '@/composables/useScorers';
 import { useStandings } from '@/composables/useStandings';
 import { buildKnockoutRounds } from '@/lib/bracket';
+import { compKey } from '@/lib/featured';
 import { useFavoritesStore } from '@/stores/favorites';
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -70,7 +71,7 @@ watch(hasGroups, (g) => (tab.value = g ? 'groups' : 'table'), {
     immediate: true,
 });
 
-const favKey = computed(() => String(competition.value?.code || id.value));
+const favKey = computed(() => compKey(competition.value) || String(id.value));
 const isFav = computed(() => favorites.isFavorite('competition', favKey.value));
 const toggleFav = () => favorites.toggle('competition', favKey.value);
 
@@ -129,6 +130,7 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
                     class="pp-btn"
                     :class="isFav ? 'ghost' : 'primary'"
                     type="button"
+                    :aria-pressed="isFav"
                     @click="toggleFav"
                 >
                     <IcStar :size="16" /> {{ isFav ? 'Following' : 'Follow' }}

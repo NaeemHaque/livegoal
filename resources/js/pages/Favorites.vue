@@ -8,6 +8,7 @@ import { IcLive, IcStar, IcTrophy } from '@/components/icons';
 import MatchCard from '@/components/MatchCard.vue';
 import StateBlock from '@/components/states/StateBlock.vue';
 import { useCompetitions } from '@/composables/useCompetitions';
+import { compKey } from '@/lib/featured';
 import api from '@/services/api';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useMatchesStore } from '@/stores/matches';
@@ -18,19 +19,33 @@ const matches = useMatchesStore();
 const { data: allComps } = useCompetitions();
 
 // Resolve followed team ids -> team objects (crest + name) via cached /teams/{id}.
+// Only the not-yet-resolved ids are fetched; a token guards against an older
+// batch overwriting a newer one under rapid (un)following.
 const resolved = ref([]);
+let resolveToken = 0;
 watch(
     () => favorites.teamIds,
     async (ids) => {
-        const teams = await Promise.all(
-            ids.map((id) =>
+        const mine = ++resolveToken;
+        const known = new Set(resolved.value.map((t) => String(t.id)));
+        const missing = ids.filter((id) => !known.has(String(id)));
+
+        if (!missing.length) {
+            return;
+        }
+
+        const fetched = await Promise.all(
+            missing.map((id) =>
                 api
                     .get(`/teams/${id}`)
                     .then((r) => r.data?.data)
                     .catch(() => null),
             ),
         );
-        resolved.value = teams.filter(Boolean);
+
+        if (mine === resolveToken) {
+            resolved.value = [...resolved.value, ...fetched.filter(Boolean)];
+        }
     },
     { immediate: true },
 );
@@ -41,7 +56,7 @@ const teams = computed(() =>
 );
 const comps = computed(() =>
     (allComps.value ?? []).filter((c) =>
-        favorites.competitionIds.includes(String(c.code || c.id)),
+        favorites.competitionIds.includes(compKey(c)),
     ),
 );
 const favMatches = computed(() =>
@@ -171,10 +186,7 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
                                 :active="true"
                                 :label="`Unfollow ${c.name}`"
                                 @toggle="
-                                    favorites.toggle(
-                                        'competition',
-                                        String(c.code || c.id),
-                                    )
+                                    favorites.toggle('competition', compKey(c))
                                 "
                             />
                         </span>

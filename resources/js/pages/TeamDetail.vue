@@ -148,6 +148,7 @@ const TABS = [
                     class="pp-btn"
                     :class="fav ? 'ghost' : 'primary'"
                     type="button"
+                    :aria-pressed="fav"
                     @click="toggleFav"
                 >
                     <IcStar :size="16" /> {{ fav ? 'Following' : 'Follow' }}

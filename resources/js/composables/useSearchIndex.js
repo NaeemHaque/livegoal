@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 
+import { compKey, FEATURED } from '@/lib/featured';
 import api from '@/services/api';
 
 /**
@@ -7,8 +8,6 @@ import api from '@/services/api';
  * no search endpoint, so we aggregate the (server-cached) competition list and
  * each featured competition's team list once, then filter locally.
  */
-const FEATURED = ['WC', 'CL', 'PL', 'PD', 'SA', 'BL1', 'FL1', 'BSA'];
-
 export function useSearchIndex() {
     const index = ref([]);
     const loading = ref(false);
@@ -48,9 +47,9 @@ export function useSearchIndex() {
 
             const comps = competitions.map((c) => ({
                 kind: 'Competition',
-                id: String(c.code || c.id),
+                id: compKey(c),
                 name: c.name,
-                route: `/competition/${c.code || c.id}`,
+                route: `/competition/${compKey(c)}`,
                 color: c.color,
             }));
 

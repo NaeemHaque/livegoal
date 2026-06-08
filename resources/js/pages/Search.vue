@@ -30,9 +30,7 @@ const results = computed(() => {
         return [];
     }
 
-    return index.value
-        .filter((r) => r.name.toLowerCase().includes(needle))
-        .slice(0, 24);
+    return index.value.filter((r) => r.name?.toLowerCase().includes(needle));
 });
 
 const grouped = computed(() => {
@@ -42,9 +40,10 @@ const grouped = computed(() => {
         groups[r.kind]?.push(r);
     }
 
+    // Cap each group independently so a long list of one kind can't crowd out the other.
     return [
-        { kind: 'Competitions', items: groups.Competition },
-        { kind: 'Teams', items: groups.Team },
+        { kind: 'Competitions', items: groups.Competition.slice(0, 12) },
+        { kind: 'Teams', items: groups.Team.slice(0, 16) },
     ].filter((g) => g.items.length);
 });
 

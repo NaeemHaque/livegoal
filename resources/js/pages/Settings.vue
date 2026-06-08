@@ -28,8 +28,10 @@ const intervals = [10, 15, 30];
                     <div class="sr-label">Theme</div>
                     <div class="sr-desc">Stadium Night or Daylight</div>
                 </div>
-                <div class="pp-segmented">
+                <div class="pp-segmented" role="radiogroup" aria-label="Theme">
                     <button
+                        role="radio"
+                        :aria-checked="settings.theme === 'dark'"
                         :class="{ on: settings.theme === 'dark' }"
                         type="button"
                         @click="settings.theme = 'dark'"
@@ -37,6 +39,8 @@ const intervals = [10, 15, 30];
                         <IcMoon :size="14" />Dark
                     </button>
                     <button
+                        role="radio"
+                        :aria-checked="settings.theme === 'light'"
                         :class="{ on: settings.theme === 'light' }"
                         type="button"
                         @click="settings.theme = 'light'"
@@ -53,10 +57,16 @@ const intervals = [10, 15, 30];
                         Kick-off times are shown in this zone
                     </div>
                 </div>
-                <div class="pp-segmented">
+                <div
+                    class="pp-segmented"
+                    role="radiogroup"
+                    aria-label="Time zone"
+                >
                     <button
                         v-for="z in zones"
                         :key="z.id"
+                        role="radio"
+                        :aria-checked="settings.timezone === z.id"
                         :class="{ on: settings.timezone === z.id }"
                         type="button"
                         @click="settings.timezone = z.id"
@@ -71,10 +81,16 @@ const intervals = [10, 15, 30];
                     <div class="sr-label">Auto-refresh interval</div>
                     <div class="sr-desc">How often live scores update</div>
                 </div>
-                <div class="pp-segmented">
+                <div
+                    class="pp-segmented"
+                    role="radiogroup"
+                    aria-label="Auto-refresh interval"
+                >
                     <button
                         v-for="n in intervals"
                         :key="n"
+                        role="radio"
+                        :aria-checked="settings.refresh === n"
                         :class="{ on: settings.refresh === n }"
                         type="button"
                         @click="settings.refresh = n"

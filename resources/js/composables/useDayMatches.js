@@ -1,5 +1,6 @@
 import { ref, toValue, watch } from 'vue';
 
+import { FEATURED } from '@/lib/featured';
 import api from '@/services/api';
 
 /**
@@ -9,8 +10,6 @@ import api from '@/services/api';
  * competitions, so we fan out to each competition's (cached) scoped endpoint and
  * merge — one request per competition, all server-cached.
  */
-const FEATURED = ['WC', 'CL', 'PL', 'PD', 'SA', 'BL1', 'FL1', 'BSA'];
-
 export function useDayMatches(date) {
     const matches = ref([]);
     const loading = ref(false);
