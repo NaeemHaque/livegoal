@@ -161,6 +161,16 @@ export const IcCheck = lineIcon([['path', { d: 'm4.5 12.5 5 5 10-11' }]]);
 
 export const IcArrowR = lineIcon([['path', { d: 'M4 12h15m-6-6 6 6-6 6' }]]);
 
+export const IcGlobe = lineIcon([
+    ['circle', { cx: 12, cy: 12, r: 8.5 }],
+    [
+        'path',
+        {
+            d: 'M3.5 12h17M12 3.5c2.5 2.4 2.5 14.6 0 17M12 3.5c-2.5 2.4-2.5 14.6 0 17',
+        },
+    ],
+]);
+
 export const IcPin = lineIcon([
     ['path', { d: 'M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z' }],
     ['circle', { cx: 12, cy: 10, r: 2.6 }],
