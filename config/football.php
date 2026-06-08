@@ -47,7 +47,7 @@ return [
     | poller; everything else is filled on demand via FootballData::cached().
     */
     'ttl' => [
-        'live' => 70,
+        'live' => 90,                 // > the 60s poll cadence, so a single missed poll never blanks /api/live
         'competitions' => 86400,      // 24h
         'competition' => 86400,
         'standings' => 600,           // 10m
@@ -63,4 +63,10 @@ return [
 
     // How long a last-known-good payload is retained for stale-on-failure fallback.
     'last_good_ttl' => 86400,
+
+    /*
+    | Token guarding GET /scheduler/run — a fallback for hosts without system
+    | cron (point free cron-job.org at it every minute). Empty disables the route.
+    */
+    'scheduler_token' => env('SCHEDULER_TOKEN', ''),
 ];

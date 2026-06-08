@@ -53,6 +53,24 @@ Scores are delayed a few minutes and the free tier has **no lineups, match event
 stats, or detailed player stats**. The UI surfaces an "updated Xs ago" timestamp near the LIVE badge and
 renders those data-poor panels as an intentional "Not available on this data plan" state — never blank.
 
+## Live scores (the poller)
+
+"Realtime" is delivered by a single scheduled poller, not websockets — the free data source is itself
+delayed and poll-only (see [`docs/LIVE_POLLING.md`](docs/LIVE_POLLING.md)).
+
+- `php artisan app:poll-live-scores` fetches all in-play/paused matches in one upstream request and
+  writes them to cache (`GET /api/live` serves that cache). It's scheduled **every minute**.
+- **Cron** (one line keeps the whole site live):
+  ```bash
+  * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
+  ```
+- **No system cron?** Set `SCHEDULER_TOKEN` in `.env` and point free [cron-job.org](https://cron-job.org)
+  at `GET /scheduler/run?token=<SCHEDULER_TOKEN>` every minute. The route is token-guarded (404s
+  otherwise) and disabled when the token is empty.
+- **Future upgrade (not wired in v1):** the poller has one commented `broadcast(...)` extension point.
+  Adding Laravel Reverb on a VPS later enables push updates without changing the polling flow — no
+  Pusher/Reverb/Echo/SSE/Redis ships today.
+
 ## Quality & tests
 
 ```bash
