@@ -112,6 +112,40 @@ export const IcMore = lineIcon([
     ],
 ]);
 
+export const IcInbox = lineIcon([
+    [
+        'path',
+        {
+            d: 'M3.5 13.5 6 6.5a2 2 0 0 1 1.9-1.4h8.2A2 2 0 0 1 18 6.5l2.5 7v5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5v-5Z',
+        },
+    ],
+    ['path', { d: 'M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5' }],
+]);
+
+export const IcAlert = lineIcon([
+    ['path', { d: 'M12 3.5 21 19H3l9-15.5Z' }],
+    ['path', { d: 'M12 9.5v4M12 16.5v.4' }],
+]);
+
+export const IcWifiOff = lineIcon([
+    [
+        'path',
+        {
+            d: 'M2 8.8a16 16 0 0 1 6-3.4M22 8.8a16 16 0 0 0-5-3.2M5.5 12.4a11 11 0 0 1 3-1.8M18.5 12.4a11 11 0 0 0-3-1.8M9 16a6 6 0 0 1 6 0',
+        },
+    ],
+    [
+        'circle',
+        { cx: 12, cy: 19.5, r: 1, fill: 'currentColor', stroke: 'none' },
+    ],
+    ['path', { d: 'm3 3 18 18' }],
+]);
+
+export const IcRefresh = lineIcon([
+    ['path', { d: 'M20 11a8 8 0 1 0-.5 4' }],
+    ['path', { d: 'M20 4.5V11h-6.5' }],
+]);
+
 /** Football glyph used in the logo mark. */
 export const IcBall = (props) =>
     h(

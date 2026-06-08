@@ -8,6 +8,9 @@ import {
     IcStar,
     IcTrophy,
 } from '@/components/icons';
+import { useMatchesStore } from '@/stores/matches';
+
+const matches = useMatchesStore();
 
 const TABS = [
     { label: 'Live', to: '/', icon: IcLive, active: ['live', 'match'] },
@@ -40,7 +43,13 @@ const isActive = (item) => item.active.includes(route.name);
             class="tab"
             :class="{ on: isActive(item) }"
         >
-            <span class="tb-ic"><component :is="item.icon" :size="22" /></span>
+            <span class="tb-ic">
+                <component :is="item.icon" :size="22" />
+                <span
+                    v-if="item.to === '/' && matches.liveCount"
+                    class="tb-livedot"
+                />
+            </span>
             <span>{{ item.label }}</span>
         </RouterLink>
     </nav>

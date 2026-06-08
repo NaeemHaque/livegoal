@@ -11,12 +11,19 @@ import {
 } from '@/components/icons';
 import LiveTicker from '@/components/LiveTicker.vue';
 import Logo from '@/components/Logo.vue';
+import RefreshIndicator from '@/components/RefreshIndicator.vue';
 import TabBar from '@/components/TabBar.vue';
 import TopNav from '@/components/TopNav.vue';
+import { useLiveMatches } from '@/composables/useLiveMatches';
+import { useMatchesStore } from '@/stores/matches';
 import { useSettingsStore } from '@/stores/settings';
 
 const router = useRouter();
 const settings = useSettingsStore();
+const matches = useMatchesStore();
+
+// Start the site-wide, visibility-aware live feed.
+useLiveMatches();
 
 const openSearch = () => router.push('/search');
 
@@ -63,6 +70,11 @@ useEventListener(window, 'keydown', (e) => {
                         />
                         <span class="kbd">/</span>
                     </div>
+                    <RefreshIndicator
+                        :seconds="settings.refresh"
+                        :paused="settings.paused"
+                        :last-updated="matches.lastUpdated"
+                    />
                     <button
                         class="pp-iconbtn sm"
                         aria-label="Following"
@@ -117,7 +129,7 @@ useEventListener(window, 'keydown', (e) => {
                 </button>
             </div>
 
-            <LiveTicker />
+            <LiveTicker :matches="matches.live" />
 
             <main class="pp-main">
                 <div aria-live="polite" class="sr-only" />
