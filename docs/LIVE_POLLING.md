@@ -27,8 +27,9 @@ delayed and poll-only. One server poller feeds a cache that the whole site reads
 * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-No cron on the host? Point free **cron-job.org** at a protected `/scheduler` route that runs
-`schedule:run` (token-guarded). Documented in the deploy guide (Phase 6).
+No cron on the host? Set `SCHEDULER_TOKEN` in `.env` and point free **cron-job.org** at
+`GET /scheduler/run?token=<SCHEDULER_TOKEN>` every minute — it runs `schedule:run`. The route is
+token-guarded (404s without a matching token) and disabled entirely when `SCHEDULER_TOKEN` is empty.
 
 ## Client: visibility-aware polling
 

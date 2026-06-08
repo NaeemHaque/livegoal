@@ -63,4 +63,10 @@ return [
 
     // How long a last-known-good payload is retained for stale-on-failure fallback.
     'last_good_ttl' => 86400,
+
+    /*
+    | Token guarding GET /scheduler/run — a fallback for hosts without system
+    | cron (point free cron-job.org at it every minute). Empty disables the route.
+    */
+    'scheduler_token' => env('SCHEDULER_TOKEN', ''),
 ];
