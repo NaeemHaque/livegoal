@@ -234,11 +234,17 @@
 /* ---------- Filter tabs ---------- */
 .pp-filtertabs {
     display: inline-flex;
+    max-width: 100%;
     gap: 4px;
     padding: 4px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-pill);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.pp-filtertabs::-webkit-scrollbar {
+    display: none;
 }
 .pp-filtertabs .ft {
     display: inline-flex;
