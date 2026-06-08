@@ -2,15 +2,27 @@
 import FormGuide from '@/components/FormGuide.vue';
 import TeamChip from '@/components/TeamChip.vue';
 
-defineProps({
+const props = defineProps({
     rows: { type: Array, default: () => [] },
     compact: { type: Boolean, default: false },
-    highlightId: { type: [String, Number], default: null },
+    // A single team id or a list of ids (e.g. both sides of a fixture).
+    highlightId: { type: [String, Number, Array], default: null },
 });
 
 const emit = defineEmits(['team']);
 
 const zoneClass = (z) => ({ qualify: 'z-ucl', relegation: 'z-rel' })[z] || '';
+const isHighlighted = (teamId) => {
+    if (props.highlightId == null || teamId == null) {
+        return false;
+    }
+
+    const ids = Array.isArray(props.highlightId)
+        ? props.highlightId
+        : [props.highlightId];
+
+    return ids.map(String).includes(String(teamId));
+};
 </script>
 
 <template>
@@ -39,11 +51,7 @@ const zoneClass = (z) => ({ qualify: 'z-ucl', relegation: 'z-rel' })[z] || '';
                     :key="r.team?.id ?? r.position"
                     :class="[
                         zoneClass(r.zone),
-                        {
-                            hl:
-                                highlightId != null &&
-                                String(highlightId) === String(r.team?.id),
-                        },
+                        { hl: isHighlighted(r.team?.id) },
                     ]"
                     style="cursor: pointer"
                     @click="emit('team', r.team?.id)"

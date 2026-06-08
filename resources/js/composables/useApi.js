@@ -20,12 +20,25 @@ export function useApi(path, { immediate = true } = {}) {
     let activeRequest = 0;
 
     async function load() {
+        const url = toValue(path);
         const requestId = ++activeRequest;
+
+        // A falsy path means "not ready yet" (e.g. a dependency hasn't resolved)
+        // — clear state and skip the request instead of fetching a bad URL.
+        if (!url) {
+            data.value = null;
+            meta.value = null;
+            error.value = null;
+            loading.value = false;
+
+            return;
+        }
+
         loading.value = true;
         error.value = null;
 
         try {
-            const res = await api.get(toValue(path));
+            const res = await api.get(url);
 
             if (requestId !== activeRequest) {
                 return;
