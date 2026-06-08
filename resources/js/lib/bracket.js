@@ -28,15 +28,23 @@ function aggregateTies(stageMatches) {
     );
 
     for (const m of chronological) {
-        const pairKey = [String(m.home?.id ?? '?'), String(m.away?.id ?? '?')]
-            .sort()
-            .join('|');
+        // Undrawn matches carry placeholder teams with an empty id, not null.
+        const home = m.home?.id ? m.home : null;
+        const away = m.away?.id ? m.away : null;
+
+        // Two-legged ties (both teams known) merge by the unordered team pair.
+        // Undrawn matches (TBD teams) must each stay their own node, or every
+        // placeholder in a round would collapse into one — so key them by match id.
+        const pairKey =
+            home && away
+                ? [String(home.id), String(away.id)].sort().join('|')
+                : `match:${m.id}`;
 
         if (!ties.has(pairKey)) {
             ties.set(pairKey, {
                 id: m.id,
-                home: m.home ?? null,
-                away: m.away ?? null,
+                home,
+                away,
                 hs: null,
                 as: null,
                 live: false,
