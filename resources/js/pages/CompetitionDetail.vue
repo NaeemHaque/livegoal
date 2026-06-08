@@ -1,12 +1,215 @@
 <script setup>
-import PagePlaceholder from '@/components/PagePlaceholder.vue';
+import { computed, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
-defineProps({ id: { type: String, required: true } });
+import Crest from '@/components/Crest.vue';
+import GroupCard from '@/components/GroupCard.vue';
+import { IcChevL, IcGlobe, IcTrophy } from '@/components/icons';
+import MatchCard from '@/components/MatchCard.vue';
+import StandingsTable from '@/components/StandingsTable.vue';
+import EmptyState from '@/components/states/EmptyState.vue';
+import Skeleton from '@/components/states/Skeleton.vue';
+import TopScorersList from '@/components/TopScorersList.vue';
+import { useApi } from '@/composables/useApi';
+import { useCompetition } from '@/composables/useCompetition';
+import { useScorers } from '@/composables/useScorers';
+import { useStandings } from '@/composables/useStandings';
+
+const props = defineProps({ id: { type: String, required: true } });
+const router = useRouter();
+
+const id = computed(() => props.id);
+const { data: competition } = useCompetition(id);
+const { data: standings, loading: standingsLoading } = useStandings(id);
+const { data: scorers, loading: scorersLoading } = useScorers(id);
+const { data: teams } = useApi(() => `/competitions/${id.value}/teams`);
+const { data: seasonMatches } = useApi(
+    () => `/competitions/${id.value}/matches`,
+);
+
+const groups = computed(() => standings.value?.groups ?? []);
+const hasGroups = computed(() => groups.value.length > 1);
+
+const matches = computed(() => seasonMatches.value ?? []);
+const fixtures = computed(() =>
+    matches.value
+        .filter((m) => m.status !== 'FT')
+        .sort((a, b) =>
+            String(a.kickoff ?? '').localeCompare(String(b.kickoff ?? '')),
+        )
+        .slice(0, 24),
+);
+const results = computed(() =>
+    matches.value
+        .filter((m) => m.status === 'FT')
+        .sort((a, b) =>
+            String(b.kickoff ?? '').localeCompare(String(a.kickoff ?? '')),
+        )
+        .slice(0, 24),
+);
+
+const tabs = computed(() => [
+    hasGroups.value
+        ? { id: 'groups', label: 'Groups' }
+        : { id: 'table', label: 'Standings' },
+    ...(hasGroups.value ? [{ id: 'knockout', label: 'Knockout' }] : []),
+    { id: 'fixtures', label: 'Fixtures' },
+    { id: 'results', label: 'Results' },
+    { id: 'scorers', label: 'Top Scorers' },
+    { id: 'teams', label: 'Teams' },
+]);
+
+const tab = ref('table');
+watch(hasGroups, (g) => (tab.value = g ? 'groups' : 'table'), {
+    immediate: true,
+});
+
+const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
+const openMatch = (m) => router.push(`/match/${m.id}`);
 </script>
 
 <template>
-    <PagePlaceholder
-        title="Competition"
-        :subtitle="`Competition #${id} — full screen in Phase 5.`"
-    />
+    <div class="pp-page pp-page-wide pp-rise">
+        <button
+            class="pp-btn ghost sm"
+            type="button"
+            style="margin-bottom: 14px"
+            @click="router.push('/competitions')"
+        >
+            <IcChevL :size="15" /> Competitions
+        </button>
+
+        <div class="pp-entity-head">
+            <div
+                class="eh-glow"
+                :style="{
+                    background: `radial-gradient(100% 140% at 0% 0%, ${competition?.color || 'var(--accent)'}, transparent 60%)`,
+                }"
+            />
+            <div class="eh-main">
+                <div
+                    class="ct-logo"
+                    style="width: 64px; height: 64px; margin: 0"
+                    :style="{
+                        background: `linear-gradient(135deg, ${competition?.color}, ${competition?.color}cc)`,
+                    }"
+                >
+                    <IcTrophy v-if="competition?.kind === 'cup'" :size="30" />
+                    <span
+                        v-else
+                        style="
+                            font-size: 24px;
+                            font-family: var(--font-display);
+                        "
+                        >{{ (competition?.short || '?')[0] }}</span
+                    >
+                </div>
+                <div>
+                    <h1>{{ competition?.name ?? '…' }}</h1>
+                    <div class="eh-sub">
+                        <span
+                            ><IcGlobe :size="13" />
+                            {{ competition?.region }}</span
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pp-tabs" style="margin-bottom: 18px">
+            <button
+                v-for="t in tabs"
+                :key="t.id"
+                class="tab"
+                :class="{ on: tab === t.id }"
+                type="button"
+                @click="tab = t.id"
+            >
+                {{ t.label }}
+            </button>
+        </div>
+
+        <!-- Groups -->
+        <div v-if="tab === 'groups'" class="pp-grid groups">
+            <GroupCard
+                v-for="g in groups"
+                :key="g.key"
+                :label="g.label"
+                :rows="g.rows"
+                @team="openTeam"
+            />
+        </div>
+
+        <!-- League table -->
+        <div v-else-if="tab === 'table'" class="pp-panel">
+            <div v-if="standingsLoading"><Skeleton :h="320" :r="12" /></div>
+            <EmptyState
+                v-else-if="!groups[0]?.rows?.length"
+                title="No table available"
+            />
+            <StandingsTable v-else :rows="groups[0].rows" @team="openTeam" />
+        </div>
+
+        <!-- Knockout (bracket lands once the group stage concludes) -->
+        <EmptyState
+            v-else-if="tab === 'knockout'"
+            title="Knockout bracket"
+            text="The bracket appears once the group stage is complete."
+        />
+
+        <!-- Fixtures / Results -->
+        <template v-else-if="tab === 'fixtures' || tab === 'results'">
+            <div
+                v-if="(tab === 'fixtures' ? fixtures : results).length"
+                class="pp-grid cols-2"
+            >
+                <MatchCard
+                    v-for="m in tab === 'fixtures' ? fixtures : results"
+                    :key="m.id"
+                    :match="m"
+                    @open="openMatch"
+                />
+            </div>
+            <EmptyState
+                v-else
+                :title="
+                    tab === 'fixtures'
+                        ? 'No upcoming fixtures'
+                        : 'No results yet'
+                "
+            />
+        </template>
+
+        <!-- Top scorers -->
+        <template v-else-if="tab === 'scorers'">
+            <div v-if="scorersLoading"><Skeleton :h="240" :r="12" /></div>
+            <EmptyState
+                v-else-if="!scorers?.length"
+                title="No scorers yet"
+                text="Top scorers appear once the competition is underway."
+            />
+            <TopScorersList
+                v-else
+                :scorers="scorers"
+                @player="(pid) => pid && router.push(`/player/${pid}`)"
+            />
+        </template>
+
+        <!-- Teams -->
+        <div v-else-if="tab === 'teams'" class="pp-grid cols-4">
+            <div
+                v-for="t in teams ?? []"
+                :key="t.id"
+                class="pp-playerrow"
+                role="button"
+                tabindex="0"
+                style="padding: 14px"
+                @click="openTeam(t.id)"
+                @keydown.enter="openTeam(t.id)"
+            >
+                <Crest :team="t" :size="32" />
+                <span class="pr-name">{{ t.name }}</span>
+            </div>
+        </div>
+    </div>
 </template>
