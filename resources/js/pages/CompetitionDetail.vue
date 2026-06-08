@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
+import Bracket from '@/components/Bracket.vue';
 import Crest from '@/components/Crest.vue';
 import GroupCard from '@/components/GroupCard.vue';
 import { IcChevL, IcGlobe, IcTrophy } from '@/components/icons';
@@ -14,6 +15,7 @@ import { useApi } from '@/composables/useApi';
 import { useCompetition } from '@/composables/useCompetition';
 import { useScorers } from '@/composables/useScorers';
 import { useStandings } from '@/composables/useStandings';
+import { buildKnockoutRounds } from '@/lib/bracket';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
@@ -31,6 +33,8 @@ const groups = computed(() => standings.value?.groups ?? []);
 const hasGroups = computed(() => groups.value.length > 1);
 
 const matches = computed(() => seasonMatches.value ?? []);
+const rounds = computed(() => buildKnockoutRounds(matches.value));
+const hasKnockout = computed(() => rounds.value.length > 0);
 const fixtures = computed(() =>
     matches.value
         .filter((m) => m.status !== 'FT')
@@ -52,7 +56,7 @@ const tabs = computed(() => [
     hasGroups.value
         ? { id: 'groups', label: 'Groups' }
         : { id: 'table', label: 'Standings' },
-    ...(hasGroups.value ? [{ id: 'knockout', label: 'Knockout' }] : []),
+    ...(hasKnockout.value ? [{ id: 'knockout', label: 'Knockout' }] : []),
     { id: 'fixtures', label: 'Fixtures' },
     { id: 'results', label: 'Results' },
     { id: 'scorers', label: 'Top Scorers' },
@@ -150,12 +154,13 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
             <StandingsTable v-else :rows="groups[0].rows" @team="openTeam" />
         </div>
 
-        <!-- Knockout (bracket lands once the group stage concludes) -->
-        <EmptyState
-            v-else-if="tab === 'knockout'"
-            title="Knockout bracket"
-            text="The bracket appears once the group stage is complete."
-        />
+        <!-- Knockout bracket -->
+        <div v-else-if="tab === 'knockout'" class="pp-bracket-scroll">
+            <Bracket
+                :rounds="rounds"
+                @open="(matchId) => router.push(`/match/${matchId}`)"
+            />
+        </div>
 
         <!-- Fixtures / Results -->
         <template v-else-if="tab === 'fixtures' || tab === 'results'">

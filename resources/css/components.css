@@ -728,6 +728,10 @@
 }
 
 /* ---------- Bracket ---------- */
+.pp-bracket-scroll {
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
 .pp-bracket {
     display: flex;
     gap: 32px;
