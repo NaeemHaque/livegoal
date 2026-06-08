@@ -8,6 +8,9 @@ import {
     IcStar,
     IcTrophy,
 } from '@/components/icons';
+import { useMatchesStore } from '@/stores/matches';
+
+const matches = useMatchesStore();
 
 const NAV = [
     { label: 'Live', to: '/', icon: IcLive, active: ['live', 'match'] },
@@ -50,6 +53,11 @@ const isActive = (item) => item.active.includes(route.name);
                     ><component :is="item.icon" :size="18"
                 /></span>
                 <span class="nt-label">{{ item.label }}</span>
+                <span
+                    v-if="item.to === '/' && matches.liveCount"
+                    class="nt-count"
+                    >{{ matches.liveCount }}</span
+                >
             </RouterLink>
         </div>
     </nav>
