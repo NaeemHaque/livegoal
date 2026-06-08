@@ -1,7 +1,9 @@
 <script setup>
 import { useEventListener } from '@vueuse/core';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
+import GoalToast from '@/components/GoalToast.vue';
 import {
     IcBell,
     IcMoon,
@@ -24,6 +26,12 @@ const matches = useMatchesStore();
 
 // Start the site-wide, visibility-aware live feed.
 useLiveMatches();
+
+const goalAnnounce = computed(() => {
+    const g = matches.lastGoal;
+
+    return g ? `Goal for ${g.team?.name}. Score now ${g.scoreline}.` : '';
+});
 
 const openSearch = () => router.push('/search');
 
@@ -132,11 +140,17 @@ useEventListener(window, 'keydown', (e) => {
             <LiveTicker :matches="matches.live" />
 
             <main class="pp-main">
-                <div aria-live="polite" class="sr-only" />
+                <div aria-live="polite" class="sr-only">{{ goalAnnounce }}</div>
                 <RouterView />
             </main>
         </div>
 
         <TabBar />
+
+        <GoalToast
+            v-if="!settings.reduceMotion"
+            :goal="matches.lastGoal"
+            @done="matches.clearGoal()"
+        />
     </div>
 </template>

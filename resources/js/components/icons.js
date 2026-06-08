@@ -146,6 +146,61 @@ export const IcRefresh = lineIcon([
     ['path', { d: 'M20 4.5V11h-6.5' }],
 ]);
 
+export const IcChevL = lineIcon([['path', { d: 'm15 5-7 7 7 7' }]]);
+
+export const IcChevR = lineIcon([['path', { d: 'm9 5 7 7-7 7' }]]);
+
+export const IcChevD = lineIcon([['path', { d: 'm5 9 7 7 7-7' }]]);
+
+export const IcClock = lineIcon([
+    ['circle', { cx: 12, cy: 12, r: 8.5 }],
+    ['path', { d: 'M12 7.5V12l3 2' }],
+]);
+
+export const IcCheck = lineIcon([['path', { d: 'm4.5 12.5 5 5 10-11' }]]);
+
+export const IcArrowR = lineIcon([['path', { d: 'M4 12h15m-6-6 6 6-6 6' }]]);
+
+export const IcUsers = lineIcon([
+    ['circle', { cx: 9, cy: 8, r: 3.2 }],
+    [
+        'path',
+        {
+            d: 'M3.5 19a5.5 5.5 0 0 1 11 0M16 5.2a3.2 3.2 0 0 1 0 6M17 14.4A5.5 5.5 0 0 1 20.5 19',
+        },
+    ],
+]);
+
+export const IcList = lineIcon([
+    ['path', { d: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' }],
+]);
+
+export const IcGlobe = lineIcon([
+    ['circle', { cx: 12, cy: 12, r: 8.5 }],
+    [
+        'path',
+        {
+            d: 'M3.5 12h17M12 3.5c2.5 2.4 2.5 14.6 0 17M12 3.5c-2.5 2.4-2.5 14.6 0 17',
+        },
+    ],
+]);
+
+export const IcPin = lineIcon([
+    ['path', { d: 'M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z' }],
+    ['circle', { cx: 12, cy: 10, r: 2.6 }],
+]);
+
+export const IcWhistle = lineIcon([
+    [
+        'path',
+        {
+            d: 'M3 11.5h7.5L13 9.5h5.5A3.5 3.5 0 0 1 22 13a4 4 0 0 1-7.9.9H3a1.5 1.5 0 0 1-1.5-1.5v0A1.4 1.4 0 0 1 3 11.5Z',
+        },
+    ],
+    ['circle', { cx: 18, cy: 13, r: 1.4 }],
+    ['path', { d: 'M6 8.5 4.5 6' }],
+]);
+
 /** Football glyph used in the logo mark. */
 export const IcBall = (props) =>
     h(
