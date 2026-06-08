@@ -64,14 +64,14 @@ useEventListener(window, 'keydown', (e) => {
                         class="pp-search"
                         role="button"
                         tabindex="0"
-                        aria-label="Search teams and players"
+                        aria-label="Search teams and competitions"
                         @click="openSearch"
                         @keydown.enter="openSearch"
                         @keydown.space.prevent="openSearch"
                     >
                         <IcSearch :size="16" />
                         <input
-                            placeholder="Search teams, players…"
+                            placeholder="Search teams, competitions…"
                             readonly
                             tabindex="-1"
                             aria-hidden="true"

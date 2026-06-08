@@ -161,6 +161,8 @@ export const IcCheck = lineIcon([['path', { d: 'm4.5 12.5 5 5 10-11' }]]);
 
 export const IcArrowR = lineIcon([['path', { d: 'M4 12h15m-6-6 6 6-6 6' }]]);
 
+export const IcClose = lineIcon([['path', { d: 'M6 6l12 12M18 6 6 18' }]]);
+
 export const IcUsers = lineIcon([
     ['circle', { cx: 9, cy: 8, r: 3.2 }],
     [
