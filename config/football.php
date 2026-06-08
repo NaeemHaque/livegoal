@@ -21,6 +21,11 @@ return [
     // Free-tier competition codes (football-data.org).
     'competitions' => ['WC', 'CL', 'PL', 'PD', 'SA', 'BL1', 'FL1', 'DED', 'PPL', 'ELC', 'EC', 'BSA', 'CLI'],
 
+    // Competitions aggregated for the day-fixtures view (GET /api/matches/day).
+    // The free-tier global /matches feed only returns currently-active
+    // competitions, so the day view merges each of these scoped (cached) feeds.
+    'featured' => ['WC', 'CL', 'PL', 'PD', 'SA', 'BL1', 'FL1', 'BSA'],
+
     /*
     | Display meta keyed by upstream competition code (short name, brand color,
     | featured flag). The upstream API doesn't provide these, so the design's
