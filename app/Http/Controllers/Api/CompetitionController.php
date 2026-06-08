@@ -17,41 +17,26 @@ class CompetitionController extends Controller
 
     public function index(): JsonResponse
     {
-        $result = $this->football->cached(
-            'competitions',
-            Config::integer('football.ttl.competitions'),
-            '/competitions',
+        return $this->respond(
+            $this->football->cached('competitions', Config::integer('football.ttl.competitions'), '/competitions'),
+            $this->normalizer->competitions(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->competitions($result->data);
-
-        return $this->envelope($data, $result);
     }
 
     public function show(string $id): JsonResponse
     {
-        $result = $this->football->cached(
-            "competition:{$id}",
-            Config::integer('football.ttl.competition'),
-            "/competitions/{$id}",
+        return $this->respond(
+            $this->football->cached("competition:{$id}", Config::integer('football.ttl.competition'), "/competitions/{$id}"),
+            $this->normalizer->competition(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->competition($result->data);
-
-        return $this->envelope($data, $result);
     }
 
     public function standings(string $id): JsonResponse
     {
-        $result = $this->football->cached(
-            "standings:{$id}",
-            Config::integer('football.ttl.standings'),
-            "/competitions/{$id}/standings",
+        return $this->respond(
+            $this->football->cached("standings:{$id}", Config::integer('football.ttl.standings'), "/competitions/{$id}/standings"),
+            $this->normalizer->standings(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->standings($result->data);
-
-        return $this->envelope($data, $result);
     }
 
     public function matches(Request $request, string $id): JsonResponse
@@ -76,29 +61,18 @@ class CompetitionController extends Controller
             $query['stage'] = strtoupper((string) $request->string('stage'));
         }
 
-        $result = $this->football->cached(
-            "competition:{$id}:matches",
-            Config::integer('football.ttl.matches'),
-            "/competitions/{$id}/matches",
-            $query,
+        return $this->respond(
+            $this->football->cached("competition:{$id}:matches", Config::integer('football.ttl.matches'), "/competitions/{$id}/matches", $query),
+            $this->normalizer->matches(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->matches($result->data);
-
-        return $this->envelope($data, $result);
     }
 
     public function teams(string $id): JsonResponse
     {
-        $result = $this->football->cached(
-            "competition:{$id}:teams",
-            Config::integer('football.ttl.teams'),
-            "/competitions/{$id}/teams",
+        return $this->respond(
+            $this->football->cached("competition:{$id}:teams", Config::integer('football.ttl.teams'), "/competitions/{$id}/teams"),
+            $this->normalizer->teams(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->teams($result->data);
-
-        return $this->envelope($data, $result);
     }
 
     public function scorers(Request $request, string $id): JsonResponse
@@ -113,15 +87,9 @@ class CompetitionController extends Controller
             $query['limit'] = $request->integer('limit');
         }
 
-        $result = $this->football->cached(
-            "competition:{$id}:scorers",
-            Config::integer('football.ttl.scorers'),
-            "/competitions/{$id}/scorers",
-            $query,
+        return $this->respond(
+            $this->football->cached("competition:{$id}:scorers", Config::integer('football.ttl.scorers'), "/competitions/{$id}/scorers", $query),
+            $this->normalizer->scorers(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->scorers($result->data);
-
-        return $this->envelope($data, $result);
     }
 }

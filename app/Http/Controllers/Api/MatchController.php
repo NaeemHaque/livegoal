@@ -35,23 +35,17 @@ class MatchController extends Controller
             $query['status'] = strtoupper((string) $request->string('status'));
         }
 
-        $result = $this->football->cached('matches', Config::integer('football.ttl.matches'), '/matches', $query);
-
-        $data = $result->data === null ? null : $this->normalizer->matches($result->data);
-
-        return $this->envelope($data, $result);
+        return $this->respond(
+            $this->football->cached('matches', Config::integer('football.ttl.matches'), '/matches', $query),
+            $this->normalizer->matches(...),
+        );
     }
 
     public function show(string $id): JsonResponse
     {
-        $result = $this->football->cached(
-            "match:{$id}",
-            Config::integer('football.ttl.match_live'),
-            "/matches/{$id}",
+        return $this->respond(
+            $this->football->cached("match:{$id}", Config::integer('football.ttl.match_live'), "/matches/{$id}"),
+            $this->normalizer->match(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->match($result->data);
-
-        return $this->envelope($data, $result);
     }
 }

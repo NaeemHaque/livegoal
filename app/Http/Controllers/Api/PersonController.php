@@ -16,14 +16,9 @@ class PersonController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $result = $this->football->cached(
-            "person:{$id}",
-            Config::integer('football.ttl.person'),
-            "/persons/{$id}",
+        return $this->respond(
+            $this->football->cached("person:{$id}", Config::integer('football.ttl.person'), "/persons/{$id}"),
+            $this->normalizer->person(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->person($result->data);
-
-        return $this->envelope($data, $result);
     }
 }

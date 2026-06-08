@@ -9,6 +9,19 @@ use Illuminate\Http\JsonResponse;
 abstract class Controller extends BaseController
 {
     /**
+     * Normalize a cache-served result and wrap it in the API envelope. The
+     * normalizer runs only when there is data; a hard miss passes null through.
+     *
+     * @param  callable(array<array-key, mixed>): mixed  $normalize
+     */
+    protected function respond(Result $result, callable $normalize): JsonResponse
+    {
+        $data = $result->data === null ? null : $normalize($result->data);
+
+        return $this->envelope($data, $result);
+    }
+
+    /**
      * Wrap a payload in the standard API envelope (see docs/API.md). Returns 503
      * on a hard miss (no data and no last-good) so the SPA can show an error state.
      */

@@ -17,15 +17,10 @@ class TeamController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $result = $this->football->cached(
-            "team:{$id}",
-            Config::integer('football.ttl.team'),
-            "/teams/{$id}",
+        return $this->respond(
+            $this->football->cached("team:{$id}", Config::integer('football.ttl.team'), "/teams/{$id}"),
+            $this->normalizer->teamDetail(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->teamDetail($result->data);
-
-        return $this->envelope($data, $result);
     }
 
     public function matches(Request $request, string $id): JsonResponse
@@ -50,15 +45,9 @@ class TeamController extends Controller
             $query['dateTo'] = (string) $request->string('dateTo');
         }
 
-        $result = $this->football->cached(
-            "team:{$id}:matches",
-            Config::integer('football.ttl.team_matches'),
-            "/teams/{$id}/matches",
-            $query,
+        return $this->respond(
+            $this->football->cached("team:{$id}:matches", Config::integer('football.ttl.team_matches'), "/teams/{$id}/matches", $query),
+            $this->normalizer->matches(...),
         );
-
-        $data = $result->data === null ? null : $this->normalizer->matches($result->data);
-
-        return $this->envelope($data, $result);
     }
 }

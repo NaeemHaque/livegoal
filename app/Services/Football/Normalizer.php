@@ -23,9 +23,14 @@ class Normalizer
             return [];
         }
 
-        return array_values(array_map(
-            fn (array $c): array => $this->competition($c),
-            array_filter($items, is_array(...)),
+        $allowed = Config::array('football.competitions');
+
+        return array_values(array_filter(
+            array_map(
+                fn (array $c): array => $this->competition($c),
+                array_filter($items, is_array(...)),
+            ),
+            fn (array $c): bool => in_array($c['code'], $allowed, true),
         ));
     }
 
