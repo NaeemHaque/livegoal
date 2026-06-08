@@ -20,11 +20,13 @@ import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
 import Skeleton from '@/components/states/Skeleton.vue';
 import { useApi } from '@/composables/useApi';
+import { useBack } from '@/composables/useBack';
 import { useMatch } from '@/composables/useMatch';
 import { useTimeFormat } from '@/composables/useTimeFormat';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
+const goBack = useBack();
 const { time, date, dateTime } = useTimeFormat();
 
 const id = computed(() => props.id);
@@ -111,7 +113,7 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
             class="pp-btn ghost sm"
             type="button"
             style="margin-bottom: 14px"
-            @click="router.back()"
+            @click="goBack"
         >
             <IcChevL :size="15" /> Back
         </button>
@@ -271,32 +273,3 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
         <EmptyState v-else title="Match not found" />
     </div>
 </template>
-
-<style scoped>
-.pp-detaillist {
-    margin: 0;
-    display: grid;
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    overflow: hidden;
-}
-.pp-detaillist > div {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 16px;
-    background: var(--surface);
-}
-.pp-detaillist dt {
-    color: var(--text-muted);
-    text-transform: capitalize;
-    font-size: 13px;
-}
-.pp-detaillist dd {
-    margin: 0;
-    font-weight: 600;
-    text-align: right;
-}
-</style>

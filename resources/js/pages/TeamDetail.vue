@@ -9,11 +9,13 @@ import MatchCard from '@/components/MatchCard.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import Skeleton from '@/components/states/Skeleton.vue';
 import { useApi } from '@/composables/useApi';
+import { useBack } from '@/composables/useBack';
 import { useTeam } from '@/composables/useTeam';
 import { useFavoritesStore } from '@/stores/favorites';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
+const goBack = useBack();
 const favorites = useFavoritesStore();
 
 const id = computed(() => props.id);
@@ -112,7 +114,7 @@ const TABS = [
             class="pp-btn ghost sm"
             type="button"
             style="margin-bottom: 14px"
-            @click="router.back()"
+            @click="goBack"
         >
             <IcChevL :size="15" /> Back
         </button>
