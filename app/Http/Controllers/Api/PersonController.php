@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Services\Football\FootballData;
+use App\Services\Football\Normalizer;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Config;
+
+class PersonController extends Controller
+{
+    public function __construct(
+        private readonly FootballData $football,
+        private readonly Normalizer $normalizer,
+    ) {}
+
+    public function show(string $id): JsonResponse
+    {
+        $result = $this->football->cached(
+            "person:{$id}",
+            Config::integer('football.ttl.person'),
+            "/persons/{$id}",
+        );
+
+        $data = $result->data === null ? null : $this->normalizer->person($result->data);
+
+        return $this->envelope($data, $result);
+    }
+}

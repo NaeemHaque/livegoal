@@ -87,4 +87,41 @@ class CompetitionController extends Controller
 
         return $this->envelope($data, $result);
     }
+
+    public function teams(string $id): JsonResponse
+    {
+        $result = $this->football->cached(
+            "competition:{$id}:teams",
+            Config::integer('football.ttl.teams'),
+            "/competitions/{$id}/teams",
+        );
+
+        $data = $result->data === null ? null : $this->normalizer->teams($result->data);
+
+        return $this->envelope($data, $result);
+    }
+
+    public function scorers(Request $request, string $id): JsonResponse
+    {
+        $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $query = [];
+
+        if ($request->filled('limit')) {
+            $query['limit'] = $request->integer('limit');
+        }
+
+        $result = $this->football->cached(
+            "competition:{$id}:scorers",
+            Config::integer('football.ttl.scorers'),
+            "/competitions/{$id}/scorers",
+            $query,
+        );
+
+        $data = $result->data === null ? null : $this->normalizer->scorers($result->data);
+
+        return $this->envelope($data, $result);
+    }
 }

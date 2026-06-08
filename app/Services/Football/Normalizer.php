@@ -121,6 +121,104 @@ class Normalizer
     }
 
     /**
+     * @param  array<array-key, mixed>  $payload  Upstream /teams response.
+     * @return list<array<string, mixed>>
+     */
+    public function teams(array $payload): array
+    {
+        $items = $payload['teams'] ?? [];
+
+        if (! is_array($items)) {
+            return [];
+        }
+
+        return array_values(array_map(
+            fn (array $t): array => $this->team($t),
+            array_filter($items, is_array(...)),
+        ));
+    }
+
+    /**
+     * A single team with detail + squad (upstream /teams/{id}).
+     *
+     * @param  array<array-key, mixed>  $t
+     * @return array<string, mixed>
+     */
+    public function teamDetail(array $t): array
+    {
+        $squad = $t['squad'] ?? [];
+        $area = $t['area'] ?? null;
+
+        return [
+            ...$this->team($t),
+            'founded' => $this->nullableInt($t['founded'] ?? null),
+            'clubColors' => $this->nullableStr($t['clubColors'] ?? null),
+            'venue' => $this->nullableStr($t['venue'] ?? null),
+            'area' => is_array($area)
+                ? ['name' => $this->str($area['name'] ?? null), 'flag' => $this->nullableStr($area['flag'] ?? null)]
+                : null,
+            'squad' => is_array($squad)
+                ? array_values(array_map(fn (array $p): array => $this->person($p), array_filter($squad, is_array(...))))
+                : [],
+        ];
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $p  Upstream person/player.
+     * @return array<string, mixed>
+     */
+    public function person(array $p): array
+    {
+        $team = $p['currentTeam'] ?? null;
+
+        return [
+            'id' => $this->str($p['id'] ?? null),
+            'name' => $this->str($p['name'] ?? null),
+            'firstName' => $this->nullableStr($p['firstName'] ?? null),
+            'lastName' => $this->nullableStr($p['lastName'] ?? null),
+            'position' => $this->nullableStr($p['position'] ?? null),
+            'dateOfBirth' => $this->nullableStr($p['dateOfBirth'] ?? null),
+            'nationality' => $this->nullableStr($p['nationality'] ?? null),
+            'shirtNumber' => $this->nullableInt($p['shirtNumber'] ?? null),
+            'team' => is_array($team) ? $this->team($team) : null,
+        ];
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $payload  Upstream /scorers response.
+     * @return list<array<string, mixed>>
+     */
+    public function scorers(array $payload): array
+    {
+        $items = $payload['scorers'] ?? [];
+
+        if (! is_array($items)) {
+            return [];
+        }
+
+        $rank = 0;
+        $scorers = [];
+
+        foreach (array_filter($items, is_array(...)) as $s) {
+            $rank++;
+            $player = $s['player'] ?? null;
+            $team = $s['team'] ?? null;
+
+            $scorers[] = [
+                'rank' => $rank,
+                'player' => is_array($player) ? $this->person($player) : null,
+                'team' => is_array($team) ? $this->team($team) : null,
+                'goals' => $this->int($s['goals'] ?? null),
+                'assists' => $this->nullableInt($s['assists'] ?? null),
+                'penalties' => $this->nullableInt($s['penalties'] ?? null),
+                'playedMatches' => $this->nullableInt($s['playedMatches'] ?? null),
+            ];
+        }
+
+        return $scorers;
+    }
+
+    /**
      * Map an upstream match status to SocPlay's set (see docs/DATA_MODEL.md).
      */
     protected function mapStatus(string $status): string
