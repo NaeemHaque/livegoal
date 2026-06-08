@@ -146,6 +146,12 @@ export const IcRefresh = lineIcon([
     ['path', { d: 'M20 4.5V11h-6.5' }],
 ]);
 
+export const IcChevL = lineIcon([['path', { d: 'm15 5-7 7 7 7' }]]);
+
+export const IcChevR = lineIcon([['path', { d: 'm9 5 7 7-7 7' }]]);
+
+export const IcChevD = lineIcon([['path', { d: 'm5 9 7 7 7-7' }]]);
+
 export const IcClock = lineIcon([
     ['circle', { cx: 12, cy: 12, r: 8.5 }],
     ['path', { d: 'M12 7.5V12l3 2' }],

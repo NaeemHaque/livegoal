@@ -45,9 +45,19 @@ class CompetitionController extends Controller
             'matchday' => ['nullable', 'integer', 'min:1'],
             'status' => ['nullable', 'string', 'max:20'],
             'stage' => ['nullable', 'string', 'max:40'],
+            'dateFrom' => ['nullable', 'date_format:Y-m-d'],
+            'dateTo' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
         $query = [];
+
+        if ($request->filled('dateFrom')) {
+            $query['dateFrom'] = (string) $request->string('dateFrom');
+        }
+
+        if ($request->filled('dateTo')) {
+            $query['dateTo'] = (string) $request->string('dateTo');
+        }
 
         if ($request->filled('matchday')) {
             $query['matchday'] = $request->integer('matchday');
