@@ -9,8 +9,8 @@ import MatchCard from '@/components/MatchCard.vue';
 import SectionHead from '@/components/SectionHead.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import Skeleton from '@/components/states/Skeleton.vue';
-import { useApi } from '@/composables/useApi';
 import { useScorers } from '@/composables/useScorers';
+import { useUpcoming } from '@/composables/useUpcoming';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useMatchesStore } from '@/stores/matches';
 
@@ -18,16 +18,15 @@ const router = useRouter();
 const matches = useMatchesStore();
 const favorites = useFavoritesStore();
 
-const { data: today, loading } = useApi('/matches');
+const { data: upcomingData, loading } = useUpcoming();
 const { data: scorers } = useScorers('PL');
 
 const live = computed(() => matches.live);
 const liveWc = computed(
     () => live.value.filter((m) => m.competition?.code === 'WC').length,
 );
-const upcoming = computed(() =>
-    (today.value ?? []).filter((m) => m.status === 'SCHEDULED'),
-);
+// The next handful of scheduled fixtures (server already filtered + sorted).
+const upcoming = computed(() => (upcomingData.value ?? []).slice(0, 6));
 const topScorers = computed(() => (scorers.value ?? []).slice(0, 5));
 
 const upcomingGroups = computed(() => {
@@ -137,7 +136,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                 <div class="pp-section">
                     <div class="pp-section-head">
                         <span class="sh-title"
-                            ><IcClock :size="17" /> Upcoming today</span
+                            ><IcClock :size="17" /> Upcoming</span
                         >
                         <span class="sh-line" />
                         <button
@@ -178,8 +177,8 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                     </template>
                     <EmptyState
                         v-else
-                        title="No fixtures today"
-                        text="There are no scheduled matches for today."
+                        title="No upcoming fixtures"
+                        text="Scheduled matches will appear here as soon as they're announced."
                     />
                 </div>
             </div>

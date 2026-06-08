@@ -215,6 +215,102 @@ class MatchesTest extends TestCase
         });
     }
 
+    // --- 5b. day view: aggregates featured competitions server-side ----------
+
+    public function test_day_aggregates_featured_competitions_into_one_response(): void
+    {
+        // Shrink the featured set so the test asserts exact call counts.
+        Config::set('football.featured', ['PL', 'PD']);
+
+        Http::fake([
+            '*/competitions/PL/matches*' => Http::response(['matches' => [$this->finishedMatch()]], 200),
+            '*/competitions/PD/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $response = $this->getJson('/api/matches/day?date=2026-05-24');
+
+        $response->assertOk();
+        $response->assertJsonPath('meta.cached', true);
+
+        // The browser gets one merged list (PL has a match on this date, PD none).
+        $data = $response->json('data');
+        $this->assertIsArray($data);
+        $this->assertCount(1, $data);
+        $response->assertJsonPath('data.0.competition.code', 'PL');
+
+        // One full-season call per featured competition (shared cache, filtered by
+        // date server-side — no per-date upstream query).
+        Http::assertSentCount(2);
+        Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/competitions/PL/matches'));
+    }
+
+    public function test_day_filters_the_shared_feed_to_the_requested_date(): void
+    {
+        Config::set('football.featured', ['PL']);
+
+        // PL's feed has a single match on 2026-05-24.
+        Http::fake([
+            '*/competitions/PL/matches*' => Http::response(['matches' => [$this->finishedMatch()]], 200),
+        ]);
+
+        // A different day is a valid 200 with an empty list (the match is filtered out).
+        $this->getJson('/api/matches/day?date=2026-06-09')
+            ->assertOk()
+            ->assertJsonPath('data', []);
+    }
+
+    public function test_day_rejects_an_invalid_date_with_422(): void
+    {
+        Http::fake(['*' => Http::response(['matches' => []], 200)]);
+
+        $this->getJson('/api/matches/day?date=nope')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('date');
+
+        Http::assertNothingSent();
+    }
+
+    // --- 5c. upcoming view: next scheduled fixtures across featured ----------
+
+    public function test_upcoming_returns_soonest_scheduled_featured_fixtures(): void
+    {
+        Date::setTestNow('2026-06-09T00:00:00Z');
+        Config::set('football.featured', ['PL', 'WC']);
+
+        // A future World Cup fixture (included) alongside a past finished one (excluded).
+        $future = $this->matchWithStatus(900001, 'TIMED');
+        $future['utcDate'] = '2026-06-11T19:00:00Z';
+        $future['competition'] = ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'];
+
+        Http::fake([
+            '*/competitions/PL/matches*' => Http::response(['matches' => [$this->finishedMatch()]], 200),
+            '*/competitions/WC/matches*' => Http::response(['matches' => [$future]], 200),
+        ]);
+
+        $response = $this->getJson('/api/matches/upcoming');
+
+        $response->assertOk();
+        $data = $response->json('data');
+        $this->assertIsArray($data);
+        $this->assertCount(1, $data, 'only the future scheduled fixture is upcoming');
+        $response->assertJsonPath('data.0.competition.code', 'WC');
+        $response->assertJsonPath('data.0.status', 'SCHEDULED');
+    }
+
+    public function test_upcoming_returns_empty_list_when_nothing_is_scheduled(): void
+    {
+        Date::setTestNow('2026-06-09T00:00:00Z');
+        Config::set('football.featured', ['PL']);
+
+        Http::fake([
+            '*/competitions/PL/matches*' => Http::response(['matches' => [$this->finishedMatch()]], 200),
+        ]);
+
+        $this->getJson('/api/matches/upcoming')
+            ->assertOk()
+            ->assertJsonPath('data', []);
+    }
+
     // --- 6. show happy path: single normalized match -------------------------
 
     public function test_show_returns_a_single_normalized_match(): void

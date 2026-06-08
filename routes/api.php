@@ -17,6 +17,8 @@ Route::get('competitions/{id}/teams', [CompetitionController::class, 'teams']);
 Route::get('competitions/{id}/scorers', [CompetitionController::class, 'scorers']);
 
 Route::get('matches', [MatchController::class, 'index']);
+Route::get('matches/day', [MatchController::class, 'day']);
+Route::get('matches/upcoming', [MatchController::class, 'upcoming']);
 Route::get('matches/{id}', [MatchController::class, 'show']);
 
 Route::get('teams/{id}', [TeamController::class, 'show']);
