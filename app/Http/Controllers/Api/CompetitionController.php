@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 
 class CompetitionController extends Controller
@@ -49,6 +50,40 @@ class CompetitionController extends Controller
         );
 
         $data = $result->data === null ? null : $this->normalizer->standings($result->data);
+
+        return $this->envelope($data, $result);
+    }
+
+    public function matches(Request $request, string $id): JsonResponse
+    {
+        $request->validate([
+            'matchday' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', 'string', 'max:20'],
+            'stage' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        $query = [];
+
+        if ($request->filled('matchday')) {
+            $query['matchday'] = $request->integer('matchday');
+        }
+
+        if ($request->filled('status')) {
+            $query['status'] = strtoupper((string) $request->string('status'));
+        }
+
+        if ($request->filled('stage')) {
+            $query['stage'] = strtoupper((string) $request->string('stage'));
+        }
+
+        $result = $this->football->cached(
+            "competition:{$id}:matches",
+            Config::integer('football.ttl.matches'),
+            "/competitions/{$id}/matches",
+            $query,
+        );
+
+        $data = $result->data === null ? null : $this->normalizer->matches($result->data);
 
         return $this->envelope($data, $result);
     }

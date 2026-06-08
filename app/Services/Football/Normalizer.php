@@ -75,6 +75,67 @@ class Normalizer
     }
 
     /**
+     * @param  array<array-key, mixed>  $payload  Upstream /matches response.
+     * @return list<array<string, mixed>>
+     */
+    public function matches(array $payload): array
+    {
+        $items = $payload['matches'] ?? [];
+
+        if (! is_array($items)) {
+            return [];
+        }
+
+        return array_values(array_map(
+            fn (array $m): array => $this->match($m),
+            array_filter($items, is_array(...)),
+        ));
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $m  A single upstream match.
+     * @return array<string, mixed>
+     */
+    public function match(array $m): array
+    {
+        $competition = $m['competition'] ?? null;
+        $home = $m['homeTeam'] ?? null;
+        $away = $m['awayTeam'] ?? null;
+
+        return [
+            'id' => $this->str($m['id'] ?? null),
+            'competition' => is_array($competition) ? $this->competition($competition) : null,
+            'stage' => $this->str($m['stage'] ?? null),
+            'group' => $this->nullableStr($m['group'] ?? null),
+            'status' => $this->mapStatus(strtoupper($this->str($m['status'] ?? null))),
+            'minute' => $this->nullableInt(data_get($m, 'minute')),
+            'home' => is_array($home) ? $this->team($home) : null,
+            'away' => is_array($away) ? $this->team($away) : null,
+            'homeScore' => $this->nullableInt(data_get($m, 'score.fullTime.home')),
+            'awayScore' => $this->nullableInt(data_get($m, 'score.fullTime.away')),
+            'winner' => $this->nullableStr(data_get($m, 'score.winner')),
+            'kickoff' => $this->nullableStr($m['utcDate'] ?? null),
+            'venue' => $this->nullableStr($m['venue'] ?? null),
+            'referee' => $this->nullableStr(data_get($m, 'referees.0.name')),
+        ];
+    }
+
+    /**
+     * Map an upstream match status to SocPlay's set (see docs/DATA_MODEL.md).
+     */
+    protected function mapStatus(string $status): string
+    {
+        return match ($status) {
+            'TIMED', 'SCHEDULED' => 'SCHEDULED',
+            'IN_PLAY', 'SUSPENDED' => 'LIVE',
+            'PAUSED' => 'HT',
+            'FINISHED' => 'FT',
+            'POSTPONED', 'CANCELLED' => 'POSTPONED',
+            default => $status !== '' ? $status : 'SCHEDULED',
+        };
+    }
+
+    /**
      * Parse standings into groups. Tournaments return one standing per group
      * (World Cup A–L); leagues return a single overall table. Only the overall
      * ("TOTAL") standing per group is used (HOME/AWAY splits are ignored).
@@ -205,5 +266,11 @@ class Normalizer
     protected function int(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
+    }
+
+    /** Coerce a mixed value to an int, or null when not numeric. */
+    protected function nullableInt(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
     }
 }
