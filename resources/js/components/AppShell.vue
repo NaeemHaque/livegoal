@@ -1,5 +1,5 @@
 <script setup>
-import { useEventListener } from '@vueuse/core';
+import { useEventListener, useOnline } from '@vueuse/core';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -10,6 +10,7 @@ import {
     IcSearch,
     IcSettings,
     IcSun,
+    IcWifiOff,
 } from '@/components/icons';
 import LiveTicker from '@/components/LiveTicker.vue';
 import Logo from '@/components/Logo.vue';
@@ -23,6 +24,7 @@ import { useSettingsStore } from '@/stores/settings';
 const router = useRouter();
 const settings = useSettingsStore();
 const matches = useMatchesStore();
+const online = useOnline();
 
 // Start the site-wide, visibility-aware live feed.
 useLiveMatches();
@@ -139,6 +141,11 @@ useEventListener(window, 'keydown', (e) => {
 
             <LiveTicker :matches="matches.live" />
 
+            <div v-if="!online" class="pp-offline-banner" role="status">
+                <IcWifiOff :size="15" /> You're offline — scores may be out of
+                date.
+            </div>
+
             <main class="pp-main">
                 <div aria-live="polite" class="sr-only">{{ goalAnnounce }}</div>
                 <RouterView />
@@ -154,3 +161,18 @@ useEventListener(window, 'keydown', (e) => {
         />
     </div>
 </template>
+
+<style scoped>
+.pp-offline-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--draw);
+    background: color-mix(in srgb, var(--draw) 12%, var(--surface));
+    border-bottom: 1px solid var(--border);
+}
+</style>

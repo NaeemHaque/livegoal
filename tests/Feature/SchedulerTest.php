@@ -100,6 +100,21 @@ class SchedulerTest extends TestCase
         $this->get('/scheduler/run?token=secretX')->assertNotFound();
     }
 
+    // --- 3b. the public route is rate-limited -------------------------------
+
+    public function test_it_rate_limits_excessive_requests(): void
+    {
+        Config::set('football.scheduler_token', 'secret');
+
+        // The throttle (20/min) runs before the controller, so even rejected
+        // (wrong-token → 404) requests count toward the limit.
+        for ($i = 0; $i < 20; $i++) {
+            $this->get('/scheduler/run?token=nope')->assertNotFound();
+        }
+
+        $this->get('/scheduler/run?token=nope')->assertStatus(429);
+    }
+
     // --- 4. schedule registration -------------------------------------------
 
     public function test_it_registers_the_live_poller_to_run_every_minute(): void
