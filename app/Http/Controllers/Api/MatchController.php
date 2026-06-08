@@ -56,7 +56,46 @@ class MatchController extends Controller
         ]);
 
         $date = $request->filled('date') ? (string) $request->string('date') : Date::now()->toDateString();
-        $query = ['dateFrom' => $date, 'dateTo' => $date];
+
+        // Filter the (shared, full-season) feed by date in PHP rather than per-date
+        // upstream queries — so day, upcoming and Competition Detail all hit the
+        // same cache and navigating dates costs no extra upstream calls.
+        $agg = $this->featuredMatches([]);
+        $matches = array_values(array_filter(
+            $agg['matches'],
+            fn (array $m): bool => (is_string($m['kickoff'] ?? null) ? substr($m['kickoff'], 0, 10) : '') === $date,
+        ));
+
+        return $this->aggregateEnvelope($this->sortByKickoff($matches), $agg);
+    }
+
+    /**
+     * The next scheduled fixtures across featured competitions — so the app
+     * surfaces what's coming (e.g. the World Cup) on quiet days rather than an
+     * empty "today". Built from each competition's cached full-season feed.
+     */
+    public function upcoming(): JsonResponse
+    {
+        $today = Date::now()->toDateString();
+        $agg = $this->featuredMatches([]);
+
+        $upcoming = array_values(array_filter($agg['matches'], function (array $m) use ($today): bool {
+            $day = is_string($m['kickoff'] ?? null) ? substr($m['kickoff'], 0, 10) : '';
+
+            return ($m['status'] ?? null) === 'SCHEDULED' && $day >= $today;
+        }));
+
+        return $this->aggregateEnvelope(array_slice($this->sortByKickoff($upcoming), 0, 24), $agg);
+    }
+
+    /**
+     * Fetch and merge each featured competition's matches for the given query.
+     *
+     * @param  array<string, string>  $query
+     * @return array{matches: list<array<string, mixed>>, lastUpdated: string|null, stale: bool, served: bool}
+     */
+    private function featuredMatches(array $query): array
+    {
         $ttl = Config::integer('football.ttl.matches');
 
         $matches = [];
@@ -83,13 +122,31 @@ class MatchController extends Controller
             }
         }
 
+        return ['matches' => $matches, 'lastUpdated' => $lastUpdated, 'stale' => $stale, 'served' => $served];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $matches
+     * @return list<array<string, mixed>>
+     */
+    private function sortByKickoff(array $matches): array
+    {
         $kickoff = static fn (array $m): string => is_string($m['kickoff'] ?? null) ? $m['kickoff'] : '';
         usort($matches, fn (array $a, array $b): int => strcmp($kickoff($a), $kickoff($b)));
 
+        return $matches;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $matches
+     * @param  array{lastUpdated: string|null, stale: bool, served: bool}  $agg
+     */
+    private function aggregateEnvelope(array $matches, array $agg): JsonResponse
+    {
         return response()->json([
-            'data' => $served ? $matches : null,
-            'meta' => ['lastUpdated' => $lastUpdated, 'stale' => $stale, 'cached' => true],
-        ], $served ? 200 : 503);
+            'data' => $agg['served'] ? $matches : null,
+            'meta' => ['lastUpdated' => $agg['lastUpdated'], 'stale' => $agg['stale'], 'cached' => true],
+        ], $agg['served'] ? 200 : 503);
     }
 
     public function show(string $id): JsonResponse

@@ -4,13 +4,15 @@ import { useRouter } from 'vue-router';
 
 import DateNavigator from '@/components/DateNavigator.vue';
 import FilterTabs from '@/components/FilterTabs.vue';
-import { IcLive, IcStar } from '@/components/icons';
+import { IcClock, IcLive, IcStar } from '@/components/icons';
 import MatchCard from '@/components/MatchCard.vue';
 import SectionHead from '@/components/SectionHead.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
 import Skeleton from '@/components/states/Skeleton.vue';
 import { useDayMatches } from '@/composables/useDayMatches';
+import { useTimeFormat } from '@/composables/useTimeFormat';
+import { useUpcoming } from '@/composables/useUpcoming';
 import { today } from '@/lib/dates';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useMatchesStore } from '@/stores/matches';
@@ -30,6 +32,11 @@ const {
 } = useDayMatches(() => date.value);
 const all = computed(() => dayMatches.value);
 
+// Next scheduled fixtures across competitions — fills empty days and drives the
+// tab counts when the selected day has nothing.
+const { data: upcomingData } = useUpcoming();
+const time = useTimeFormat();
+
 const LIVE = ['LIVE', 'HT', 'ET', 'PEN'];
 const TABS = [
     { id: 'all', label: 'All' },
@@ -38,12 +45,24 @@ const TABS = [
     { id: 'finished', label: 'Finished' },
 ];
 
-const counts = computed(() => ({
-    all: all.value.length,
-    live: all.value.filter((m) => LIVE.includes(m.status)).length,
-    upcoming: all.value.filter((m) => m.status === 'SCHEDULED').length,
-    finished: all.value.filter((m) => m.status === 'FT').length,
-}));
+const counts = computed(() => {
+    const day = all.value;
+
+    // On an empty day the screen surfaces the cross-day upcoming list, so count
+    // that instead — the tabs then reflect what's actually on screen.
+    if (day.length === 0 && (upcomingData.value ?? []).length) {
+        const total = upcomingData.value.length;
+
+        return { all: total, live: 0, upcoming: total, finished: 0 };
+    }
+
+    return {
+        all: day.length,
+        live: day.filter((m) => LIVE.includes(m.status)).length,
+        upcoming: day.filter((m) => m.status === 'SCHEDULED').length,
+        finished: day.filter((m) => m.status === 'FT').length,
+    };
+});
 
 const filtered = computed(() =>
     all.value.filter((m) => {
@@ -81,6 +100,32 @@ const restGroups = computed(() => {
     return [...groups.values()];
 });
 
+// Empty-day upcoming fixtures, grouped by their displayed (local) date.
+const upcomingByDate = computed(() => {
+    const groups = new Map();
+
+    for (const m of upcomingData.value ?? []) {
+        const label = time.date(m.kickoff);
+
+        if (!groups.has(label)) {
+            groups.set(label, { label, matches: [] });
+        }
+
+        groups.get(label).matches.push(m);
+    }
+
+    return [...groups.values()];
+});
+
+// Only when the whole day is empty (not merely a filtered subset) — keeps the
+// shown list in step with the tab counts.
+const showUpcoming = computed(
+    () =>
+        all.value.length === 0 &&
+        (filter.value === 'all' || filter.value === 'upcoming') &&
+        upcomingByDate.value.length > 0,
+);
+
 const open = (m) => router.push(`/match/${m.id}`);
 const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 </script>
@@ -114,10 +159,39 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 
         <ErrorState v-else-if="error" @retry="reload" />
 
+        <!-- Empty day: surface upcoming fixtures inline (grouped by date). -->
+        <template v-else-if="filtered.length === 0 && showUpcoming">
+            <div class="pp-section-head" style="margin-bottom: 18px">
+                <span class="sh-title"
+                    ><IcClock :size="16" /> Upcoming fixtures</span
+                >
+                <span class="sh-line" />
+            </div>
+            <div v-for="g in upcomingByDate" :key="g.label" class="pp-section">
+                <div class="pp-section-head">
+                    <span class="sh-title" style="font-size: 14px">{{
+                        g.label
+                    }}</span>
+                    <span class="sh-count">{{ g.matches.length }}</span>
+                    <span class="sh-line" />
+                </div>
+                <div class="pp-grid cols-2">
+                    <MatchCard
+                        v-for="m in g.matches"
+                        :key="m.id"
+                        :match="m"
+                        :fav="isFav(m)"
+                        @open="open"
+                        @fav="toggleFav(m)"
+                    />
+                </div>
+            </div>
+        </template>
+
         <EmptyState
             v-else-if="filtered.length === 0"
-            title="Nothing here"
-            text="No matches for this date and filter."
+            title="No matches on this date"
+            text="Nothing scheduled for the selected day and filter."
         />
 
         <template v-else>
