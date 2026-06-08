@@ -39,4 +39,17 @@ class CompetitionController extends Controller
 
         return $this->envelope($data, $result);
     }
+
+    public function standings(string $id): JsonResponse
+    {
+        $result = $this->football->cached(
+            "standings:{$id}",
+            Config::integer('football.ttl.standings'),
+            "/competitions/{$id}/standings",
+        );
+
+        $data = $result->data === null ? null : $this->normalizer->standings($result->data);
+
+        return $this->envelope($data, $result);
+    }
 }

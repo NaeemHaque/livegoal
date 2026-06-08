@@ -56,6 +56,139 @@ class Normalizer
         ];
     }
 
+    /**
+     * @param  array<array-key, mixed>  $t  A single upstream team.
+     * @return array<string, mixed>
+     */
+    public function team(array $t): array
+    {
+        $name = $this->str($t['name'] ?? null);
+        $tla = $this->str($t['tla'] ?? null);
+
+        return [
+            'id' => $this->str($t['id'] ?? null),
+            'name' => $name,
+            'short' => $tla ?: ($this->str($t['shortName'] ?? null) ?: $name),
+            'tla' => $tla ?: null,
+            'crest' => $this->nullableStr($t['crest'] ?? null),
+        ];
+    }
+
+    /**
+     * Parse standings into groups. Tournaments return one standing per group
+     * (World Cup A–L); leagues return a single overall table. Only the overall
+     * ("TOTAL") standing per group is used (HOME/AWAY splits are ignored).
+     *
+     * @param  array<array-key, mixed>  $payload  Upstream /standings response.
+     * @return array{groups: list<array{key: string, label: string, rows: list<array<string, mixed>>}>}
+     */
+    public function standings(array $payload): array
+    {
+        $standings = $payload['standings'] ?? [];
+
+        if (! is_array($standings)) {
+            return ['groups' => []];
+        }
+
+        $groups = [];
+
+        foreach ($standings as $standing) {
+            if (! is_array($standing) || strtoupper($this->str($standing['type'] ?? null)) !== 'TOTAL') {
+                continue;
+            }
+
+            $table = $standing['table'] ?? [];
+
+            if (! is_array($table)) {
+                continue;
+            }
+
+            $group = $this->str($standing['group'] ?? null);
+            $isGroup = $group !== '';
+            $total = count($table);
+
+            $groups[] = [
+                'key' => $group ?: 'TOTAL',
+                'label' => $isGroup ? $this->humanizeGroup($group) : 'Table',
+                'rows' => array_values(array_map(
+                    fn (array $row): array => $this->standingRow($row, $isGroup, $total),
+                    array_filter($table, is_array(...)),
+                )),
+            ];
+        }
+
+        return ['groups' => $groups];
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $row
+     * @return array<string, mixed>
+     */
+    protected function standingRow(array $row, bool $isGroup, int $total): array
+    {
+        $position = $this->int($row['position'] ?? null);
+        $team = $row['team'] ?? null;
+
+        return [
+            'position' => $position,
+            'team' => is_array($team) ? $this->team($team) : null,
+            'played' => $this->int($row['playedGames'] ?? null),
+            'won' => $this->int($row['won'] ?? null),
+            'draw' => $this->int($row['draw'] ?? null),
+            'lost' => $this->int($row['lost'] ?? null),
+            'goalsFor' => $this->int($row['goalsFor'] ?? null),
+            'goalsAgainst' => $this->int($row['goalsAgainst'] ?? null),
+            'goalDifference' => $this->int($row['goalDifference'] ?? null),
+            'points' => $this->int($row['points'] ?? null),
+            'form' => $this->parseForm($row['form'] ?? null),
+            'zone' => $this->zone($position, $isGroup, $total),
+        ];
+    }
+
+    /**
+     * Recent results as W/D/L pills (last 5).
+     *
+     * @return list<string>
+     */
+    protected function parseForm(mixed $form): array
+    {
+        if (! is_string($form)) {
+            return [];
+        }
+
+        preg_match_all('/[WDL]/', strtoupper($form), $matches);
+
+        return array_slice($matches[0], -5);
+    }
+
+    /** Qualification-zone hint for row coloring (derived from table structure). */
+    protected function zone(int $position, bool $isGroup, int $total): ?string
+    {
+        if ($position < 1) {
+            return null;
+        }
+
+        if ($isGroup) {
+            return $position <= 2 ? 'qualify' : null;
+        }
+
+        if ($position <= 4) {
+            return 'qualify';
+        }
+
+        if ($total >= 6 && $position > $total - 3) {
+            return 'relegation';
+        }
+
+        return null;
+    }
+
+    /** "GROUP_A" -> "Group A". */
+    protected function humanizeGroup(string $group): string
+    {
+        return ucwords(strtolower(str_replace('_', ' ', $group)));
+    }
+
     /** Coerce a mixed value to a string ('' when not scalar). */
     protected function str(mixed $value): string
     {
@@ -66,5 +199,11 @@ class Normalizer
     protected function nullableStr(mixed $value): ?string
     {
         return is_scalar($value) ? (string) $value : null;
+    }
+
+    /** Coerce a mixed value to an int (0 when not numeric). */
+    protected function int(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
     }
 }
