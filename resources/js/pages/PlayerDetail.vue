@@ -117,6 +117,7 @@ const openTeam = () =>
                             tabindex="0"
                             @click="openTeam"
                             @keydown.enter="openTeam"
+                            @keydown.space.prevent="openTeam"
                         >
                             <Crest :team="player.team" :size="22" />
                         </span>
@@ -148,6 +149,7 @@ const openTeam = () =>
                                 style="cursor: pointer"
                                 @click="openTeam"
                                 @keydown.enter="openTeam"
+                                @keydown.space.prevent="openTeam"
                             >
                                 Club: <Crest :team="player.team" :size="14" />
                                 {{ player.team.name }}
@@ -179,8 +181,12 @@ const openTeam = () =>
                     <dt>{{ key }}</dt>
                     <dd
                         v-if="key === 'team'"
+                        role="button"
+                        tabindex="0"
                         style="cursor: pointer"
                         @click="openTeam"
+                        @keydown.enter="openTeam"
+                        @keydown.space.prevent="openTeam"
                     >
                         {{ value }}
                     </dd>

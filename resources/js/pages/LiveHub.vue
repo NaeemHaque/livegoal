@@ -47,10 +47,8 @@ const upcomingGroups = computed(() => {
 });
 
 const openMatch = (m) => router.push(`/match/${m.id}`);
-const isFav = (m) =>
-    favorites.isFavorite('team', m.home?.id) ||
-    favorites.isFavorite('team', m.away?.id);
-const toggleFav = (m) => favorites.toggle('team', m.home?.id);
+const isFav = (m) => favorites.isMatchFavorite(m);
+const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 </script>
 
 <template>

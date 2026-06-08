@@ -44,6 +44,7 @@ const open = () => emit('open', m.value);
         :aria-label="`${m.home?.name} ${m.homeScore ?? ''} ${m.away?.name} ${m.awayScore ?? ''}, ${m.status}`"
         @click="open"
         @keydown.enter="open"
+        @keydown.space.prevent="open"
     >
         <div class="mc-top">
             <span class="mc-comp">

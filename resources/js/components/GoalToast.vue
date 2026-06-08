@@ -42,7 +42,9 @@ watch(
             <div class="gt-text">
                 <b>{{ goal.scorer || goal.team?.name }}</b>
                 <span class="mono"
-                    >{{ goal.minute }}' · {{ goal.scoreline }}</span
+                    ><template v-if="goal.minute != null"
+                        >{{ goal.minute }}' · </template
+                    >{{ goal.scoreline }}</span
                 >
             </div>
         </div>

@@ -149,7 +149,11 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                     <div
                         class="mh-team"
                         style="cursor: pointer"
+                        role="button"
+                        tabindex="0"
                         @click="openTeam(match.home?.id)"
+                        @keydown.enter="openTeam(match.home?.id)"
+                        @keydown.space.prevent="openTeam(match.home?.id)"
                     >
                         <Crest :team="match.home" :size="64" :ring="isLive" />
                         <span class="nm">{{ match.home?.name }}</span>
@@ -197,7 +201,11 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                     <div
                         class="mh-team"
                         style="cursor: pointer"
+                        role="button"
+                        tabindex="0"
                         @click="openTeam(match.away?.id)"
+                        @keydown.enter="openTeam(match.away?.id)"
+                        @keydown.space.prevent="openTeam(match.away?.id)"
                     >
                         <Crest :team="match.away" :size="64" :ring="isLive" />
                         <span class="nm">{{ match.away?.name }}</span>

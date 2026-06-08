@@ -63,9 +63,7 @@ const filtered = computed(() =>
     }),
 );
 
-const isFav = (m) =>
-    favorites.isFavorite('team', m.home?.id) ||
-    favorites.isFavorite('team', m.away?.id);
+const isFav = (m) => favorites.isMatchFavorite(m);
 const favMatches = computed(() => filtered.value.filter(isFav));
 const restGroups = computed(() => {
     const groups = new Map();
@@ -84,7 +82,7 @@ const restGroups = computed(() => {
 });
 
 const open = (m) => router.push(`/match/${m.id}`);
-const toggleFav = (m) => favorites.toggle('team', m.home?.id);
+const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 </script>
 
 <template>

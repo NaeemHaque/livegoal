@@ -211,6 +211,7 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
                 style="padding: 14px"
                 @click="openTeam(t.id)"
                 @keydown.enter="openTeam(t.id)"
+                @keydown.space.prevent="openTeam(t.id)"
             >
                 <Crest :team="t" :size="32" />
                 <span class="pr-name">{{ t.name }}</span>

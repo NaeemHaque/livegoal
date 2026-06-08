@@ -236,6 +236,7 @@ const TABS = [
                         tabindex="0"
                         @click="router.push(`/player/${p.id}`)"
                         @keydown.enter="router.push(`/player/${p.id}`)"
+                        @keydown.space.prevent="router.push(`/player/${p.id}`)"
                     >
                         <span class="pr-num tnum">{{
                             p.shirtNumber ?? '–'

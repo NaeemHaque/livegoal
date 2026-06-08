@@ -54,7 +54,10 @@ const isHighlighted = (teamId) => {
                         { hl: isHighlighted(r.team?.id) },
                     ]"
                     style="cursor: pointer"
+                    tabindex="0"
                     @click="emit('team', r.team?.id)"
+                    @keydown.enter="emit('team', r.team?.id)"
+                    @keydown.space.prevent="emit('team', r.team?.id)"
                 >
                     <td class="c-pos">
                         <span class="pos-mark">{{ r.position }}</span>

@@ -36,7 +36,11 @@ const letter = computed(
                     v-for="(r, i) in rows"
                     :key="r.team?.id ?? i"
                     :class="{ qual: i < 2 }"
+                    style="cursor: pointer"
+                    tabindex="0"
                     @click="emit('team', r.team?.id)"
+                    @keydown.enter="emit('team', r.team?.id)"
+                    @keydown.space.prevent="emit('team', r.team?.id)"
                 >
                     <td class="pos">
                         <span class="qdot" :class="{ on: i < 2 }">{{

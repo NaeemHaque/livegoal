@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     team: { type: Object, default: null },
@@ -8,6 +8,13 @@ const props = defineProps({
 });
 
 const failed = ref(false);
+
+// Reset the broken-image fallback when the crest changes, so a recycled node
+// (standings rows, squad grids, detail-page nav) doesn't stay stuck on initials.
+watch(
+    () => props.team?.crest,
+    () => (failed.value = false),
+);
 const showImg = computed(() => Boolean(props.team?.crest) && !failed.value);
 const mono = computed(() =>
     (props.team?.tla || props.team?.short || props.team?.name || '?')

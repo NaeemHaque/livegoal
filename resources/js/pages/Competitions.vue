@@ -52,6 +52,7 @@ const open = (c) => router.push(`/competition/${c.code || c.id}`);
                 tabindex="0"
                 @click="open(c)"
                 @keydown.enter="open(c)"
+                @keydown.space.prevent="open(c)"
             >
                 <span v-if="liveCount(c)" class="ct-live"
                     ><LivePulseBadge :label="`${liveCount(c)} LIVE`" small

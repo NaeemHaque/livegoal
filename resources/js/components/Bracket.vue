@@ -31,6 +31,7 @@ const label = (team) => team?.tla || team?.short || team?.name || 'TBD';
                     :tabindex="t.id ? 0 : -1"
                     @click="t.id && emit('open', t.id)"
                     @keydown.enter="t.id && emit('open', t.id)"
+                    @keydown.space.prevent="t.id && emit('open', t.id)"
                 >
                     <div
                         class="bn-row"

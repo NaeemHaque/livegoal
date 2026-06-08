@@ -24,6 +24,30 @@ export const useFavoritesStore = defineStore('favorites', () => {
         }
     };
 
+    /** A match counts as followed when either side is a followed team. */
+    const isMatchFavorite = (match) =>
+        isFavorite('team', match?.home?.id) ||
+        isFavorite('team', match?.away?.id);
+
+    /**
+     * Toggle a match card's star: unfollow whichever side(s) made it followed,
+     * otherwise follow the home team. Keeps the star a clean on/off toggle
+     * instead of silently accruing extra favorites.
+     */
+    const toggleMatchFavorite = (match) => {
+        if (isMatchFavorite(match)) {
+            if (isFavorite('team', match?.home?.id)) {
+                toggle('team', match.home.id);
+            }
+
+            if (isFavorite('team', match?.away?.id)) {
+                toggle('team', match.away.id);
+            }
+        } else if (match?.home?.id) {
+            toggle('team', match.home.id);
+        }
+    };
+
     const teamIds = computed(() =>
         items.value.filter((f) => f.type === 'team').map((f) => f.id),
     );
@@ -31,5 +55,13 @@ export const useFavoritesStore = defineStore('favorites', () => {
         items.value.filter((f) => f.type === 'competition').map((f) => f.id),
     );
 
-    return { items, isFavorite, toggle, teamIds, competitionIds };
+    return {
+        items,
+        isFavorite,
+        toggle,
+        isMatchFavorite,
+        toggleMatchFavorite,
+        teamIds,
+        competitionIds,
+    };
 });
