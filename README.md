@@ -89,6 +89,9 @@ into `dev` via a pull request (CI: `.github/workflows/pr-checks.yml`). See [`doc
 
 ## Deployment
 
-Single-host deploy (PHP + a cron job for the poller) at `socplay.win`. The full deploy guide — domain,
-HTTPS, `APP_URL`, cron / cron-job.org fallback, SPA fallback — lands in Phase 6. See
-[`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md) §8 and Appendix B–C.
+One Laravel host serves the SPA, the `/api`, and the poller — no separate frontend host, websocket server, or
+external queue. Production needs only PHP 8.4+, the built assets, and **one** of: a system-cron line or a
+token-guarded `/scheduler/run` pinger to drive the every-minute poller.
+
+Full step-by-step guide (env, web server + SPA fallback, HTTPS, cron / cron-job.org, Laravel Cloud):
+**[`docs/DEPLOY.md`](docs/DEPLOY.md)**.
