@@ -15,20 +15,36 @@ export function useApi(path, { immediate = true } = {}) {
     const loading = ref(false);
     const error = ref(null);
 
+    // Monotonic token so a slow earlier request can't overwrite a newer one
+    // (e.g. fast navigation between detail pages).
+    let activeRequest = 0;
+
     async function load() {
+        const requestId = ++activeRequest;
         loading.value = true;
         error.value = null;
 
         try {
             const res = await api.get(toValue(path));
+
+            if (requestId !== activeRequest) {
+                return;
+            }
+
             data.value = res.data?.data ?? null;
             meta.value = res.data?.meta ?? null;
         } catch (e) {
+            if (requestId !== activeRequest) {
+                return;
+            }
+
             error.value = e;
             data.value = null;
             meta.value = null;
         } finally {
-            loading.value = false;
+            if (requestId === activeRequest) {
+                loading.value = false;
+            }
         }
     }
 

@@ -13,7 +13,7 @@ const minuteLabel = (m) => {
         return 'HT';
     }
 
-    return m.minute ? `${m.minute}'` : '';
+    return m.minute != null ? `${m.minute}'` : '';
 };
 </script>
 
@@ -24,7 +24,7 @@ const minuteLabel = (m) => {
             <div class="tk-track">
                 <RouterLink
                     v-for="(m, i) in track"
-                    :key="i"
+                    :key="`${m.id}-${i < matches.length ? 'a' : 'b'}`"
                     :to="`/match/${m.id}`"
                     class="tk-item"
                 >

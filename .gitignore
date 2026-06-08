@@ -29,3 +29,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Browser MCP debug artifacts
+/.playwright-mcp

@@ -33,9 +33,9 @@ watch(
     (isPaused) => (isPaused ? pause() : resume()),
 );
 
-// Reset the ring whenever a real poll lands.
+// Reset the ring whenever a real poll lands or the interval changes.
 watch(
-    () => props.lastUpdated,
+    [() => props.lastUpdated, () => props.seconds],
     () => (remaining.value = props.seconds),
 );
 </script>
