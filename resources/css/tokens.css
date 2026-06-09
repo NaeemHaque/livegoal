@@ -386,6 +386,17 @@ a {
     }
 }
 
+/* Route-change cross-fade (out-in): the old page fades out, then the new one
+   fades in — keeps tab switches smooth with no flash of layout. */
+.pp-fade-enter-active,
+.pp-fade-leave-active {
+    transition: opacity var(--dur) var(--ease-out);
+}
+.pp-fade-enter-from,
+.pp-fade-leave-to {
+    opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
