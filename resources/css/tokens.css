@@ -175,6 +175,15 @@ body {
     padding: 0;
 }
 
+/* Always reserve room for the vertical scrollbar so centered content doesn't
+   shift horizontally when a route toggles the scrollbar on tab change.
+   `overflow-y: scroll` keeps the gutter on every browser; `scrollbar-gutter`
+   lets supporting browsers reserve it without painting an idle track. */
+html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+}
+
 body {
     font-family: var(--font-body);
     background: var(--bg-base);
