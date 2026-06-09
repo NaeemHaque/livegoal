@@ -12,3 +12,11 @@ Artisan::command('inspire', function () {
 Schedule::command('app:poll-live-scores')
     ->everyMinute()
     ->withoutOverlapping();
+
+// Keep the featured leagues' Golden Boot feed hot so the Top Scorers tabs are
+// instant cache hits instead of slow on-demand football-data.org calls. cached()
+// no-ops while fresh (30m TTL), so this only refetches a handful of feeds twice
+// an hour — well inside the free-tier rate limit.
+Schedule::command('app:warm-scorers')
+    ->everyTenMinutes()
+    ->withoutOverlapping();

@@ -12,13 +12,13 @@ import {
     IcTrophy,
     IcWhistle,
 } from '@/components/icons';
+import InlineLoader from '@/components/InlineLoader.vue';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import MatchStatus from '@/components/MatchStatus.vue';
 import ScoreDigit from '@/components/ScoreDigit.vue';
 import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import { useApi } from '@/composables/useApi';
 import { useBack } from '@/composables/useBack';
 import { useMatch } from '@/composables/useMatch';
@@ -118,7 +118,11 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
             <IcChevL :size="15" /> Back
         </button>
 
-        <Skeleton v-if="loading && !match" :h="240" :r="16" />
+        <InlineLoader
+            v-if="loading && !match"
+            label="Loading match"
+            :min-height="240"
+        />
         <ErrorState v-else-if="error" @retry="reload" />
 
         <template v-else-if="match">
@@ -247,10 +251,10 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                     <IcTrophy :size="16" />
                     {{ standingGroup?.label || 'Standings' }}
                 </h3>
-                <Skeleton
+                <InlineLoader
                     v-if="standingsLoading && !standingGroup"
-                    :h="280"
-                    :r="12"
+                    label="Loading table"
+                    :min-height="240"
                 />
                 <StandingsTable
                     v-else-if="standingGroup"

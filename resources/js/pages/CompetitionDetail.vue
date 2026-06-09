@@ -6,10 +6,10 @@ import Bracket from '@/components/Bracket.vue';
 import Crest from '@/components/Crest.vue';
 import GroupCard from '@/components/GroupCard.vue';
 import { IcChevL, IcGlobe, IcStar, IcTrophy } from '@/components/icons';
+import InlineLoader from '@/components/InlineLoader.vue';
 import MatchCard from '@/components/MatchCard.vue';
 import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import TopScorersList from '@/components/TopScorersList.vue';
 import { useApi } from '@/composables/useApi';
 import { useCompetition } from '@/composables/useCompetition';
@@ -164,7 +164,11 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
 
         <!-- League table -->
         <div v-else-if="tab === 'table'" class="pp-panel">
-            <div v-if="standingsLoading"><Skeleton :h="320" :r="12" /></div>
+            <InlineLoader
+                v-if="standingsLoading"
+                label="Loading table"
+                :min-height="240"
+            />
             <EmptyState
                 v-else-if="!groups[0]?.rows?.length"
                 title="No table available"
@@ -205,7 +209,11 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
 
         <!-- Top scorers -->
         <template v-else-if="tab === 'scorers'">
-            <div v-if="scorersLoading"><Skeleton :h="240" :r="12" /></div>
+            <InlineLoader
+                v-if="scorersLoading"
+                label="Loading scorers"
+                :min-height="220"
+            />
             <EmptyState
                 v-else-if="!scorers?.length"
                 title="No scorers yet"
