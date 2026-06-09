@@ -1,7 +1,7 @@
 <script setup>
 import { useEventListener, useOnline } from '@vueuse/core';
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import GoalToast from '@/components/GoalToast.vue';
 import {
@@ -23,6 +23,7 @@ import { useMatchesStore } from '@/stores/matches';
 import { useSettingsStore } from '@/stores/settings';
 
 const router = useRouter();
+const route = useRoute();
 const settings = useSettingsStore();
 const matches = useMatchesStore();
 const online = useOnline();
@@ -153,7 +154,11 @@ useEventListener(window, 'keydown', (e) => {
 
             <main class="pp-main">
                 <div aria-live="polite" class="sr-only">{{ goalAnnounce }}</div>
-                <RouterView />
+                <RouterView v-slot="{ Component }">
+                    <Transition name="pp-fade" mode="out-in">
+                        <component :is="Component" :key="route.path" />
+                    </Transition>
+                </RouterView>
             </main>
         </div>
 

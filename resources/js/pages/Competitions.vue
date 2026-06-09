@@ -2,11 +2,11 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
+import FormationLoader from '@/components/FormationLoader.vue';
 import { IcArrowR, IcGlobe, IcTrophy } from '@/components/icons';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import { useCompetitions } from '@/composables/useCompetitions';
 import { FEATURED } from '@/lib/featured';
 import { useMatchesStore } from '@/stores/matches';
@@ -59,9 +59,7 @@ const open = (c) => router.push(`/competition/${code(c)}`);
             </div>
         </div>
 
-        <div v-if="loading" class="pp-grid cols-3">
-            <Skeleton v-for="i in 6" :key="i" :h="130" :r="16" />
-        </div>
+        <FormationLoader v-if="loading" label="Loading competitions" />
 
         <ErrorState v-else-if="error" @retry="reload" />
 

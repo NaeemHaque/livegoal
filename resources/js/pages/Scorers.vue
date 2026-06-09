@@ -3,9 +3,9 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import FilterTabs from '@/components/FilterTabs.vue';
+import FormationLoader from '@/components/FormationLoader.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import TopScorersList from '@/components/TopScorersList.vue';
 import { useApi } from '@/composables/useApi';
 import { useCompetitions } from '@/composables/useCompetitions';
@@ -79,12 +79,10 @@ const openTeam = (id) => id && router.push(`/team/${id}`);
             style="margin-bottom: 18px"
         />
 
-        <div
+        <FormationLoader
             v-if="loading && !scorers"
-            style="display: flex; flex-direction: column; gap: 8px"
-        >
-            <Skeleton v-for="i in 8" :key="i" :h="62" :r="12" />
-        </div>
+            label="Loading top scorers"
+        />
 
         <ErrorState v-else-if="error" @retry="reload" />
 

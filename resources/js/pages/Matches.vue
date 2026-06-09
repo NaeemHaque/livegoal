@@ -4,12 +4,12 @@ import { useRouter } from 'vue-router';
 
 import DateNavigator from '@/components/DateNavigator.vue';
 import FilterTabs from '@/components/FilterTabs.vue';
+import FormationLoader from '@/components/FormationLoader.vue';
 import { IcClock, IcLive, IcStar } from '@/components/icons';
 import MatchCard from '@/components/MatchCard.vue';
 import SectionHead from '@/components/SectionHead.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import { useDayMatches } from '@/composables/useDayMatches';
 import { useTimeFormat } from '@/composables/useTimeFormat';
 import { useUpcoming } from '@/composables/useUpcoming';
@@ -153,9 +153,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
             <DateNavigator v-model="date" :live-count="counts.live" />
         </div>
 
-        <div v-if="loading" class="pp-grid cols-2">
-            <Skeleton v-for="i in 6" :key="i" :h="76" :r="14" />
-        </div>
+        <FormationLoader v-if="loading" label="Loading fixtures" />
 
         <ErrorState v-else-if="error" @retry="reload" />
 
