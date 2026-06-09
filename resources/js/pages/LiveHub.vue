@@ -8,9 +8,12 @@ import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import MatchCard from '@/components/MatchCard.vue';
 import NextKickoff from '@/components/NextKickoff.vue';
 import SectionHead from '@/components/SectionHead.vue';
+import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import Skeleton from '@/components/states/Skeleton.vue';
 import { useScorers } from '@/composables/useScorers';
+import { useStandings } from '@/composables/useStandings';
+import { useTimeFormat } from '@/composables/useTimeFormat';
 import { useUpcoming } from '@/composables/useUpcoming';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useMatchesStore } from '@/stores/matches';
@@ -20,7 +23,10 @@ const matches = useMatchesStore();
 const favorites = useFavoritesStore();
 
 const { data: upcomingData, loading } = useUpcoming();
-const { data: scorers } = useScorers('PL');
+const { data: standings } = useStandings('PL');
+const { data: wcScorers } = useScorers('WC');
+const { data: leagueScorers } = useScorers('PL');
+const time = useTimeFormat();
 
 const live = computed(() => matches.live);
 const liveWc = computed(
@@ -29,7 +35,31 @@ const liveWc = computed(
 // The next handful of scheduled fixtures (server already filtered + sorted).
 const upcoming = computed(() => (upcomingData.value ?? []).slice(0, 6));
 const nextMatch = computed(() => (upcomingData.value ?? [])[0] ?? null);
-const topScorers = computed(() => (scorers.value ?? []).slice(0, 5));
+
+// Top of the table — a league standings snapshot.
+const tableRows = computed(() =>
+    (standings.value?.groups?.[0]?.rows ?? []).slice(0, 6),
+);
+
+// Feature the World Cup scorers while it's upcoming or under way; once it's no
+// longer current (no fixtures, no scorers) fall back to a league's golden boot.
+const wcCurrent = computed(
+    () =>
+        (wcScorers.value?.length ?? 0) > 0 ||
+        (upcomingData.value ?? []).some((m) => m.competition?.code === 'WC'),
+);
+const scorerTitle = computed(() =>
+    wcCurrent.value ? 'World Cup top scorers' : 'Premier League top scorers',
+);
+const topScorers = computed(() =>
+    ((wcCurrent.value ? wcScorers.value : leagueScorers.value) ?? []).slice(
+        0,
+        5,
+    ),
+);
+const wcStartLabel = computed(() =>
+    nextMatch.value ? time.date(nextMatch.value.kickoff) : null,
+);
 
 const upcomingGroups = computed(() => {
     const groups = new Map();
@@ -188,9 +218,29 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 
             <!-- Right rail -->
             <aside class="pp-rail">
+                <!-- Top of the table -->
+                <div v-if="tableRows.length" class="pp-rail-card">
+                    <div class="rc-head">
+                        <span>Top of the table</span>
+                        <span
+                            class="more"
+                            @click="router.push('/competition/PL')"
+                            >Premier League</span
+                        >
+                    </div>
+                    <div class="rc-body">
+                        <StandingsTable
+                            :rows="tableRows"
+                            compact
+                            @team="(id) => id && router.push(`/team/${id}`)"
+                        />
+                    </div>
+                </div>
+
+                <!-- Top scorers — World Cup while it's current, else a league -->
                 <div class="pp-rail-card">
                     <div class="rc-head">
-                        <span>Top scorers</span>
+                        <span>{{ scorerTitle }}</span>
                         <span class="more" @click="router.push('/scorers')"
                             >All</span
                         >
@@ -199,11 +249,16 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         <div
                             v-for="(s, i) in topScorers"
                             :key="s.player?.id ?? i"
-                            style="
-                                display: flex;
-                                align-items: center;
-                                gap: 10px;
-                                padding: 8px;
+                            class="rc-scorer"
+                            role="button"
+                            tabindex="0"
+                            @click="
+                                s.player?.id &&
+                                router.push(`/player/${s.player.id}`)
+                            "
+                            @keydown.enter="
+                                s.player?.id &&
+                                router.push(`/player/${s.player.id}`)
                             "
                         >
                             <span
@@ -233,9 +288,49 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                                 >{{ s.goals }}</span
                             >
                         </div>
+
+                        <!-- Pre-tournament: no goals scored yet. -->
+                        <div v-if="!topScorers.length" class="rc-empty">
+                            <span class="display tnum">0</span>
+                            <div>
+                                No goals yet<template v-if="wcStartLabel"
+                                    ><br />World Cup starts
+                                    {{ wcStartLabel }}</template
+                                >
+                            </div>
+                        </div>
                     </div>
                 </div>
             </aside>
         </div>
     </div>
 </template>
+
+<style scoped>
+.rc-scorer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background var(--dur-fast);
+}
+.rc-scorer:hover {
+    background: var(--hover);
+}
+.rc-empty {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+.rc-empty .tnum {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--text-faint);
+    line-height: 1;
+}
+</style>
