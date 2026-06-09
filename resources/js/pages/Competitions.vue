@@ -85,10 +85,8 @@ const open = (c) => router.push(`/competition/${code(c)}`);
                         </div>
                         <h2>{{ hero.name }}</h2>
                         <div class="sp-meta">
-                            <IcGlobe
-                                :size="13"
-                                style="vertical-align: -2px; margin-right: 5px"
-                            />{{ hero.region }} · Summer 2026
+                            <IcGlobe :size="13" />{{ hero.region }} · Summer
+                            2026
                         </div>
                     </div>
                     <div class="sp-stats">
@@ -135,10 +133,7 @@ const open = (c) => router.push(`/competition/${code(c)}`);
                     </div>
                     <h3>{{ c.name }}</h3>
                     <div class="ct-region">
-                        <IcGlobe
-                            :size="12"
-                            style="vertical-align: -2px; margin-right: 4px"
-                        />{{ c.region }}
+                        <IcGlobe :size="12" />{{ c.region }}
                     </div>
                     <span class="ct-arrow"><IcArrowR :size="18" /></span>
                 </div>
@@ -165,5 +160,11 @@ const open = (c) => router.push(`/competition/${code(c)}`);
 .comp-hero .sp-stats {
     align-items: center;
     gap: 16px;
+}
+/* Center the globe icon with the region text instead of baseline-aligning it. */
+.comp-hero .sp-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
 </style>
