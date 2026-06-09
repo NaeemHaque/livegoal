@@ -1,4 +1,4 @@
-# SocPlay — Design System
+# LiveGoal — Design System
 
 Source of truth: [`design-ref/project/`](./design-ref/project/) — `tokens.css` (tokens), `components.css`
 (component styles), `app.css` (layout), the `*.jsx` prototypes (React → port to Vue), and

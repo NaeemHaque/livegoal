@@ -1,4 +1,4 @@
-# SocPlay — Branching & PR Plan
+# LiveGoal — Branching & PR Plan
 
 How work flows into the repo. Each build phase is implemented on its own branch and merged into `dev`
 via a pull request. Plan: [`PLAN.md`](./PLAN.md) · Spec: [`BUILD_PROMPT.md`](./BUILD_PROMPT.md).
@@ -35,7 +35,7 @@ One branch + one PR per phase. Branch naming: **`phase/<n>-<slug>`**.
 | 4 — Frontend core | `phase/4-frontend-core` | `Phase 4 — Data layer, polling, states` | `dev` |
 | 5 — Primary screens | `phase/5-primary-screens` | `Phase 5 — Primary screens` | `dev` |
 | 6 — Secondary + ship | `phase/6-secondary-ship` | `Phase 6 — Secondary screens, polish & deploy` | `dev` |
-| Release | — | `Release — SocPlay v1` | `dev → main` |
+| Release | — | `Release — LiveGoal v1` | `dev → main` |
 
 Phase scope and acceptance criteria are in [`PLAN.md`](./PLAN.md) §7 and `BUILD_PROMPT.md` §8.
 

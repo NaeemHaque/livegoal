@@ -5,7 +5,7 @@ namespace App\Services\Football;
 use Illuminate\Support\Facades\Config;
 
 /**
- * Maps football-data.org v4 responses into SocPlay's normalized DTO arrays
+ * Maps football-data.org v4 responses into LiveGoal's normalized DTO arrays
  * (see docs/DATA_MODEL.md). Upstream values are `mixed`, so every field is read
  * through the typed coercion helpers below.
  */
@@ -224,7 +224,7 @@ class Normalizer
     }
 
     /**
-     * Map an upstream match status to SocPlay's set (see docs/DATA_MODEL.md).
+     * Map an upstream match status to LiveGoal's set (see docs/DATA_MODEL.md).
      */
     protected function mapStatus(string $status): string
     {

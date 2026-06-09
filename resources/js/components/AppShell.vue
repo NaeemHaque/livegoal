@@ -58,7 +58,10 @@ useEventListener(window, 'keydown', (e) => {
         <div class="pp-shell">
             <header class="pp-topbar">
                 <div class="pp-topbar-inner">
-                    <RouterLink to="/" class="tb-logo" aria-label="SocPlay home"
+                    <RouterLink
+                        to="/"
+                        class="tb-logo"
+                        aria-label="LiveGoal home"
                         ><Logo
                     /></RouterLink>
                     <span class="tb-spacer" />
@@ -118,7 +121,7 @@ useEventListener(window, 'keydown', (e) => {
             <TopNav />
 
             <div class="pp-mobile-top">
-                <RouterLink to="/" class="tb-logo" aria-label="SocPlay home"
+                <RouterLink to="/" class="tb-logo" aria-label="LiveGoal home"
                     ><Logo
                 /></RouterLink>
                 <span class="tb-spacer" />

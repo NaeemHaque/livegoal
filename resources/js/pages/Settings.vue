@@ -18,7 +18,7 @@ const intervals = [10, 15, 30];
         <div class="pp-pagehead">
             <div>
                 <h1>Settings</h1>
-                <div class="ph-sub">Personalise SocPlay</div>
+                <div class="ph-sub">Personalise LiveGoal</div>
             </div>
         </div>
 

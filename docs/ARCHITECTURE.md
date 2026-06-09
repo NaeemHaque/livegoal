@@ -1,4 +1,4 @@
-# SocPlay — Architecture
+# LiveGoal — Architecture
 
 One Laravel app serves **both** the JSON API and the built Vue SPA from a single origin. The Laravel
 backend is the **only** thing that talks to football-data.org; the browser never calls the upstream API.
@@ -40,7 +40,7 @@ backend is the **only** thing that talks to football-data.org; the browser never
 - **`Services/Football/FootballData`** — Laravel HTTP client (`Http::withHeaders(['X-Auth-Token' => …])`),
   base `https://api.football-data.org/v4`, retry/backoff on 429, returns last-good cache on failure,
   logs upstream errors. Never throws to the user.
-- **`Services/Football/Normalizer`** — maps upstream JSON to SocPlay DTO arrays (see
+- **`Services/Football/Normalizer`** — maps upstream JSON to LiveGoal DTO arrays (see
   [DATA_MODEL.md](./DATA_MODEL.md)), including status normalization and standings group parsing.
 - **`Http/Controllers/Api/*`** — thin controllers; validate input, call the service (cache-served),
   return the JSON envelope (see [API.md](./API.md)).

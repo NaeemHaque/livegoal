@@ -10,7 +10,7 @@ defineProps({
     <span class="pp-logo">
         <span class="mark"><IcBall :size="20" /></span>
         <span v-if="!compact" class="word">
-            <b>Soc<span class="accent">Play</span></b>
+            <b>Live<span class="accent">Goal</span></b>
             <small>Live Football</small>
         </span>
     </span>

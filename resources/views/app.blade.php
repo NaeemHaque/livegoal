@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>SocPlay — Live Football Scores</title>
+    <title>LiveGoal — Live Football Scores</title>
     <meta name="description" content="Live football scores, fixtures, results, standings, and brackets.">
 
     {{-- Set the theme before first paint to avoid a flash of the wrong theme. --}}

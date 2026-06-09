@@ -1,6 +1,6 @@
-# SocPlay — Implementation Plan
+# LiveGoal — Implementation Plan
 
-> Master plan for building **SocPlay**, a free, non-betting football live-scores web app.
+> Master plan for building **LiveGoal**, a free, non-betting football live-scores web app.
 > Authoritative spec: [`BUILD_PROMPT.md`](./BUILD_PROMPT.md). Design source: [`design-ref/`](./design-ref/).
 > This file is the plan-first deliverable required by `BUILD_PROMPT` §0.2 / §7.
 
@@ -10,7 +10,7 @@
 |---|---|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | The single-app SPA + JSON API shape, data flow, rate-limit math, extension points |
 | [API.md](./API.md) | `/api/*` endpoint catalog, JSON envelope, cache TTLs, 429 handling, upstream mapping |
-| [DATA_MODEL.md](./DATA_MODEL.md) | Normalized DTO shapes + football-data.org → SocPlay field/status mapping |
+| [DATA_MODEL.md](./DATA_MODEL.md) | Normalized DTO shapes + football-data.org → LiveGoal field/status mapping |
 | [DESIGN.md](./DESIGN.md) | Design tokens, theming, fonts, component & screen inventory, motion, a11y |
 | [LIVE_POLLING.md](./LIVE_POLLING.md) | The poller, score-diff, `lastUpdated`, visibility-aware client polling, goal animation |
 | [PR_PLAN.md](./PR_PLAN.md) | Branching model + per-phase branch/PR workflow targeting `dev` |
@@ -23,7 +23,7 @@
 - **Architecture:** decoupled **Vue 3 SPA + Laravel JSON API**, one app, one origin. **Inertia + Wayfinder are removed.**
 - **Frontend language:** **plain JavaScript** (no TypeScript). `vue-tsc` is dropped from the gate; ESLint switches to a Vue + JS config.
 - **Navigation:** **top horizontal nav** (Sofascore-style) on desktop + **mobile bottom tab bar**. The build prompt's "sidebar" text is superseded by the final design (the chat transcript settles this).
-- **CSS namespace:** keep the design's `pp-` class prefix so `tokens.css` / `components.css` port 1:1 (the design predates the SocPlay rename; classnames are internal).
+- **CSS namespace:** keep the design's `pp-` class prefix so `tokens.css` / `components.css` port 1:1 (the design predates the LiveGoal rename; classnames are internal).
 - **Data source:** football-data.org v4, token server-side only. The mock `data.js` in the design defines the shapes our normalizer targets.
 
 ---
@@ -34,7 +34,7 @@
 app/
   Console/Commands/PollLiveScores.php          # single scheduled poller
   Services/Football/FootballData.php           # HTTP client, auth, 429/backoff, normalize
-  Services/Football/Normalizer.php             # upstream JSON -> SocPlay DTO arrays
+  Services/Football/Normalizer.php             # upstream JSON -> LiveGoal DTO arrays
   Http/Controllers/Api/
     LiveController.php  CompetitionController.php  MatchController.php
     TeamController.php  PlayerController.php       ScorerController.php
@@ -63,7 +63,7 @@ resources/
            PlayerDetail,Scorers,Favorites,Search,Settings,NotFound}.vue
   css/{tokens.css,components.css,app.css}      # ported from design-ref
   views/app.blade.php                          # mounts #app, @vite
-.env.example      # FOOTBALL_DATA_TOKEN=, CACHE_STORE=file, APP_URL=https://socplay.win
+.env.example      # FOOTBALL_DATA_TOKEN=, CACHE_STORE=file, APP_URL=https://livegoal.win
 ```
 
 ## 3. Route table
@@ -144,7 +144,7 @@ Commits follow Conventional Commits per the build prompt's per-phase commit plan
 
 ## 8. Assumptions & open items
 
-- **Domain `socplay.win` not purchased yet** — build host-agnostic; set `APP_URL` later (build prompt App. C). No go-live steps until purchase.
+- **Domain `livegoal.win` not purchased yet** — build host-agnostic; set `APP_URL` later (build prompt App. C). No go-live steps until purchase.
 - **`FOOTBALL_DATA_TOKEN`** needed for live backend verification (Phases 2–3). Until provided, verify with cached fixtures / the design's mock shapes and document the gap.
 - **Club crests are trademarked** — the design uses colored monogram badges for clubs and real flags (flagcdn) for nations. football-data.org returns crest URLs; we load them directly in `<img>`. We mirror the design's monogram fallback when a crest is missing.
 - **football-data.org free tier** lacks lineups/events/detailed stats/player stats → those screens are the intentional "Not available on this data plan" empty state (secondary tier).

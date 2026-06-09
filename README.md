@@ -1,4 +1,4 @@
-# SocPlay
+# LiveGoal
 
 A free, **non-betting** football (soccer) live-scores web app — World Cup 2026–aware, covering major
 leagues (Premier League, Champions League, La Liga, Serie A, Bundesliga, Ligue 1, and more). Live
@@ -37,7 +37,7 @@ Or run the backend, logs, and Vite together:
 composer dev           # php artisan serve + pail (logs) + vite
 ```
 
-Served by **Laravel Herd** at `http://socplay.test`, or `http://127.0.0.1:8000` via `php artisan serve`.
+Served by **Laravel Herd** at `http://livegoal.test`, or `http://127.0.0.1:8000` via `php artisan serve`.
 
 ## Environment
 
@@ -45,7 +45,7 @@ Served by **Laravel Herd** at `http://socplay.test`, or `http://127.0.0.1:8000` 
 |---|---|
 | `FOOTBALL_DATA_TOKEN` | football-data.org API token (server-side only — never shipped to the browser). |
 | `CACHE_STORE` | `database` (default) or `file` — the poller and `/api` cache live here. |
-| `APP_URL` | App URL. Local: `http://socplay.test`. Production: set at go-live (domain not purchased yet). |
+| `APP_URL` | App URL. Local: `http://livegoal.test`. Production: set at go-live (domain not purchased yet). |
 
 ## Free-tier caveats
 

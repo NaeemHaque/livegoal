@@ -1,4 +1,4 @@
-# SocPlay — Internal JSON API
+# LiveGoal — Internal JSON API
 
 All endpoints live under `/api`, are **cache-served**, and return a consistent envelope. The browser
 talks only to these; never to football-data.org. Upstream codes & endpoints: `BUILD_PROMPT` §4.
@@ -42,7 +42,7 @@ Crest & flag URLs are passed straight through in payloads and loaded directly by
 
 ## Free competition codes
 
-`WC, CL, PL, PD, SA, BL1, FL1, DED, PPL, ELC, EC, BSA, CLI` — map to SocPlay ids in
+`WC, CL, PL, PD, SA, BL1, FL1, DED, PPL, ELC, EC, BSA, CLI` — map to LiveGoal ids in
 [DATA_MODEL.md](./DATA_MODEL.md). Resolve numeric upstream competition ids from these codes.
 
 ## Caching rules

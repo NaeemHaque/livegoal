@@ -1,4 +1,4 @@
-# SocPlay — Data Model
+# LiveGoal — Data Model
 
 Normalized DTO shapes the API returns and the SPA consumes. Shapes mirror the design's mock
 `design-ref/project/data.js` so the prototype maps 1:1; the `Normalizer` converts football-data.org v4
@@ -68,9 +68,9 @@ JSON into these.
 }
 ```
 
-### Status mapping (football-data.org → SocPlay)
+### Status mapping (football-data.org → LiveGoal)
 
-| Upstream | SocPlay | Notes |
+| Upstream | LiveGoal | Notes |
 |---|---|---|
 | `SCHEDULED`, `TIMED` | `SCHEDULED` | show kickoff time |
 | `IN_PLAY` | `LIVE` | derive `period`/`minute` from `utcDate` + score; HT inferred when paused at 45 |

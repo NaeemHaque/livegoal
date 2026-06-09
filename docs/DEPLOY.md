@@ -1,6 +1,6 @@
-# Deploying SocPlay
+# Deploying LiveGoal
 
-SocPlay is **one Laravel app**: it serves the cached JSON `/api`, the compiled Vue SPA, and runs a single
+LiveGoal is **one Laravel app**: it serves the cached JSON `/api`, the compiled Vue SPA, and runs a single
 scheduled poller against football-data.org. There is no separate frontend host, no websocket server, and no
 external queue/broker to stand up — a single PHP host with one cron line runs the whole product.
 
@@ -20,8 +20,8 @@ This guide covers a generic single-host deploy (nginx/Apache + PHP-FPM). For a z
 ## 2. Get the code & dependencies
 
 ```bash
-git clone git@github.com:NaeemHaque/socplay.git
-cd socplay
+git clone git@github.com:NaeemHaque/livegoal.git
+cd livegoal
 
 composer install --no-dev --optimize-autoloader
 npm ci
@@ -43,7 +43,7 @@ Set at minimum:
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://socplay.win          # your real https URL
+APP_URL=https://livegoal.win          # your real https URL
 
 FOOTBALL_DATA_TOKEN=xxxxxxxx          # server-side only — never shipped to the browser
 
@@ -80,8 +80,8 @@ nginx example:
 ```nginx
 server {
     listen 443 ssl;
-    server_name socplay.win;
-    root /var/www/socplay/public;
+    server_name livegoal.win;
+    root /var/www/livegoal/public;
 
     index index.php;
     location / { try_files $uri $uri/ /index.php?$query_string; }
@@ -103,18 +103,18 @@ server {
 
 - **System cron (preferred):** one line drives Laravel's whole schedule.
   ```bash
-  * * * * * cd /var/www/socplay && php artisan schedule:run >> /dev/null 2>&1
+  * * * * * cd /var/www/livegoal && php artisan schedule:run >> /dev/null 2>&1
   ```
 - **No system cron:** set `SCHEDULER_TOKEN` and point a free pinger (e.g. <https://cron-job.org>) at
-  `GET https://socplay.win/scheduler/run?token=<SCHEDULER_TOKEN>` every minute. The route is token-guarded
+  `GET https://livegoal.win/scheduler/run?token=<SCHEDULER_TOKEN>` every minute. The route is token-guarded
   (404s without the exact token, disabled when the token is empty) and **rate-limited to 20 requests/minute**
   per IP, which is far above the once-a-minute legitimate ping.
 
 ## 7. Verify
 
 ```bash
-curl -s https://socplay.win/api/competitions | head -c 200    # cached JSON
-curl -s https://socplay.win/api/live | head -c 200            # poller output (empty list off-season is fine)
+curl -s https://livegoal.win/api/competitions | head -c 200    # cached JSON
+curl -s https://livegoal.win/api/live | head -c 200            # poller output (empty list off-season is fine)
 ```
 
 Open the site: the top bar shows an "updated Xs ago" timestamp that advances as the poller runs. If the

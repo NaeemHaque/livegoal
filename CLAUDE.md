@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**SocPlay** is a free, non-betting **football live-scores** web app (World Cup 2026–aware + major leagues): live scores, fixtures, results, standings/groups, knockout brackets, competitions, teams. It's a single Laravel app that serves a **decoupled Vue 3 SPA** and a **cached JSON `/api`** from one origin; a single scheduled poller hits football-data.org (free tier) so the browser never does. "Realtime" is polling.
+**LiveGoal** is a free, non-betting **football live-scores** web app (World Cup 2026–aware + major leagues): live scores, fixtures, results, standings/groups, knockout brackets, competitions, teams. It's a single Laravel app that serves a **decoupled Vue 3 SPA** and a **cached JSON `/api`** from one origin; a single scheduled poller hits football-data.org (free tier) so the browser never does. "Realtime" is polling.
 
 **Authoritative spec:** [`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md). **Plan + design + decisions:** [`docs/PLAN.md`](docs/PLAN.md) and the docs it references (`ARCHITECTURE`, `API`, `DATA_MODEL`, `DESIGN`, `LIVE_POLLING`, `DECISIONS`). Read those before building.
 

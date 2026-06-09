@@ -1,11 +1,11 @@
 ---
 name: test-runner
-description: PHPUnit testing patterns for the socplay Laravel app — how to scaffold, write, and run feature/unit tests with factories, RefreshDatabase, Inertia assertions, and HTTP helpers. Use when writing or running tests, debugging failing tests, or adding coverage for new Laravel code.
+description: PHPUnit testing patterns for the livegoal Laravel app — how to scaffold, write, and run feature/unit tests with factories, RefreshDatabase, Inertia assertions, and HTTP helpers. Use when writing or running tests, debugging failing tests, or adding coverage for new Laravel code.
 ---
 
 # test-runner
 
-PHPUnit conventions for **socplay** (Laravel 13, PHPUnit 12). Tests run against an **in-memory SQLite** DB (see `phpunit.xml`): cache=array, queue=sync, mail=array — fully isolated, no external services.
+PHPUnit conventions for **livegoal** (Laravel 13, PHPUnit 12). Tests run against an **in-memory SQLite** DB (see `phpunit.xml`): cache=array, queue=sync, mail=array — fully isolated, no external services.
 
 ## Running tests
 

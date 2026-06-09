@@ -1,4 +1,4 @@
-# SocPlay — Decision Log
+# LiveGoal — Decision Log
 
 Decisions that shape the build, with rationale. Newest first.
 
@@ -40,7 +40,7 @@ not in left"). The exported `shell.jsx` ships the top-nav layout. Design wins ov
 **Decision:** Keep `pp-*` class names from the design when porting `components.css`/`app.css`.
 
 **Why:** Lets us reuse the design CSS verbatim for pixel fidelity. The prefix is an internal artifact of
-the prototype's original name ("PitchPulse" → "SocPlay"); class names aren't user-visible. Lower porting
+the prototype's original name ("PitchPulse" → "LiveGoal"); class names aren't user-visible. Lower porting
 risk than a rename.
 
 ## D5 — Keep Laravel 13 (spec says "11/12")
@@ -59,8 +59,8 @@ ESLint/Prettier clean, backend boots, poller works). Revisit if the user wants c
 
 ## D7 — Local-first; defer domain go-live
 
-**Decision:** Develop and test entirely **locally** (Laravel Herd at `http://socplay.test`, `APP_URL`
-stays local). Purchase `socplay.win` and run the go-live steps (DNS, HTTPS, `APP_URL`, SPA fallback) only
+**Decision:** Develop and test entirely **locally** (Laravel Herd at `http://livegoal.test`, `APP_URL`
+stays local). Purchase `livegoal.win` and run the go-live steps (DNS, HTTPS, `APP_URL`, SPA fallback) only
 **after the project is feature-complete**.
 
 **Why:** User direction — test locally now, buy the domain and deploy when ready. Keeps everything
@@ -74,4 +74,4 @@ host-agnostic per `BUILD_PROMPT` Appendix C; no cost until launch.
 
 ## Pending
 
-- **`socplay.win`** — not purchased; deferred to launch (see D7).
+- **`livegoal.win`** — not purchased; deferred to launch (see D7).
