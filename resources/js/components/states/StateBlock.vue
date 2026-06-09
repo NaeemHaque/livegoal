@@ -3,11 +3,12 @@ defineProps({
     title: { type: String, required: true },
     text: { type: String, default: '' },
     tone: { type: String, default: 'neutral' }, // neutral | error | offline
+    art: { type: Boolean, default: false }, // render the graphic un-boxed (e.g. corner-flag empty state)
 });
 </script>
 
 <template>
-    <div class="pp-state" :class="tone">
+    <div class="pp-state" :class="[tone, { art }]">
         <div class="ic"><slot name="icon" /></div>
         <div class="st-title display">{{ title }}</div>
         <div v-if="text" class="st-text">{{ text }}</div>
@@ -36,6 +37,20 @@ defineProps({
     border: 1px solid var(--border);
     color: var(--text-2);
     margin-bottom: 4px;
+}
+
+/* Art mode: a larger, un-boxed graphic (the corner-flag empty state). */
+.pp-state.art {
+    padding: 64px 24px;
+}
+.pp-state.art .ic {
+    width: auto;
+    height: auto;
+    background: none;
+    border: none;
+    border-radius: 0;
+    color: inherit;
+    margin-bottom: 10px;
 }
 
 .pp-state.error .ic {

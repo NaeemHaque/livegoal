@@ -6,6 +6,7 @@ import Crest from '@/components/Crest.vue';
 import FavoriteStar from '@/components/FavoriteStar.vue';
 import { IcLive, IcStar, IcTrophy } from '@/components/icons';
 import MatchCard from '@/components/MatchCard.vue';
+import CornerFlag from '@/components/states/CornerFlag.vue';
 import StateBlock from '@/components/states/StateBlock.vue';
 import { useCompetitions } from '@/composables/useCompetitions';
 import { compKey } from '@/lib/featured';
@@ -88,8 +89,9 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
             v-if="!hasAny"
             title="Nothing followed yet"
             text="Tap the star on any team or competition to pin it here for quick access."
+            art
         >
-            <template #icon><IcStar :size="28" /></template>
+            <template #icon><CornerFlag /></template>
             <template #action>
                 <button
                     class="pp-btn primary"
