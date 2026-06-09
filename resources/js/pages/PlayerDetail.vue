@@ -4,8 +4,8 @@ import { useRouter } from 'vue-router';
 
 import Crest from '@/components/Crest.vue';
 import { IcAlert, IcChevL, IcGlobe, IcUsers } from '@/components/icons';
+import InlineLoader from '@/components/InlineLoader.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import { useBack } from '@/composables/useBack';
 import { usePerson } from '@/composables/usePerson';
 
@@ -92,7 +92,11 @@ const openTeam = () =>
             <IcChevL :size="15" /> Back
         </button>
 
-        <Skeleton v-if="loading && !player" :h="180" :r="16" />
+        <InlineLoader
+            v-if="loading && !player"
+            label="Loading player"
+            :min-height="200"
+        />
         <ErrorState v-else-if="error" @retry="reload" />
 
         <template v-else-if="player">

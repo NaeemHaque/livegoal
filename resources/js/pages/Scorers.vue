@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 
 import FilterTabs from '@/components/FilterTabs.vue';
 import FormationLoader from '@/components/FormationLoader.vue';
+import InlineLoader from '@/components/InlineLoader.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
 import TopScorersList from '@/components/TopScorersList.vue';
@@ -85,6 +86,14 @@ const openTeam = (id) => id && router.push(`/team/${id}`);
         />
 
         <ErrorState v-else-if="error" @retry="reload" />
+
+        <!-- Switching leagues: the previous list is held in `scorers`, so show a
+             compact loader during the refetch instead of letting it linger. -->
+        <InlineLoader
+            v-else-if="loading"
+            label="Loading top scorers"
+            :min-height="360"
+        />
 
         <EmptyState
             v-else-if="!scorers?.length"

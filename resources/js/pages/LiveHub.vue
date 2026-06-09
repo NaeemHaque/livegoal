@@ -4,13 +4,13 @@ import { useRouter } from 'vue-router';
 
 import Crest from '@/components/Crest.vue';
 import { IcArrowR, IcClock, IcTrophy } from '@/components/icons';
+import InlineLoader from '@/components/InlineLoader.vue';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import MatchCard from '@/components/MatchCard.vue';
 import NextKickoff from '@/components/NextKickoff.vue';
 import SectionHead from '@/components/SectionHead.vue';
 import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import { useScorers } from '@/composables/useScorers';
 import { useStandings } from '@/composables/useStandings';
 import { useTimeFormat } from '@/composables/useTimeFormat';
@@ -181,11 +181,11 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         </button>
                     </div>
 
-                    <template v-if="loading">
-                        <div class="pp-grid cols-2">
-                            <Skeleton v-for="i in 4" :key="i" :h="76" :r="14" />
-                        </div>
-                    </template>
+                    <InlineLoader
+                        v-if="loading"
+                        label="Loading fixtures"
+                        :min-height="180"
+                    />
                     <template v-else-if="upcomingGroups.length">
                         <div
                             v-for="group in upcomingGroups"

@@ -5,9 +5,9 @@ import { useRouter } from 'vue-router';
 import Crest from '@/components/Crest.vue';
 import FormGuide from '@/components/FormGuide.vue';
 import { IcChevL, IcClock, IcGlobe, IcList, IcStar } from '@/components/icons';
+import InlineLoader from '@/components/InlineLoader.vue';
 import MatchCard from '@/components/MatchCard.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
-import Skeleton from '@/components/states/Skeleton.vue';
 import { useApi } from '@/composables/useApi';
 import { useBack } from '@/composables/useBack';
 import { useTeam } from '@/composables/useTeam';
@@ -215,7 +215,11 @@ const TABS = [
 
         <!-- Squad -->
         <div v-else-if="tab === 'squad'">
-            <div v-if="loading"><Skeleton :h="200" :r="12" /></div>
+            <InlineLoader
+                v-if="loading"
+                label="Loading squad"
+                :min-height="200"
+            />
             <EmptyState
                 v-else-if="!squadGroups.length"
                 title="Squad not available"
