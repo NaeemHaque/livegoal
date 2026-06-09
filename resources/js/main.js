@@ -25,7 +25,7 @@ router.isReady().then(() => {
         loader.addEventListener('transitionend', () => loader.remove(), {
             once: true,
         });
-        // Fallback removal in case transitionend doesn't fire.
-        setTimeout(() => loader.remove(), 700);
+        // Fallback removal in case transitionend doesn't fire (after the 0.7s fade).
+        setTimeout(() => loader.remove(), 900);
     }, remaining);
 });

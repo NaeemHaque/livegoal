@@ -43,11 +43,28 @@
             background:
                 radial-gradient(120% 80% at 50% 6%, color-mix(in srgb, var(--accent, #C6FF3A) 10%, transparent), transparent 52%),
                 radial-gradient(140% 120% at 50% 120%, color-mix(in srgb, var(--cyan, #00E5FF) 6%, transparent), transparent 58%),
-                var(--bg-base, #0A0D12);
+                color-mix(in srgb, var(--bg-base, #0A0D12) 72%, transparent);
+            -webkit-backdrop-filter: blur(14px) saturate(125%);
+            backdrop-filter: blur(14px) saturate(125%);
             font-family: 'Saira Condensed', 'Arial Narrow', system-ui, sans-serif;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            transition:
+                opacity 0.7s ease,
+                visibility 0.7s ease,
+                transform 0.7s ease,
+                -webkit-backdrop-filter 0.7s ease,
+                backdrop-filter 0.7s ease;
         }
-        #pp-loader.pp-loader-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+        /* Exit as a clearing frosted glass: the page is held behind the blur,
+           which lifts (blur → 0) as the loader fades and gently scales away, so
+           the page sharpens into focus instead of snapping in. */
+        #pp-loader.pp-loader-hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: scale(1.04);
+            -webkit-backdrop-filter: blur(0);
+            backdrop-filter: blur(0);
+        }
 
         #pp-loader .ld-logo { display: flex; align-items: center; gap: 12px; animation: ld-fade 0.5s ease both; }
         #pp-loader .ld-mark { width: 42px; height: 42px; border-radius: 11px; background: var(--accent, #C6FF3A); color: var(--accent-text, #0A0D12); display: grid; place-items: center; box-shadow: 0 0 30px -5px color-mix(in srgb, var(--accent, #C6FF3A) 50%, transparent); }
