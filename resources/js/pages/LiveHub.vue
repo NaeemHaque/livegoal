@@ -6,6 +6,7 @@ import Crest from '@/components/Crest.vue';
 import { IcArrowR, IcClock, IcTrophy } from '@/components/icons';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import MatchCard from '@/components/MatchCard.vue';
+import NextKickoff from '@/components/NextKickoff.vue';
 import SectionHead from '@/components/SectionHead.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import Skeleton from '@/components/states/Skeleton.vue';
@@ -27,6 +28,7 @@ const liveWc = computed(
 );
 // The next handful of scheduled fixtures (server already filtered + sorted).
 const upcoming = computed(() => (upcomingData.value ?? []).slice(0, 6));
+const nextMatch = computed(() => (upcomingData.value ?? [])[0] ?? null);
 const topScorers = computed(() => (scorers.value ?? []).slice(0, 5));
 
 const upcomingGroups = computed(() => {
@@ -125,6 +127,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                             @fav="toggleFav(m)"
                         />
                     </div>
+                    <NextKickoff v-else-if="nextMatch" :match="nextMatch" />
                     <EmptyState
                         v-else
                         title="No live matches"
