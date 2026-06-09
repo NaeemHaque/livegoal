@@ -1,6 +1,6 @@
-# SocPlay — Build Prompt for Claude Code
+# LiveGoal — Build Prompt for Claude Code
 
-**SocPlay — football (soccer) live-scores web app · Laravel API + Vue 3 SPA · free-tier data, polling-based, Production domain: socplay.win (not purchased yet).**
+**LiveGoal — football (soccer) live-scores web app · Laravel API + Vue 3 SPA · free-tier data, polling-based, Production domain: livegoal.win (not purchased yet).**
 
 This is the authoritative build spec. Read it fully (plus the Claude Design output) before writing any code. Build in the phases defined in §8, in order, with the commit plans given.
 
@@ -20,11 +20,11 @@ This is the authoritative build spec. Read it fully (plus the Claude Design outp
 
 ## 1. Goal & context
 
-Build **SocPlay** — a modern, responsive football live-scores web app — **World Cup 2026–aware** and covering major leagues (Premier League, Champions League, La Liga, Serie A, Bundesliga, Ligue 1, etc.). It shows live scores, fixtures, results, standings/groups, knockout brackets, competitions, and teams.
+Build **LiveGoal** — a modern, responsive football live-scores web app — **World Cup 2026–aware** and covering major leagues (Premier League, Champions League, La Liga, Serie A, Bundesliga, Ligue 1, etc.). It shows live scores, fixtures, results, standings/groups, knockout brackets, competitions, and teams.
 
 This is a **free, non-profit project**. Server cost must be bare minimum. There is **no budget for paid realtime infrastructure**. "Realtime" is delivered by polling (see §2), which is appropriate because the free data source is itself delayed and poll-only.
 
-SocPlay is a **pure, non-betting live-scores product** — no odds, tips, predictions-for-money, or affiliate/gambling content anywhere. (The `.win` TLD can read as betting; keep the product unambiguously a neutral scores tracker, which also keeps it within the data provider's terms.)
+LiveGoal is a **pure, non-betting live-scores product** — no odds, tips, predictions-for-money, or affiliate/gambling content anywhere. (The `.win` TLD can read as betting; keep the product unambiguously a neutral scores tracker, which also keeps it within the data provider's terms.)
 
 ---
 
@@ -153,15 +153,15 @@ Six phases. Each contains multiple commits.
 
 ### Phase 1 — Foundation & tooling
 **Goal:** A running Laravel app serving a themed Vue 3 SPA shell with routing, matching the Claude Design tokens.
-**Deliverables:** Laravel installed; Vue 3 + Vite + Tailwind + Pinia + Router wired into Laravel; design tokens (color/type/spacing/radius/motion) in `tailwind.config`; dark/light theme toggle (persisted, seeded by `usePreferredDark`); app shell (top bar with the **SocPlay** wordmark/logo + search slot + theme toggle; desktop sidebar nav; mobile bottom tab bar: Live/Matches/Competitions/Favorites/More; sticky live-ticker slot); routed page stubs + 404; `.env.example` with `FOOTBALL_DATA_TOKEN`.
+**Deliverables:** Laravel installed; Vue 3 + Vite + Tailwind + Pinia + Router wired into Laravel; design tokens (color/type/spacing/radius/motion) in `tailwind.config`; dark/light theme toggle (persisted, seeded by `usePreferredDark`); app shell (top bar with the **LiveGoal** wordmark/logo + search slot + theme toggle; desktop sidebar nav; mobile bottom tab bar: Live/Matches/Competitions/Favorites/More; sticky live-ticker slot); routed page stubs + 404; `.env.example` with `FOOTBALL_DATA_TOKEN`.
 **Commit plan:**
 1. `chore: scaffold Laravel app + base config`
 2. `build: add Vite, Vue 3, Tailwind, Pinia, Vue Router`
 3. `feat: design tokens + dark/light theme`
-4. `feat: app shell (SocPlay wordmark, sidebar, mobile tab bar, live-ticker slot)`
+4. `feat: app shell (LiveGoal wordmark, sidebar, mobile tab bar, live-ticker slot)`
 5. `feat: route table with page stubs + 404`
 6. `chore: .env.example + README quickstart`
-   **Acceptance:** app boots; SocPlay wordmark shows in the shell; theme toggles and persists; every route navigates to a stub; shell is responsive at mobile (bottom tab bar) and desktop (sidebar) widths.
+   **Acceptance:** app boots; LiveGoal wordmark shows in the shell; theme toggles and persists; every route navigates to a stub; shell is responsive at mobile (bottom tab bar) and desktop (sidebar) widths.
 
 ### Phase 2 — Backend: FootballData service + cached read API
 **Goal:** All on-demand data exposed via cached internal JSON endpoints; no per-user upstream calls beyond cache misses.
@@ -227,33 +227,33 @@ Six phases. Each contains multiple commits.
 - **Favorites** page (star teams/competitions, surface their live/upcoming), **Search** (competitions/teams/players + recent searches), **Settings** (theme/timezone/refresh interval).
 - **Polish:** route transitions, lazy-loaded crest/flag images, long-list virtualization, debounced search, `prefers-reduced-motion`, WCAG AA contrast, keyboard nav, ARIA live region for score updates.
 - **Optional:** PWA (installable + offline shell) via `vite-plugin-pwa`.
-- **Deploy docs:** `npm run build`; single-host deploy (cPanel/shared) at **socplay.win** — point the domain at the host, enable free HTTPS (Let's Encrypt / host SSL or Cloudflare in front), set `APP_URL=https://socplay.win`; cron entry; `.env`; SPA fallback route; cron-job.org fallback; future Reverb-on-VPS upgrade path. Keep SocPlay a non-betting scores product (no odds/tips/affiliate content).
+- **Deploy docs:** `npm run build`; single-host deploy (cPanel/shared) at **livegoal.win** — point the domain at the host, enable free HTTPS (Let's Encrypt / host SSL or Cloudflare in front), set `APP_URL=https://livegoal.win`; cron entry; `.env`; SPA fallback route; cron-job.org fallback; future Reverb-on-VPS upgrade path. Keep LiveGoal a non-betting scores product (no odds/tips/affiliate content).
   **Commit plan:**
 1. `feat(screen): Match Detail secondary tabs as graceful-empty`
 2. `feat(screen): Player Detail + Team Squad (graceful-empty)`
 3. `feat(screen): Favorites + Search + Settings`
 4. `perf+a11y: lazy images, virtualization, transitions, reduced-motion, ARIA, keyboard nav`
 5. `feat(pwa): installable + offline shell` *(optional)*
-6. `docs(deploy): README deploy guide (socplay.win) + cron + env + upgrade path`
-   **Acceptance:** secondary screens look finished when empty (never blank/broken); favorites/search/settings work; reasonable Lighthouse a11y; build deploys to a single host at socplay.win with HTTPS, a working cron poller, and SPA routing; README complete.
+6. `docs(deploy): README deploy guide (livegoal.win) + cron + env + upgrade path`
+   **Acceptance:** secondary screens look finished when empty (never blank/broken); favorites/search/settings work; reasonable Lighthouse a11y; build deploys to a single host at livegoal.win with HTTPS, a working cron poller, and SPA routing; README complete.
 
 ---
 
 ## 9. Global acceptance criteria
 
-- App runs as a **single Laravel host** serving the Vue SPA + `/api` at **socplay.win**; no separate frontend host; no CORS.
+- App runs as a **single Laravel host** serving the Vue SPA + `/api` at **livegoal.win**; no separate frontend host; no CORS.
 - API token lives only in `.env` (server-side); never shipped to the browser.
 - Live scores update on screen without manual refresh; a goal animates + toasts; "updated Xs ago" reflects `lastUpdated`.
 - Upstream usage stays under **10 req/min** at any traffic level (central poller + cache verified).
 - 429 / upstream failure degrades gracefully (last-good cache, visible notice), never crashes.
 - Every page matches the approved design in **dark and light**, fully responsive (mobile bottom tab bar; desktop sidebar).
 - Free-tier-absent data (lineups/events/stats/player/squad) renders the intentional empty state, never blank or broken.
-- SocPlay stays a neutral, **non-betting** live-scores product (no odds/tips/affiliate content).
+- LiveGoal stays a neutral, **non-betting** live-scores product (no odds/tips/affiliate content).
 - **No** Pusher, Reverb, Echo, socket.io, SSE, or Redis anywhere; only the commented broadcast extension point remains.
 
 ## 10. Definition of Done
 
-Frontend builds clean (`npm run build`); ESLint/Prettier clean; backend boots with a real `FOOTBALL_DATA_TOKEN`; cron poller documented and working; favorites/settings persist; README documents setup, env, the free-tier delayed-score caveat, the single-host deploy at **socplay.win** (domain pointed, HTTPS on, `APP_URL` set) + cron (and cron-job.org fallback), and the future websocket upgrade path. Deployable to a host costing ~$0–$2/mo.
+Frontend builds clean (`npm run build`); ESLint/Prettier clean; backend boots with a real `FOOTBALL_DATA_TOKEN`; cron poller documented and working; favorites/settings persist; README documents setup, env, the free-tier delayed-score caveat, the single-host deploy at **livegoal.win** (domain pointed, HTTPS on, `APP_URL` set) + cron (and cron-job.org fallback), and the future websocket upgrade path. Deployable to a host costing ~$0–$2/mo.
 
 ---
 
@@ -285,7 +285,7 @@ resources/
     pages/{LiveHub,Matches,MatchDetail,Competitions,CompetitionDetail,TeamDetail,
            PlayerDetail,Scorers,Favorites,Search,Settings,NotFound}.vue
   css/app.css
-.env.example       # FOOTBALL_DATA_TOKEN=, CACHE_STORE=file (or database), APP_URL=https://socplay.win
+.env.example       # FOOTBALL_DATA_TOKEN=, CACHE_STORE=file (or database), APP_URL=https://livegoal.win
 ```
 
 ## Appendix B — Cron entry
@@ -295,10 +295,10 @@ resources/
 ```
 No cron on your host? Point free **cron-job.org** at a protected `/scheduler` route that calls `schedule:run`.
 
-## Appendix C — Domain & go-live (socplay.win is not accessable yet so take decisiton when need to do this. now or after purchase)
+## Appendix C — Domain & go-live (livegoal.win is not accessable yet so take decisiton when need to do this. now or after purchase)
 
-- Point `socplay.win` (A / ALIAS, or CNAME) at the single host serving the Laravel app. The SPA and `/api` share this one origin — no second host, no CORS.
-- Enable HTTPS (free Let's Encrypt via the host, or put Cloudflare in front). Force `https://` and pick one canonical host (apex `socplay.win` or `www`), redirecting the other.
-- Set `APP_URL=https://socplay.win` in `.env`; make sure Vue Router (history mode) has the SPA fallback route so deep links resolve.
-- Branding: the in-app wordmark/logo reads **SocPlay**; page `<title>` and meta default to "SocPlay — Live Football Scores".
+- Point `livegoal.win` (A / ALIAS, or CNAME) at the single host serving the Laravel app. The SPA and `/api` share this one origin — no second host, no CORS.
+- Enable HTTPS (free Let's Encrypt via the host, or put Cloudflare in front). Force `https://` and pick one canonical host (apex `livegoal.win` or `www`), redirecting the other.
+- Set `APP_URL=https://livegoal.win` in `.env`; make sure Vue Router (history mode) has the SPA fallback route so deep links resolve.
+- Branding: the in-app wordmark/logo reads **LiveGoal**; page `<title>` and meta default to "LiveGoal — Live Football Scores".
 - Keep it a pure, **non-betting** live-scores product (no odds, tips, or affiliate content) — the `.win` TLD reads as betting, and football-data.org's terms disfavor gambling use, so stay unambiguously a neutral scores tracker.

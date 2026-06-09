@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PreToolUse hook — Bash command policy gate for the socplay Laravel app.
+PreToolUse hook — Bash command policy gate for the livegoal Laravel app.
 
 Adds a safety layer on top of normal permissions:
   - deny  : blocked outright (truly destructive, irreversible)

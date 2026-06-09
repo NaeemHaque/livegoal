@@ -1,4 +1,4 @@
-# socplay AI Workflow
+# livegoal AI Workflow
 
 Adapted from the FluentMembers AI workflow, tuned for this Laravel 13 + Inertia v3 + Vue 3 app. **No `prompt-task` entry point** — agents are invoked directly or chain automatically.
 

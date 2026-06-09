@@ -1,4 +1,4 @@
-# SocPlay — Live Polling & Goal Animation
+# LiveGoal — Live Polling & Goal Animation
 
 "Realtime" is delivered by **polling**, which is appropriate because the free data source is itself
 delayed and poll-only. One server poller feeds a cache that the whole site reads.

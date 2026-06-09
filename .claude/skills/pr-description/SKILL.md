@@ -1,6 +1,6 @@
 ---
 name: pr-description
-description: Generate a clear PR title and body for socplay changes, aligned with the repo's pull request template, and optionally open the PR with gh. Use when finishing a change, preparing to open a pull request, or when asked to write a PR description/summary.
+description: Generate a clear PR title and body for livegoal changes, aligned with the repo's pull request template, and optionally open the PR with gh. Use when finishing a change, preparing to open a pull request, or when asked to write a PR description/summary.
 ---
 
 # pr-description

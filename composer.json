@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/blank-vue-starter-kit",
+    "name": "livegoal/livegoal",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "LiveGoal — a free, non-betting football live-scores web app.",
     "keywords": [
         "laravel",
         "framework"

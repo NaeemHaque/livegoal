@@ -137,7 +137,7 @@ class MatchesTest extends TestCase
 
     // --- 2. status mapping across the upstream status set --------------------
 
-    public function test_index_maps_upstream_statuses_to_socplay_set(): void
+    public function test_index_maps_upstream_statuses_to_livegoal_set(): void
     {
         Http::fake([
             '*/matches*' => Http::response(['matches' => [

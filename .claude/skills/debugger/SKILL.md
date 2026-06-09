@@ -1,6 +1,6 @@
 ---
 name: debugger
-description: Systematic root-cause debugging for the socplay Laravel + Inertia + Vue app — a Reproduce → Find → Verify → Fix loop that uses logs, errors, tests, and tinker before proposing changes. Use when investigating a bug, test failure, exception, 419/500 error, unexpected behavior, or any "why is this happening" question.
+description: Systematic root-cause debugging for the livegoal Laravel + Inertia + Vue app — a Reproduce → Find → Verify → Fix loop that uses logs, errors, tests, and tinker before proposing changes. Use when investigating a bug, test failure, exception, 419/500 error, unexpected behavior, or any "why is this happening" question.
 ---
 
 # debugger
