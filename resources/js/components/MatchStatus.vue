@@ -7,12 +7,19 @@ import { useTimeFormat } from '@/composables/useTimeFormat';
 const props = defineProps({
     match: { type: Object, required: true },
     small: { type: Boolean, default: false },
+    // Show the kickoff date alongside the time (for cross-day upcoming lists).
+    showDate: { type: Boolean, default: false },
 });
 
 const time = useTimeFormat();
 const status = computed(() => props.match.status);
 const minuteLabel = computed(() =>
     props.match.minute != null ? `${props.match.minute}'` : 'LIVE',
+);
+const kickoffLabel = computed(() =>
+    props.showDate
+        ? time.dateTime(props.match.kickoff)
+        : time.time(props.match.kickoff),
 );
 </script>
 
@@ -58,6 +65,6 @@ const minuteLabel = computed(() =>
         <IcAlert :size="small ? 11 : 13" /> PP
     </span>
     <span v-else class="pp-status sched" :class="{ sm: small }">
-        <IcClock :size="small ? 11 : 13" /> {{ time.time(match.kickoff) }}
+        <IcClock :size="small ? 11 : 13" /> {{ kickoffLabel }}
     </span>
 </template>

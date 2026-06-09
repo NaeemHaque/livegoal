@@ -13,6 +13,7 @@ const props = defineProps({
     fav: { type: Boolean, default: false },
     favable: { type: Boolean, default: true },
     scored: { type: Boolean, default: false },
+    showDate: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['open', 'fav']);
@@ -56,7 +57,7 @@ const open = () => emit('open', m.value);
                 }}<template v-if="m.group"> · {{ m.group }}</template>
             </span>
             <div class="mc-top-r">
-                <MatchStatus :match="m" small />
+                <MatchStatus :match="m" small :show-date="showDate" />
                 <FavoriteStar
                     v-if="favable"
                     :active="fav"
