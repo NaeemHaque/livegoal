@@ -1,6 +1,6 @@
 <script setup>
 import { useEventListener, useOnline } from '@vueuse/core';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import GoalToast from '@/components/GoalToast.vue';
@@ -15,6 +15,7 @@ import {
 import LiveTicker from '@/components/LiveTicker.vue';
 import Logo from '@/components/Logo.vue';
 import RefreshIndicator from '@/components/RefreshIndicator.vue';
+import SearchModal from '@/components/SearchModal.vue';
 import TabBar from '@/components/TabBar.vue';
 import TopNav from '@/components/TopNav.vue';
 import { useLiveMatches } from '@/composables/useLiveMatches';
@@ -35,7 +36,8 @@ const goalAnnounce = computed(() => {
     return g ? `Goal for ${g.team?.name}. Score now ${g.scoreline}.` : '';
 });
 
-const openSearch = () => router.push('/search');
+const searchOpen = ref(false);
+const openSearch = () => (searchOpen.value = true);
 
 // "/" or ⌘K / Ctrl+K opens search (ignored while typing in a field).
 useEventListener(window, 'keydown', (e) => {
@@ -162,6 +164,8 @@ useEventListener(window, 'keydown', (e) => {
             :goal="matches.lastGoal"
             @done="matches.clearGoal()"
         />
+
+        <SearchModal :open="searchOpen" @close="searchOpen = false" />
     </div>
 </template>
 

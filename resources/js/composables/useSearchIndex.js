@@ -8,11 +8,19 @@ import api from '@/services/api';
  * no search endpoint, so we aggregate the (server-cached) competition list and
  * each featured competition's team list once, then filter locally.
  */
-export function useSearchIndex() {
+export function useSearchIndex({ immediate = true } = {}) {
     const index = ref([]);
     const loading = ref(false);
+    let started = false;
 
     async function load() {
+        // Build the index once per instance; the modal calls this lazily on
+        // first open so the app boot doesn't fan out these requests up front.
+        if (started) {
+            return;
+        }
+
+        started = true;
         loading.value = true;
 
         try {
@@ -49,6 +57,7 @@ export function useSearchIndex() {
                 kind: 'Competition',
                 id: compKey(c),
                 name: c.name,
+                short: c.short,
                 route: `/competition/${compKey(c)}`,
                 color: c.color,
             }));
@@ -57,9 +66,16 @@ export function useSearchIndex() {
         } finally {
             loading.value = false;
         }
+
+        // Allow a later retry if nothing loaded (transient failure / rate limit).
+        if (!index.value.length) {
+            started = false;
+        }
     }
 
-    load();
+    if (immediate) {
+        load();
+    }
 
-    return { index, loading };
+    return { index, loading, load };
 }
