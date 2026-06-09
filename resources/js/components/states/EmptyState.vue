@@ -1,5 +1,5 @@
 <script setup>
-import { IcInbox } from '@/components/icons';
+import CornerFlag from '@/components/states/CornerFlag.vue';
 import StateBlock from '@/components/states/StateBlock.vue';
 
 defineProps({
@@ -9,8 +9,8 @@ defineProps({
 </script>
 
 <template>
-    <StateBlock :title="title" :text="text" tone="neutral">
-        <template #icon><IcInbox :size="28" /></template>
+    <StateBlock :title="title" :text="text" tone="neutral" art>
+        <template #icon><CornerFlag /></template>
         <template #action><slot /></template>
     </StateBlock>
 </template>
