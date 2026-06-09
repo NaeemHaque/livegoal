@@ -202,6 +202,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                                     :key="m.id"
                                     :match="m"
                                     :fav="isFav(m)"
+                                    show-date
                                     @open="openMatch"
                                     @fav="toggleFav(m)"
                                 />
