@@ -749,6 +749,9 @@
     margin: 0 0 3px;
 }
 .pp-comptile .ct-region {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 12px;
     color: var(--text-muted);
 }
