@@ -3,9 +3,10 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import Bracket from '@/components/Bracket.vue';
+import CompetitionLogo from '@/components/CompetitionLogo.vue';
 import Crest from '@/components/Crest.vue';
 import GroupCard from '@/components/GroupCard.vue';
-import { IcChevL, IcGlobe, IcStar, IcTrophy } from '@/components/icons';
+import { IcChevL, IcGlobe, IcStar } from '@/components/icons';
 import InlineLoader from '@/components/InlineLoader.vue';
 import MatchCard from '@/components/MatchCard.vue';
 import SectionHead from '@/components/SectionHead.vue';
@@ -123,23 +124,7 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
                 }"
             />
             <div class="eh-main">
-                <div
-                    class="ct-logo"
-                    style="width: 64px; height: 64px; margin: 0"
-                    :style="{
-                        background: `linear-gradient(135deg, ${competition?.color}, ${competition?.color}cc)`,
-                    }"
-                >
-                    <IcTrophy v-if="competition?.kind === 'cup'" :size="30" />
-                    <span
-                        v-else
-                        style="
-                            font-size: 24px;
-                            font-family: var(--font-display);
-                        "
-                        >{{ (competition?.short || '?')[0] }}</span
-                    >
-                </div>
+                <CompetitionLogo :competition="competition" :size="64" />
                 <div>
                     <h1>{{ competition?.name ?? '…' }}</h1>
                     <div class="eh-sub">
