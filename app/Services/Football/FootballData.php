@@ -108,6 +108,46 @@ class FootballData
     }
 
     /**
+     * Read a cached payload (fresh value, else last-known-good) WITHOUT ever
+     * contacting the upstream API. Returns the raw decoded upstream payload, or
+     * null when nothing is cached.
+     *
+     * This is the crawler-safe read used by the SEO shell: a flood of bots
+     * hitting deep links can never trigger a rate-limited upstream fetch.
+     *
+     * @param  array<string, mixed>  $query
+     * @return array<string, mixed>|null
+     */
+    public function peek(string $key, array $query = []): ?array
+    {
+        return $this->peekEntry($key, $query)['data'] ?? null;
+    }
+
+    /**
+     * Like peek(), but also returns the timestamp the payload was fetched, so a
+     * caller can show an honest "last updated" (freshness matters for live
+     * sports / QDF, but only when the date reflects a real fetch).
+     *
+     * @param  array<string, mixed>  $query
+     * @return array{data: array<string, mixed>, at: string}|null
+     */
+    public function peekEntry(string $key, array $query = []): ?array
+    {
+        $base = $this->cacheKey($key, $query);
+
+        foreach (["fd:{$base}", "fd:last:{$base}"] as $cacheKey) {
+            $hit = Cache::get($cacheKey);
+
+            if (is_array($hit) && is_array($hit['data'] ?? null) && is_string($hit['at'] ?? null)) {
+                /** @var array{data: array<string, mixed>, at: string} */
+                return ['data' => $hit['data'], 'at' => $hit['at']];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The last-known-good payload (flagged stale), or an empty result when none
      * has ever been stored.
      */

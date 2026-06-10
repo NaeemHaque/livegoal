@@ -4,8 +4,44 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>LiveGoal — Live Football Scores</title>
-    <meta name="description" content="Live football scores, fixtures, results, standings, and brackets.">
+    @php
+        // Per-URL SEO metadata is injected by App\Http\Controllers\SeoShellController.
+        // The fallback keeps the shell renderable if a view is built without it.
+        $seo ??= new \App\Seo\SeoMeta(config('seo.default_title'), config('seo.default_description'), url()->current());
+        $ogImage = config('seo.og_image');
+        $ogImage = $ogImage ? (\Illuminate\Support\Str::startsWith($ogImage, 'http') ? $ogImage : url($ogImage)) : null;
+    @endphp
+
+    <title>{{ $seo->title }}</title>
+    <meta name="description" content="{{ $seo->description }}">
+    <meta name="robots" content="{{ $seo->robots }}">
+    <link rel="canonical" href="{{ $seo->canonical }}">
+
+    {{-- Open Graph / Twitter so shared links (WhatsApp, X, Discord, Slack) render a preview. --}}
+    <meta property="og:site_name" content="{{ config('seo.site_name') }}">
+    <meta property="og:type" content="{{ $seo->ogType }}">
+    <meta property="og:title" content="{{ $seo->title }}">
+    <meta property="og:description" content="{{ $seo->description }}">
+    <meta property="og:url" content="{{ $seo->canonical }}">
+    <meta property="og:locale" content="{{ config('seo.locale') }}">
+    @if ($ogImage)
+        <meta property="og:image" content="{{ $ogImage }}">
+    @endif
+    <meta name="twitter:card" content="{{ config('seo.og_image_wide') ? 'summary_large_image' : 'summary' }}">
+    <meta name="twitter:title" content="{{ $seo->title }}">
+    <meta name="twitter:description" content="{{ $seo->description }}">
+    @if ($ogImage)
+        <meta name="twitter:image" content="{{ $ogImage }}">
+    @endif
+    @if ($handle = config('seo.twitter'))
+        <meta name="twitter:site" content="{{ $handle }}">
+    @endif
+
+    {{-- Structured data (Organization/WebSite site-wide; SportsEvent/SportsTeam/
+         Person/SportsOrganization + breadcrumbs on detail pages). --}}
+    @foreach ($seo->jsonLdScripts() as $jsonLd)
+        <script type="application/ld+json">{!! $jsonLd !!}</script>
+    @endforeach
 
     {{-- Set the theme before first paint to avoid a flash of the wrong theme. --}}
     <script>
@@ -23,11 +59,18 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    {{-- Crests/emblems are loaded from here on nearly every page. Fonts are now
+         self-hosted (bundled via @fontsource in app.css), so there's no
+         render-blocking request to Google Fonts. --}}
+    <link rel="preconnect" href="https://crests.football-data.org" crossorigin>
 
     @vite(['resources/css/app.css', 'resources/js/main.js'])
+
+    {{-- Privacy-friendly, cookieless analytics. Renders only when configured
+         (PLAUSIBLE_DOMAIN); the default script auto-tracks SPA navigations. --}}
+    @if ($plausibleDomain = config('services.plausible.domain'))
+        <script defer data-domain="{{ $plausibleDomain }}" src="{{ config('services.plausible.src') }}"></script>
+    @endif
 
     {{-- Full-page boot loader ("Formation build"). Paints instantly (inline,
          before the JS bundle runs) so there's no layout shift, then main.js
@@ -169,6 +212,29 @@
         </div>
     </div>
 
-    <div id="app"></div>
+    {{-- Crawlable navigation for clients that don't run JavaScript (some search
+         and AI crawlers): a real link graph into the key sections and entities,
+         plus a one-line description of what LiveGoal is. --}}
+    <noscript>
+        <nav aria-label="LiveGoal sections">
+            <a href="{{ url('/') }}">Live scores</a>
+            <a href="{{ url('/matches') }}">Fixtures &amp; results</a>
+            <a href="{{ url('/competitions') }}">Competitions</a>
+            <a href="{{ url('/scorers') }}">Top scorers</a>
+            @foreach (config('football.featured') as $code)
+                @php($competitionMeta = config('football.meta.'.$code))
+                @if ($competitionMeta)
+                    <a href="{{ url('/competition/'.$code) }}">{{ $competitionMeta['short'] ?? $code }}</a>
+                @endif
+            @endforeach
+        </nav>
+        <p>LiveGoal shows free, real-time football scores, fixtures, results, standings and
+            knockout brackets for the FIFA World Cup 2026 and major leagues — no betting ads.</p>
+    </noscript>
+
+    {{-- Server-rendered facts for crawlers/AI bots that don't run JavaScript.
+         Vue replaces #app on mount, so users get the live SPA — same data, so
+         this is content parity (SSR-style), not cloaking. --}}
+    <div id="app">@isset($prerender)@include($prerender['view'], $prerender['data'])@endisset</div>
 </body>
 </html>
