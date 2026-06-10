@@ -226,25 +226,6 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 
             <!-- Right rail -->
             <aside class="pp-rail">
-                <!-- Top of the table -->
-                <div v-if="tableRows.length" class="pp-rail-card">
-                    <div class="rc-head">
-                        <span>Top of the table</span>
-                        <span
-                            class="more"
-                            @click="router.push('/competition/PL')"
-                            >Premier League</span
-                        >
-                    </div>
-                    <div class="rc-body">
-                        <StandingsTable
-                            :rows="tableRows"
-                            compact
-                            @team="(id) => id && router.push(`/team/${id}`)"
-                        />
-                    </div>
-                </div>
-
                 <!-- Top scorers — World Cup while it's current, else a league -->
                 <div class="pp-rail-card">
                     <div class="rc-head">
@@ -307,6 +288,25 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                                 >
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Top of the table -->
+                <div v-if="tableRows.length" class="pp-rail-card">
+                    <div class="rc-head">
+                        <span>Top of the table</span>
+                        <span
+                            class="more"
+                            @click="router.push('/competition/PL')"
+                            >Premier League</span
+                        >
+                    </div>
+                    <div class="rc-body">
+                        <StandingsTable
+                            :rows="tableRows"
+                            compact
+                            @team="(id) => id && router.push(`/team/${id}`)"
+                        />
                     </div>
                 </div>
             </aside>
