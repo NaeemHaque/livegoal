@@ -94,11 +94,11 @@ class SeoMetaResolver
 
     public function match(string $id): SeoMeta
     {
-        $canonical = URL::current();
-        $raw = $this->football->peek("match:{$id}");
+        $numericId = Slug::id($id);
+        $raw = $this->football->peek("match:{$numericId}");
 
         if ($raw === null) {
-            return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', $canonical);
+            return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', URL::current());
         }
 
         $m = $this->normalizer->match($raw);
@@ -106,9 +106,10 @@ class SeoMetaResolver
         $away = $this->str(data_get($m, 'away.name'));
 
         if ($home === '' || $away === '') {
-            return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', $canonical);
+            return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', URL::current());
         }
 
+        $canonical = Slug::url('match', $numericId, "{$home} vs {$away}");
         $competition = $this->nullableStr(data_get($m, 'competition.name'));
         $status = $this->str(data_get($m, 'status'));
         $venue = $this->nullableStr(data_get($m, 'venue'));
@@ -174,20 +175,21 @@ class SeoMetaResolver
 
     public function team(string $id): SeoMeta
     {
-        $canonical = URL::current();
-        $raw = $this->football->peek("team:{$id}");
+        $numericId = Slug::id($id);
+        $raw = $this->football->peek("team:{$numericId}");
 
         if ($raw === null) {
-            return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', $canonical);
+            return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', URL::current());
         }
 
         $t = $this->normalizer->teamDetail($raw);
         $name = $this->str(data_get($t, 'name'));
 
         if ($name === '') {
-            return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', $canonical);
+            return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', URL::current());
         }
 
+        $canonical = Slug::url('team', $numericId, $name);
         $area = $this->nullableStr(data_get($t, 'area.name'));
         $crest = $this->nullableStr(data_get($t, 'crest'));
 
@@ -224,20 +226,21 @@ class SeoMetaResolver
 
     public function player(string $id): SeoMeta
     {
-        $canonical = URL::current();
-        $raw = $this->football->peek("person:{$id}");
+        $numericId = Slug::id($id);
+        $raw = $this->football->peek("person:{$numericId}");
 
         if ($raw === null) {
-            return $this->cold('Player Profile', 'Football player profiles, positions and teams on LiveGoal.', $canonical);
+            return $this->cold('Player Profile', 'Football player profiles, positions and teams on LiveGoal.', URL::current());
         }
 
         $p = $this->normalizer->person($raw);
         $name = $this->str(data_get($p, 'name'));
 
         if ($name === '') {
-            return $this->cold('Player Profile', 'Football player profiles, positions and teams on LiveGoal.', $canonical);
+            return $this->cold('Player Profile', 'Football player profiles, positions and teams on LiveGoal.', URL::current());
         }
 
+        $canonical = Slug::url('player', $numericId, $name);
         $position = $this->nullableStr(data_get($p, 'position'));
         $teamName = $this->nullableStr(data_get($p, 'team.name'));
         $nationality = $this->nullableStr(data_get($p, 'nationality'));
@@ -323,7 +326,7 @@ class SeoMetaResolver
      */
     public function matchBody(string $id): ?array
     {
-        $entry = $this->football->peekEntry("match:{$id}");
+        $entry = $this->football->peekEntry('match:'.Slug::id($id));
 
         if ($entry === null) {
             return null;
@@ -381,7 +384,8 @@ class SeoMetaResolver
      */
     public function teamBody(string $id): ?array
     {
-        $entry = $this->football->peekEntry("team:{$id}");
+        $numericId = Slug::id($id);
+        $entry = $this->football->peekEntry("team:{$numericId}");
 
         if ($entry === null) {
             return null;
@@ -393,7 +397,7 @@ class SeoMetaResolver
             return null;
         }
 
-        $matchesRaw = $this->football->peek("team:{$id}:matches");
+        $matchesRaw = $this->football->peek("team:{$numericId}:matches");
         $all = $matchesRaw !== null ? $this->normalizer->matches($matchesRaw) : [];
 
         return [
@@ -475,7 +479,7 @@ class SeoMetaResolver
      */
     public function playerBody(string $id): ?array
     {
-        $entry = $this->football->peekEntry("person:{$id}");
+        $entry = $this->football->peekEntry('person:'.Slug::id($id));
 
         if ($entry === null) {
             return null;

@@ -12,6 +12,7 @@ import { useApi } from '@/composables/useApi';
 import { useBack } from '@/composables/useBack';
 import { usePageMeta } from '@/composables/usePageMeta';
 import { useTeam } from '@/composables/useTeam';
+import { numericId } from '@/lib/slugs';
 import { useFavoritesStore } from '@/stores/favorites';
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -19,7 +20,7 @@ const router = useRouter();
 const goBack = useBack();
 const favorites = useFavoritesStore();
 
-const id = computed(() => props.id);
+const id = computed(() => numericId(props.id));
 const { data: team, loading } = useTeam(id);
 const { data: teamMatches } = useApi(() => `/teams/${id.value}/matches`);
 

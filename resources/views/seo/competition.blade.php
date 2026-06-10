@@ -20,7 +20,7 @@
                     @foreach ($group['rows'] as $row)
                         <tr>
                             <td>{{ data_get($row, 'position') }}</td>
-                            <td>{{ data_get($row, 'team.name') }}</td>
+                            <td><a href="{{ \App\Seo\Slug::url('team', (string) data_get($row, 'team.id'), data_get($row, 'team.name')) }}">{{ data_get($row, 'team.name') }}</a></td>
                             <td>{{ data_get($row, 'played') }}</td>
                             <td>{{ data_get($row, 'won') }}</td>
                             <td>{{ data_get($row, 'draw') }}</td>
@@ -40,13 +40,11 @@
             <ol>
                 @foreach ($scorers as $scorer)
                     @php
-                        $line = data_get($scorer, 'player.name');
-                        if (data_get($scorer, 'team.name')) {
-                            $line .= ' ('.data_get($scorer, 'team.name').')';
-                        }
-                        $line .= ' — '.data_get($scorer, 'goals').' goals';
+                        $playerUrl = \App\Seo\Slug::url('player', (string) data_get($scorer, 'player.id'), data_get($scorer, 'player.name'));
+                        $suffix = data_get($scorer, 'team.name') ? ' ('.data_get($scorer, 'team.name').')' : '';
+                        $suffix .= ' — '.data_get($scorer, 'goals').' goals';
                     @endphp
-                    <li>{{ $line }}</li>
+                    <li><a href="{{ $playerUrl }}">{{ data_get($scorer, 'player.name') }}</a>{{ $suffix }}</li>
                 @endforeach
             </ol>
         </section>
@@ -58,12 +56,13 @@
             <ul>
                 @foreach ($fixtures as $fixture)
                     @php
+                        $fixtureUrl = \App\Seo\Slug::url('match', (string) data_get($fixture, 'id'), data_get($fixture, 'home.name').' vs '.data_get($fixture, 'away.name'));
                         $line = data_get($fixture, 'home.name').' vs '.data_get($fixture, 'away.name');
                         if (data_get($fixture, 'kickoff')) {
                             $line .= ' — '.\Illuminate\Support\Carbon::parse(data_get($fixture, 'kickoff'))->format('j M, H:i').' UTC';
                         }
                     @endphp
-                    <li>{{ $line }}</li>
+                    <li><a href="{{ $fixtureUrl }}">{{ $line }}</a></li>
                 @endforeach
             </ul>
         </section>

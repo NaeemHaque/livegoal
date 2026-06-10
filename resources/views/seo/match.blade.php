@@ -10,6 +10,9 @@
     $awayScore = data_get($match, 'awayScore');
     $kickoff = data_get($match, 'kickoff');
     $kickoffHuman = $kickoff ? \Illuminate\Support\Carbon::parse($kickoff)->format('D j M Y, H:i').' UTC' : null;
+    $competitionCode = data_get($match, 'competition.code');
+    $homeUrl = \App\Seo\Slug::url('team', (string) data_get($match, 'home.id'), $home);
+    $awayUrl = \App\Seo\Slug::url('team', (string) data_get($match, 'away.id'), $away);
     $isResult = in_array($status, ['FT', 'AET', 'PEN'], true);
     $isLive = in_array($status, ['LIVE', 'HT', 'ET'], true);
 
@@ -41,12 +44,16 @@
     <h1>{{ $home }} vs {{ $away }}</h1>
     <p>{{ $summary }}</p>
     <dl>
-        @if ($competition)<dt>Competition</dt><dd>{{ $competition }}</dd>@endif
+        @if ($competition)
+            <dt>Competition</dt>
+            <dd>@if ($competitionCode)<a href="{{ url('/competition/'.$competitionCode) }}">{{ $competition }}</a>@else{{ $competition }}@endif</dd>
+        @endif
         @if ($stage)<dt>Stage</dt><dd>{{ $stage }}</dd>@endif
         @if ($kickoffHuman)<dt>Kick-off</dt><dd>{{ $kickoffHuman }}</dd>@endif
         @if ($venue)<dt>Venue</dt><dd>{{ $venue }}</dd>@endif
         @if ($status)<dt>Status</dt><dd>{{ $status }}</dd>@endif
     </dl>
+    <p>Team pages: <a href="{{ $homeUrl }}">{{ $home }}</a> · <a href="{{ $awayUrl }}">{{ $away }}</a></p>
     @isset($updatedAt)
         <p>Last updated {{ \Illuminate\Support\Carbon::parse($updatedAt)->format('H:i, j M Y') }} UTC.</p>
     @endisset

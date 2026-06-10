@@ -4,6 +4,7 @@
     $position = data_get($player, 'position');
     $nationality = data_get($player, 'nationality');
     $team = data_get($player, 'team.name');
+    $teamUrl = $team ? \App\Seo\Slug::url('team', (string) data_get($player, 'team.id'), $team) : null;
     $shirt = data_get($player, 'shirtNumber');
 
     $summary = $name;
@@ -23,7 +24,7 @@
     <p>{{ $summary }}</p>
     <dl>
         @if ($position)<dt>Position</dt><dd>{{ $position }}</dd>@endif
-        @if ($team)<dt>Team</dt><dd>{{ $team }}</dd>@endif
+        @if ($team)<dt>Team</dt><dd><a href="{{ $teamUrl }}">{{ $team }}</a></dd>@endif
         @if ($nationality)<dt>Nationality</dt><dd>{{ $nationality }}</dd>@endif
         @if ($shirt)<dt>Shirt number</dt><dd>{{ $shirt }}</dd>@endif
     </dl>

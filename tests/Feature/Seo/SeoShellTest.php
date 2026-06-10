@@ -86,7 +86,8 @@ class SeoShellTest extends TestCase
 
         $response->assertOk()
             ->assertSee('<title>Arsenal FC vs Chelsea FC', false)
-            ->assertSee('<link rel="canonical" href="'.url('/match/1').'">', false)
+            // Canonical is the keyword-rich slug URL, not the bare id.
+            ->assertSee('<link rel="canonical" href="'.url('/match/1-arsenal-fc-vs-chelsea-fc').'">', false)
             ->assertSee('"@type":"SportsEvent"', false)
             ->assertSee('"@type":"BreadcrumbList"', false)
             ->assertSee('property="og:title"', false);
@@ -95,12 +96,23 @@ class SeoShellTest extends TestCase
         $response->assertDontSee('name="robots" content="noindex', false);
     }
 
-    public function test_match_canonical_ignores_query_string(): void
+    public function test_match_canonical_is_slug_url_ignoring_query_string(): void
     {
         $this->cacheUpstream('match:1', $this->upstreamMatch());
 
         $this->get('/match/1?utm_source=newsletter&fbclid=abc')
-            ->assertSee('<link rel="canonical" href="'.url('/match/1').'">', false);
+            ->assertSee('<link rel="canonical" href="'.url('/match/1-arsenal-fc-vs-chelsea-fc').'">', false);
+    }
+
+    public function test_slugged_match_url_resolves_the_same_entity(): void
+    {
+        $this->cacheUpstream('match:1', $this->upstreamMatch());
+
+        // A keyword URL (even with a stale/wrong slug) resolves by its numeric id.
+        $this->get('/match/1-arsenal-fc-vs-chelsea-fc')
+            ->assertOk()
+            ->assertSee('<title>Arsenal FC vs Chelsea FC', false)
+            ->assertSee('<link rel="canonical" href="'.url('/match/1-arsenal-fc-vs-chelsea-fc').'">', false);
     }
 
     public function test_uncached_match_is_noindex_but_still_serves_the_shell(): void

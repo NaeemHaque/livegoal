@@ -9,12 +9,13 @@ import ErrorState from '@/components/states/ErrorState.vue';
 import { useBack } from '@/composables/useBack';
 import { usePageMeta } from '@/composables/usePageMeta';
 import { usePerson } from '@/composables/usePerson';
+import { numericId } from '@/lib/slugs';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const goBack = useBack();
 
-const id = computed(() => props.id);
+const id = computed(() => numericId(props.id));
 const { data: player, loading, error, reload } = usePerson(id);
 
 usePageMeta(() => player.value?.name || null);

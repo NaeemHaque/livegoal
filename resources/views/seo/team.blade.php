@@ -15,6 +15,12 @@
         $summary .= ", founded {$founded}";
     }
     $summary .= '. Fixtures, results, squad and live scores on LiveGoal.';
+
+    $matchUrl = function (array $match): string {
+        $name = data_get($match, 'home.name').' vs '.data_get($match, 'away.name');
+
+        return \App\Seo\Slug::url('match', (string) data_get($match, 'id'), $name);
+    };
 @endphp
 <article data-seo-prerender>
     <h1>{{ $name }}</h1>
@@ -36,7 +42,7 @@
                             $line .= ' — '.\Illuminate\Support\Carbon::parse(data_get($match, 'kickoff'))->format('j M, H:i').' UTC';
                         }
                     @endphp
-                    <li>{{ $line }}</li>
+                    <li><a href="{{ $matchUrl($match) }}">{{ $line }}</a></li>
                 @endforeach
             </ul>
         </section>
@@ -47,7 +53,7 @@
             <h2>Recent results</h2>
             <ul>
                 @foreach ($recent as $match)
-                    <li>{{ data_get($match, 'home.name') }} {{ data_get($match, 'homeScore') }}–{{ data_get($match, 'awayScore') }} {{ data_get($match, 'away.name') }}</li>
+                    <li><a href="{{ $matchUrl($match) }}">{{ data_get($match, 'home.name') }} {{ data_get($match, 'homeScore') }}–{{ data_get($match, 'awayScore') }} {{ data_get($match, 'away.name') }}</a></li>
                 @endforeach
             </ul>
         </section>

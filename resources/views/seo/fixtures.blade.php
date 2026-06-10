@@ -25,6 +25,12 @@
 
         return $text;
     };
+
+    $matchUrl = function (array $match): string {
+        $name = data_get($match, 'home.name').' vs '.data_get($match, 'away.name');
+
+        return \App\Seo\Slug::url('match', (string) data_get($match, 'id'), $name);
+    };
 @endphp
 <article data-seo-prerender>
     <h1>{{ $heading }}</h1>
@@ -36,7 +42,7 @@
             <h2>{{ $matchesHeading ?? "Today's matches" }}</h2>
             <ul>
                 @foreach ($today as $match)
-                    <li>{{ $line($match) }}</li>
+                    <li><a href="{{ $matchUrl($match) }}">{{ $line($match) }}</a></li>
                 @endforeach
             </ul>
         </section>
@@ -47,7 +53,7 @@
             <h2>Upcoming fixtures</h2>
             <ul>
                 @foreach ($upcoming as $match)
-                    <li>{{ $line($match) }}</li>
+                    <li><a href="{{ $matchUrl($match) }}">{{ $line($match) }}</a></li>
                 @endforeach
             </ul>
         </section>

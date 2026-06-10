@@ -24,13 +24,14 @@ import { useBack } from '@/composables/useBack';
 import { useMatch } from '@/composables/useMatch';
 import { usePageMeta } from '@/composables/usePageMeta';
 import { useTimeFormat } from '@/composables/useTimeFormat';
+import { numericId } from '@/lib/slugs';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const goBack = useBack();
 const { time, date, dateTime } = useTimeFormat();
 
-const id = computed(() => props.id);
+const id = computed(() => numericId(props.id));
 const { data: match, loading, error, reload } = useMatch(id);
 
 usePageMeta(() => {

@@ -132,6 +132,38 @@ class SeoPrerenderTest extends TestCase
             ->assertSee('Last updated', false);
     }
 
+    public function test_competition_prerender_links_to_team_and_player_pages(): void
+    {
+        $this->cacheUpstream('competition:PL', [
+            'id' => 2021, 'name' => 'Premier League', 'code' => 'PL', 'type' => 'LEAGUE',
+        ]);
+        $this->cacheUpstream('standings:PL', [
+            'standings' => [[
+                'type' => 'TOTAL',
+                'table' => [[
+                    'position' => 1,
+                    'team' => ['id' => 57, 'name' => 'Arsenal FC', 'tla' => 'ARS'],
+                    'playedGames' => 10, 'won' => 8, 'draw' => 1, 'lost' => 1,
+                    'goalsFor' => 20, 'goalsAgainst' => 5, 'goalDifference' => 15, 'points' => 25,
+                ]],
+            ]],
+        ]);
+        $this->cacheUpstream('competition:PL:scorers', [
+            'scorers' => [[
+                'player' => ['id' => 44, 'name' => 'Erling Haaland'],
+                'team' => ['id' => 65, 'name' => 'Manchester City', 'tla' => 'MCI'],
+                'goals' => 20,
+            ]],
+        ]);
+
+        // The crawl graph: standings/scorers link to slug team/player pages, so
+        // crawlers can reach deep pages that aren't in the sitemap.
+        $this->get('/competition/PL')
+            ->assertOk()
+            ->assertSee('href="'.url('/team/57-arsenal-fc').'"', false)
+            ->assertSee('href="'.url('/player/44-erling-haaland').'"', false);
+    }
+
     // --- Team & player prerender --------------------------------------------
 
     public function test_team_prerenders_name_and_fixtures(): void
