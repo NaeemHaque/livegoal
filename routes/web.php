@@ -20,6 +20,9 @@ Route::get('sitemap.xml', [SitemapController::class, 'index']);
 // everything else, instead of soft-404ing every URL with a 200.
 Route::get('/', [SeoShellController::class, 'home'])->name('home');
 Route::get('/matches', [SeoShellController::class, 'matches'])->name('matches');
+Route::get('/matches/{date}', [SeoShellController::class, 'matchesByDate'])
+    ->where('date', '\d{4}-\d{2}-\d{2}')
+    ->name('matches.date');
 Route::get('/match/{id}', [SeoShellController::class, 'match'])->name('match');
 Route::get('/competitions', [SeoShellController::class, 'competitions'])->name('competitions');
 Route::get('/competition/{id}', [SeoShellController::class, 'competition'])->name('competition');

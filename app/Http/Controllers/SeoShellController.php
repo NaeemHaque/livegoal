@@ -27,6 +27,11 @@ class SeoShellController extends Controller
         return $this->shell($this->seo->matches(), $this->seo->fixturesBody('Football Fixtures & Results'));
     }
 
+    public function matchesByDate(string $date): View
+    {
+        return $this->shell($this->seo->matchesForDate($date), $this->seo->fixturesBodyForDate($date));
+    }
+
     public function competitions(): View
     {
         return $this->shell($this->seo->competitions());

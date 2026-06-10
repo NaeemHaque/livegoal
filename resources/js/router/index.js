@@ -16,6 +16,14 @@ const routes = [
         meta: { title: 'Fixtures & Results' },
     },
     {
+        // Crawlable, shareable per-date fixtures (e.g. /matches/2026-06-12).
+        path: '/matches/:date(\\d{4}-\\d{2}-\\d{2})',
+        name: 'matches-date',
+        component: () => import('@/pages/Matches.vue'),
+        props: true,
+        meta: { title: 'Fixtures & Results' },
+    },
+    {
         path: '/match/:id',
         name: 'match',
         component: () => import('@/pages/MatchDetail.vue'),

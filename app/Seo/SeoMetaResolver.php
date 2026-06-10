@@ -65,6 +65,33 @@ class SeoMetaResolver
         );
     }
 
+    /**
+     * A specific day's fixtures page (/matches/{Y-m-d}) — targets the high-volume
+     * "football matches on {date}" long tail. Indexable only when that day has
+     * fixtures, so empty future/past dates don't create thin pages.
+     */
+    public function matchesForDate(string $date): SeoMeta
+    {
+        $canonical = url('/matches/'.$date);
+        $human = $this->humanDate($date);
+        $hasFixtures = $this->datedMatches($date) !== [];
+
+        return new SeoMeta(
+            title: $this->brand("Football Matches on {$human} — Live Scores & Results"),
+            description: "All football fixtures and results on {$human}: World Cup 2026, Premier "
+                .'League, La Liga, Serie A and Europe\'s top leagues. Live scores on LiveGoal.',
+            canonical: $canonical,
+            robots: $hasFixtures ? 'index,follow' : 'noindex,follow',
+            jsonLd: [
+                $this->breadcrumb([
+                    [Config::string('seo.site_name'), url('/')],
+                    ['Matches', url('/matches')],
+                    [$human, $canonical],
+                ]),
+            ],
+        );
+    }
+
     public function match(string $id): SeoMeta
     {
         $canonical = URL::current();
@@ -407,8 +434,37 @@ class SeoMetaResolver
             'view' => 'seo.fixtures',
             'data' => [
                 'heading' => $heading,
+                'matchesHeading' => "Today's matches",
                 'today' => $todayMatches,
                 'upcoming' => $upcoming,
+                'updatedAt' => $agg['lastUpdated'],
+            ],
+        ];
+    }
+
+    /**
+     * Prerendered fixtures for a specific date page.
+     *
+     * @return array{view: string, data: array<string, mixed>}|null
+     */
+    public function fixturesBodyForDate(string $date): ?array
+    {
+        $agg = $this->featured->all(allowFetch: false);
+        $matches = $this->featured->onDate($agg['matches'], $date);
+
+        if ($matches === []) {
+            return null;
+        }
+
+        $human = $this->humanDate($date);
+
+        return [
+            'view' => 'seo.fixtures',
+            'data' => [
+                'heading' => "Football Matches — {$human}",
+                'matchesHeading' => 'Fixtures & results',
+                'today' => $matches,
+                'upcoming' => [],
                 'updatedAt' => $agg['lastUpdated'],
             ],
         ];
@@ -678,6 +734,28 @@ class SeoMetaResolver
                 ],
             ],
         ];
+    }
+
+    /**
+     * Featured fixtures on a given Y-m-d (cache-only, crawler-safe).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function datedMatches(string $date): array
+    {
+        $agg = $this->featured->all(allowFetch: false);
+
+        return $this->featured->onDate($agg['matches'], $date);
+    }
+
+    /** "2026-06-12" -> "12 June 2026" (falls back to the raw value on bad input). */
+    private function humanDate(string $date): string
+    {
+        try {
+            return Carbon::parse($date)->format('j F Y');
+        } catch (\Throwable) {
+            return $date;
+        }
     }
 
     private function brand(string $title): string

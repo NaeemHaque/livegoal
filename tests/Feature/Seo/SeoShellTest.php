@@ -194,4 +194,39 @@ class SeoShellTest extends TestCase
             ->assertOk()
             ->assertSee('name="robots" content="noindex', false);
     }
+
+    // --- Crawlable date pages -----------------------------------------------
+
+    public function test_date_page_has_dated_title_and_canonical(): void
+    {
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 20,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-12T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $this->get('/matches/2026-06-12')
+            ->assertOk()
+            ->assertSee('<title>Football Matches on 12 June 2026', false)
+            ->assertSee('<link rel="canonical" href="'.url('/matches/2026-06-12').'">', false)
+            ->assertDontSee('name="robots" content="noindex', false);
+    }
+
+    public function test_date_page_without_fixtures_is_noindex(): void
+    {
+        // No featured feeds cached → no matches that day → thin page → noindex.
+        $this->get('/matches/2030-01-01')
+            ->assertOk()
+            ->assertSee('name="robots" content="noindex', false);
+    }
+
+    public function test_invalid_date_path_returns_404(): void
+    {
+        $this->get('/matches/not-a-date')->assertNotFound();
+    }
 }

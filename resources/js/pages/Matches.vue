@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import DateNavigator from '@/components/DateNavigator.vue';
@@ -17,12 +17,31 @@ import { today } from '@/lib/dates';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useMatchesStore } from '@/stores/matches';
 
+const props = defineProps({ date: { type: String, default: '' } });
+
 const router = useRouter();
 const favorites = useFavoritesStore();
 const matches = useMatchesStore();
 
-const date = ref(today());
+const date = ref(props.date || today());
 const filter = ref('all');
+
+// Keep the selected day in sync with the URL so dates are shareable and the
+// browser back/forward buttons work: route param → date, and date → URL
+// (navigating to today drops back to the bare /matches).
+watch(
+    () => props.date,
+    (value) => {
+        date.value = value || today();
+    },
+);
+watch(date, (value) => {
+    const target = value === today() ? '/matches' : `/matches/${value}`;
+
+    if (router.currentRoute.value.path !== target) {
+        router.push(target);
+    }
+});
 
 const {
     matches: dayMatches,

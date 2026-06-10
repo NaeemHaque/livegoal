@@ -242,4 +242,24 @@ class SeoPrerenderTest extends TestCase
             ->assertSee('id="app"', false)
             ->assertDontSee('data-seo-prerender', false);
     }
+
+    public function test_date_page_prerenders_that_dates_fixtures(): void
+    {
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 20,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-12T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $this->get('/matches/2026-06-12')
+            ->assertOk()
+            ->assertSee('data-seo-prerender', false)
+            ->assertSee('Mexico', false)
+            ->assertSee('Last updated', false);
+    }
 }

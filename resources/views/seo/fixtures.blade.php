@@ -33,7 +33,7 @@
 
     @if (count($today))
         <section>
-            <h2>Today's matches</h2>
+            <h2>{{ $matchesHeading ?? "Today's matches" }}</h2>
             <ul>
                 @foreach ($today as $match)
                     <li>{{ $line($match) }}</li>

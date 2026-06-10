@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 
@@ -23,6 +24,13 @@ class SitemapController extends Controller
                 if (is_string($code)) {
                     $urls[] = url('/competition/'.$code);
                 }
+            }
+
+            // Rolling window of date pages (recent results + upcoming fixtures).
+            $start = Carbon::now()->subDays(2);
+
+            for ($offset = 0; $offset <= 9; $offset++) {
+                $urls[] = url('/matches/'.$start->copy()->addDays($offset)->toDateString());
             }
 
             $body = '';
