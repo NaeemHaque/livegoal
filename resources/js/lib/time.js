@@ -79,3 +79,30 @@ export function formatShortDateTime(iso, tz = 'local') {
         return '';
     }
 }
+
+export function formatDateRange(startIso, endIso) {
+    if (!startIso || !endIso) {
+        return '';
+    }
+
+    try {
+        // Tournament windows are calendar dates (date-only), so format in UTC —
+        // a local timezone must not shift the day. The year sits on the end only.
+        const format = (iso, opts) =>
+            new Intl.DateTimeFormat(undefined, {
+                ...opts,
+                timeZone: 'UTC',
+            }).format(new Date(iso));
+
+        const start = format(startIso, { day: 'numeric', month: 'short' });
+        const end = format(endIso, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+        });
+
+        return `${start} – ${end}`;
+    } catch {
+        return '';
+    }
+}

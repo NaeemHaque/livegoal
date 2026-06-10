@@ -1,5 +1,6 @@
 import {
     formatDate,
+    formatDateRange,
     formatDateTime,
     formatLongDate,
     formatShortDateTime,
@@ -18,6 +19,7 @@ export function useTimeFormat() {
         time: (iso) => formatTime(iso, settings.timezone),
         date: (iso) => formatDate(iso, settings.timezone),
         longDate: (iso) => formatLongDate(iso, settings.timezone),
+        dateRange: (start, end) => formatDateRange(start, end),
         shortDateTime: (iso) => formatShortDateTime(iso, settings.timezone),
         dateTime: (iso) => formatDateTime(iso, settings.timezone),
     };

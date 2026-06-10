@@ -300,6 +300,11 @@
     padding: 1px 6px;
     border-radius: 999px;
     background: color-mix(in srgb, currentColor 18%, transparent);
+    /* Reserve room for up to two digits so the tab doesn't resize when the
+       count fills in after data loads. */
+    min-width: 26px;
+    box-sizing: border-box;
+    text-align: center;
 }
 .pp-filtertabs .ft.on .cnt {
     background: rgba(0, 0, 0, 0.18);
