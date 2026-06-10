@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +15,7 @@ class MatchController extends Controller
     public function __construct(
         private readonly FootballData $football,
         private readonly Normalizer $normalizer,
+        private readonly FeaturedMatches $featured,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -60,13 +62,9 @@ class MatchController extends Controller
         // Filter the (shared, full-season) feed by date in PHP rather than per-date
         // upstream queries — so day, upcoming and Competition Detail all hit the
         // same cache and navigating dates costs no extra upstream calls.
-        $agg = $this->featuredMatches([]);
-        $matches = array_values(array_filter(
-            $agg['matches'],
-            fn (array $m): bool => (is_string($m['kickoff'] ?? null) ? substr($m['kickoff'], 0, 10) : '') === $date,
-        ));
+        $agg = $this->featured->all();
 
-        return $this->aggregateEnvelope($this->sortByKickoff($matches), $agg);
+        return $this->aggregateEnvelope($this->featured->onDate($agg['matches'], $date), $agg);
     }
 
     /**
@@ -77,66 +75,9 @@ class MatchController extends Controller
     public function upcoming(): JsonResponse
     {
         $today = Date::now()->toDateString();
-        $agg = $this->featuredMatches([]);
+        $agg = $this->featured->all();
 
-        $upcoming = array_values(array_filter($agg['matches'], function (array $m) use ($today): bool {
-            $day = is_string($m['kickoff'] ?? null) ? substr($m['kickoff'], 0, 10) : '';
-
-            return ($m['status'] ?? null) === 'SCHEDULED' && $day >= $today;
-        }));
-
-        return $this->aggregateEnvelope(array_slice($this->sortByKickoff($upcoming), 0, 24), $agg);
-    }
-
-    /**
-     * Fetch and merge each featured competition's matches for the given query.
-     *
-     * @param  array<string, string>  $query
-     * @return array{matches: list<array<string, mixed>>, lastUpdated: string|null, stale: bool, served: bool}
-     */
-    private function featuredMatches(array $query): array
-    {
-        $ttl = Config::integer('football.ttl.matches');
-
-        $matches = [];
-        $lastUpdated = null;
-        $stale = false;
-        $served = false;
-
-        foreach (Config::array('football.featured') as $code) {
-            if (! is_string($code)) {
-                continue;
-            }
-
-            // Read-only: never block the homepage on the rate-limited upstream —
-            // serve cache/last-good and let app:warm-matches keep it fresh.
-            $result = $this->football->cached("competition:{$code}:matches", $ttl, "/competitions/{$code}/matches", $query, refresh: false);
-
-            if (is_array($result->data)) {
-                $served = true;
-                $matches = array_merge($matches, $this->normalizer->matches($result->data));
-            }
-
-            $stale = $stale || $result->stale;
-
-            if ($result->lastUpdated !== null && ($lastUpdated === null || $result->lastUpdated > $lastUpdated)) {
-                $lastUpdated = $result->lastUpdated;
-            }
-        }
-
-        return ['matches' => $matches, 'lastUpdated' => $lastUpdated, 'stale' => $stale, 'served' => $served];
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $matches
-     * @return list<array<string, mixed>>
-     */
-    private function sortByKickoff(array $matches): array
-    {
-        $kickoff = static fn (array $m): string => is_string($m['kickoff'] ?? null) ? $m['kickoff'] : '';
-        usort($matches, fn (array $a, array $b): int => strcmp($kickoff($a), $kickoff($b)));
-
-        return $matches;
+        return $this->aggregateEnvelope($this->featured->scheduledFrom($agg['matches'], $today, 24), $agg);
     }
 
     /**

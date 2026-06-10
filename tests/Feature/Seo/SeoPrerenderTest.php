@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seo;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -170,5 +171,75 @@ class SeoPrerenderTest extends TestCase
             ->assertSee('<h1>Erling Haaland</h1>', false)
             ->assertSee('Centre-Forward', false)
             ->assertSee('Norway', false);
+    }
+
+    // --- Home / matches: today's fixtures prerender -------------------------
+
+    public function test_home_prerenders_todays_and_upcoming_fixtures(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-11 09:00:00'));
+
+        // Only the World Cup feed is cached; the other featured competitions are
+        // cold and must NOT trigger an upstream call (preventStrayRequests guards).
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [
+                [
+                    'id' => 10,
+                    'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                    'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                    'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                    'status' => 'TIMED', 'utcDate' => '2026-06-11T18:00:00Z',
+                    'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+                ],
+                [
+                    'id' => 11,
+                    'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                    'homeTeam' => ['id' => 3, 'name' => 'Spain', 'tla' => 'ESP'],
+                    'awayTeam' => ['id' => 4, 'name' => 'Japan', 'tla' => 'JPN'],
+                    'status' => 'TIMED', 'utcDate' => '2026-06-13T18:00:00Z',
+                    'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+                ],
+            ],
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('data-seo-prerender', false)
+            ->assertSee('Mexico', false)   // today's fixture
+            ->assertSee('Spain', false)    // upcoming fixture
+            ->assertSee('Last updated', false);
+
+        $this->travelBack();
+    }
+
+    public function test_matches_page_prerenders_fixtures(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-11 09:00:00'));
+
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 10,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-11T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $this->get('/matches')
+            ->assertOk()
+            ->assertSee('data-seo-prerender', false)
+            ->assertSee('Mexico', false);
+
+        $this->travelBack();
+    }
+
+    public function test_home_has_no_prerender_when_no_fixtures_cached(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('id="app"', false)
+            ->assertDontSee('data-seo-prerender', false);
     }
 }

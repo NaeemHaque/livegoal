@@ -19,12 +19,12 @@ class SeoShellController extends Controller
 
     public function home(): View
     {
-        return $this->shell($this->seo->home());
+        return $this->shell($this->seo->home(), $this->seo->fixturesBody('Live Football Scores Today'));
     }
 
     public function matches(): View
     {
-        return $this->shell($this->seo->matches());
+        return $this->shell($this->seo->matches(), $this->seo->fixturesBody('Football Fixtures & Results'));
     }
 
     public function competitions(): View

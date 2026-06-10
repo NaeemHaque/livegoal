@@ -2,6 +2,7 @@
 
 namespace App\Seo;
 
+use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
 use Illuminate\Support\Carbon;
@@ -21,6 +22,7 @@ class SeoMetaResolver
     public function __construct(
         private readonly FootballData $football,
         private readonly Normalizer $normalizer,
+        private readonly FeaturedMatches $featured,
     ) {}
 
     public function home(): SeoMeta
@@ -374,6 +376,40 @@ class SeoMetaResolver
                 'upcoming' => $this->upcoming($all, 5),
                 'recent' => $this->recent($all, 5),
                 'updatedAt' => $entry['at'],
+            ],
+        ];
+    }
+
+    /**
+     * Today's and upcoming featured fixtures for the home / matches pages — the
+     * highest-value "matches today" surface during a live tournament. Cache-only
+     * (crawler-safe): never triggers an upstream fetch.
+     *
+     * @return array{view: string, data: array<string, mixed>}|null
+     */
+    public function fixturesBody(string $heading): ?array
+    {
+        $agg = $this->featured->all(allowFetch: false);
+
+        if (! $agg['served']) {
+            return null;
+        }
+
+        $today = Carbon::now()->toDateString();
+        $todayMatches = $this->featured->onDate($agg['matches'], $today);
+        $upcoming = $this->featured->scheduledFrom($agg['matches'], $today, 10);
+
+        if ($todayMatches === [] && $upcoming === []) {
+            return null;
+        }
+
+        return [
+            'view' => 'seo.fixtures',
+            'data' => [
+                'heading' => $heading,
+                'today' => $todayMatches,
+                'upcoming' => $upcoming,
+                'updatedAt' => $agg['lastUpdated'],
             ],
         ];
     }
