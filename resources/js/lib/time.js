@@ -38,6 +38,23 @@ export function formatDate(iso, tz = 'local') {
     }
 }
 
+export function formatLongDate(iso, tz = 'local') {
+    if (!iso) {
+        return '';
+    }
+
+    try {
+        return new Intl.DateTimeFormat(undefined, {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            timeZone: zone(tz),
+        }).format(new Date(iso));
+    } catch {
+        return '';
+    }
+}
+
 export function formatDateTime(iso, tz = 'local') {
     const date = formatDate(iso, tz);
     const time = formatTime(iso, tz);
