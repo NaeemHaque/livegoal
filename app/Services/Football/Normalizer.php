@@ -50,6 +50,7 @@ class Normalizer
             'name' => $this->str($c['name'] ?? null),
             'short' => $this->str($meta['short'] ?? null) ?: $this->str($c['name'] ?? null),
             'region' => $this->str(data_get($c, 'area.name')),
+            'regionFlag' => $this->nullableStr(data_get($c, 'area.flag')),
             'kind' => match ($type) {
                 'CUP' => 'cup',
                 'LEAGUE' => 'league',

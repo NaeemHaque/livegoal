@@ -833,6 +833,18 @@
     flex-wrap: wrap;
     margin-top: 4px;
 }
+.pp-entity-head .eh-sub span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.pp-entity-head .eh-flag {
+    height: 13px;
+    width: auto;
+    border-radius: 2px;
+    flex: none;
+    box-shadow: 0 0 0 1px var(--border);
+}
 .pp-entity-head .eh-stats {
     position: relative;
     display: flex;

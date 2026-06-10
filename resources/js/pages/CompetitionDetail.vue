@@ -128,10 +128,17 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
                 <div>
                     <h1>{{ competition?.name ?? '…' }}</h1>
                     <div class="eh-sub">
-                        <span
-                            ><IcGlobe :size="13" />
-                            {{ competition?.region }}</span
-                        >
+                        <span>
+                            <img
+                                v-if="competition?.regionFlag"
+                                class="eh-flag"
+                                :src="competition.regionFlag"
+                                :alt="competition?.region"
+                                loading="lazy"
+                            />
+                            <IcGlobe v-else :size="13" />
+                            {{ competition?.region }}
+                        </span>
                     </div>
                 </div>
             </div>
