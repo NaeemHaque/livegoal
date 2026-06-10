@@ -22,6 +22,7 @@ import ErrorState from '@/components/states/ErrorState.vue';
 import { useApi } from '@/composables/useApi';
 import { useBack } from '@/composables/useBack';
 import { useMatch } from '@/composables/useMatch';
+import { usePageMeta } from '@/composables/usePageMeta';
 import { useTimeFormat } from '@/composables/useTimeFormat';
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -31,6 +32,14 @@ const { time, date, dateTime } = useTimeFormat();
 
 const id = computed(() => props.id);
 const { data: match, loading, error, reload } = useMatch(id);
+
+usePageMeta(() => {
+    const m = match.value;
+
+    return m?.home?.name && m?.away?.name
+        ? `${m.home.name} vs ${m.away.name}`
+        : null;
+});
 
 const isLive = computed(() =>
     ['LIVE', 'HT', 'ET', 'PEN'].includes(match.value?.status),

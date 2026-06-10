@@ -10,6 +10,7 @@ import MatchCard from '@/components/MatchCard.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import { useApi } from '@/composables/useApi';
 import { useBack } from '@/composables/useBack';
+import { usePageMeta } from '@/composables/usePageMeta';
 import { useTeam } from '@/composables/useTeam';
 import { useFavoritesStore } from '@/stores/favorites';
 
@@ -21,6 +22,8 @@ const favorites = useFavoritesStore();
 const id = computed(() => props.id);
 const { data: team, loading } = useTeam(id);
 const { data: teamMatches } = useApi(() => `/teams/${id.value}/matches`);
+
+usePageMeta(() => team.value?.name || null);
 
 const tab = ref('overview');
 const matches = computed(() => teamMatches.value ?? []);

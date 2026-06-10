@@ -40,6 +40,8 @@ const monoSize = computed(() => `${Math.round(props.size * 0.4)}px`);
             v-if="showImg"
             :src="competition.emblem"
             :alt="competition?.name"
+            :width="size"
+            :height="size"
             loading="lazy"
             @error="failed = true"
         />

@@ -17,7 +17,9 @@ router.isReady().then(() => {
         return;
     }
 
-    const MIN_DISPLAY_MS = 1100;
+    // Keep the loader long enough to avoid a flash on slow loads, but don't tax
+    // fast loads — the old 1100ms floor delayed first paint on every visit (LCP).
+    const MIN_DISPLAY_MS = 250;
     const remaining = Math.max(0, MIN_DISPLAY_MS - performance.now());
 
     setTimeout(() => {
