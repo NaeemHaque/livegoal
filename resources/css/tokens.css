@@ -318,22 +318,22 @@ a {
 
 @keyframes pp-goal-in {
     0% {
-        transform: translateY(-22px) scale(0.9);
+        transform: translateX(-50%) translateY(-22px) scale(0.9);
         opacity: 0;
     }
     12% {
-        transform: translateY(0) scale(1.04);
+        transform: translateX(-50%) translateY(0) scale(1.04);
         opacity: 1;
     }
     20% {
-        transform: scale(1);
+        transform: translateX(-50%) scale(1);
     }
     88% {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(-50%) translateY(0);
     }
     100% {
-        transform: translateY(-12px);
+        transform: translateX(-50%) translateY(-12px);
         opacity: 0;
     }
 }
