@@ -8,8 +8,10 @@ const KO_ORDER = [
     { key: 'LAST_16', title: 'Round of 16' },
     { key: 'QUARTER_FINALS', title: 'Quarter-finals' },
     { key: 'SEMI_FINALS', title: 'Semi-finals' },
-    { key: 'THIRD_PLACE', title: 'Third place' },
     { key: 'FINAL', title: 'Final' },
+    // Third place is a standalone match (not fed by the final), so it trails the
+    // bracket — this keeps every main round a clean 2:1 for the connector lines.
+    { key: 'THIRD_PLACE', title: 'Third place' },
 ];
 
 const LIVE_STATUSES = ['LIVE', 'HT', 'ET', 'PEN'];
@@ -48,6 +50,7 @@ function aggregateTies(stageMatches) {
                 hs: null,
                 as: null,
                 live: false,
+                kickoff: m.kickoff ?? null,
             });
         }
 

@@ -737,11 +737,28 @@
     gap: 32px;
     padding: 8px 4px 20px;
     min-width: max-content;
+    position: relative;
+}
+.pp-bracket .b-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 0;
+}
+.pp-bracket .b-lines line {
+    stroke: color-mix(in srgb, var(--text) 18%, transparent);
+    stroke-width: 1.5;
+    stroke-linecap: round;
 }
 .pp-bracket .b-col {
     display: flex;
     flex-direction: column;
     min-width: 168px;
+    position: relative;
+    z-index: 1;
 }
 .pp-bracket .b-col-title {
     font-size: 11px;
@@ -776,6 +793,13 @@
 }
 .pp-bnode.live {
     border-color: color-mix(in srgb, var(--live) 40%, var(--border));
+}
+.pp-bnode .bn-time {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-faint);
+    padding: 1px 7px 3px;
 }
 .pp-bnode .bn-row {
     display: flex;

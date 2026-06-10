@@ -2,6 +2,7 @@ import {
     formatDate,
     formatDateTime,
     formatLongDate,
+    formatShortDateTime,
     formatTime,
 } from '@/lib/time';
 import { useSettingsStore } from '@/stores/settings';
@@ -17,6 +18,7 @@ export function useTimeFormat() {
         time: (iso) => formatTime(iso, settings.timezone),
         date: (iso) => formatDate(iso, settings.timezone),
         longDate: (iso) => formatLongDate(iso, settings.timezone),
+        shortDateTime: (iso) => formatShortDateTime(iso, settings.timezone),
         dateTime: (iso) => formatDateTime(iso, settings.timezone),
     };
 }

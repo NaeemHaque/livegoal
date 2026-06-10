@@ -46,16 +46,14 @@ const fixtures = computed(() =>
         .filter((m) => m.status !== 'FT')
         .sort((a, b) =>
             String(a.kickoff ?? '').localeCompare(String(b.kickoff ?? '')),
-        )
-        .slice(0, 24),
+        ),
 );
 const results = computed(() =>
     matches.value
         .filter((m) => m.status === 'FT')
         .sort((a, b) =>
             String(b.kickoff ?? '').localeCompare(String(a.kickoff ?? '')),
-        )
-        .slice(0, 24),
+        ),
 );
 
 // Segment a kickoff-sorted list into day groups ("12 July 2026") so Fixtures and
@@ -86,8 +84,8 @@ const tabs = computed(() => [
     hasGroups.value
         ? { id: 'groups', label: 'Groups' }
         : { id: 'table', label: 'Standings' },
-    ...(hasKnockout.value ? [{ id: 'knockout', label: 'Knockout' }] : []),
     { id: 'fixtures', label: 'Fixtures' },
+    ...(hasKnockout.value ? [{ id: 'knockout', label: 'Knockout' }] : []),
     { id: 'results', label: 'Results' },
     { id: 'scorers', label: 'Top Scorers' },
     { id: 'teams', label: 'Teams' },

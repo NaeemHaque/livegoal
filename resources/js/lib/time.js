@@ -61,3 +61,21 @@ export function formatDateTime(iso, tz = 'local') {
 
     return date && time ? `${date} · ${time}` : date || time;
 }
+
+export function formatShortDateTime(iso, tz = 'local') {
+    if (!iso) {
+        return '';
+    }
+
+    try {
+        return new Intl.DateTimeFormat(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: zone(tz),
+        }).format(new Date(iso));
+    } catch {
+        return '';
+    }
+}
