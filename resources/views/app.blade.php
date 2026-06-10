@@ -18,7 +18,10 @@
         })();
     </script>
 
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
     <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,8 +69,11 @@
             backdrop-filter: blur(0);
         }
 
-        #pp-loader .ld-logo { display: flex; align-items: center; gap: 12px; animation: ld-fade 0.5s ease both; }
-        #pp-loader .ld-mark { width: 42px; height: 42px; border-radius: 11px; background: var(--accent, #C6FF3A); color: var(--accent-text, #0A0D12); display: grid; place-items: center; box-shadow: 0 0 30px -5px color-mix(in srgb, var(--accent, #C6FF3A) 50%, transparent); }
+        #pp-loader .ld-logo { display: flex; align-items: center; gap: 11px; animation: ld-fade 0.5s ease both; }
+        #pp-loader .ld-ball { width: 40px; height: 40px; flex: none; overflow: visible; }
+        #pp-loader .ld-ball .body { fill: var(--text, #E6EAF0); }
+        #pp-loader .ld-ball .panel { fill: var(--bg-base, #0A0D12); }
+        #pp-loader .ld-ball .seam { stroke: var(--bg-base, #0A0D12); }
         #pp-loader .ld-word { display: flex; flex-direction: column; line-height: 1; align-items: flex-start; }
         #pp-loader .ld-word b { font-size: 25px; font-weight: 800; letter-spacing: -0.01em; color: var(--text, #E6EAF0); }
         #pp-loader .ld-word b .a { color: var(--accent, #C6FF3A); }
@@ -129,13 +135,16 @@
 <body>
     <div id="pp-loader" role="status" aria-label="Loading LiveGoal">
         <div class="ld-logo">
-            <span class="ld-mark">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" />
-                    <path d="M12 7.2 9 9.4l1.1 3.5h3.8L15 9.4 12 7.2Z" fill="currentColor" />
-                </svg>
-            </span>
-            <span class="ld-word"><b>Live<span class="a">Goal</span></b><small>Live Football</small></span>
+            <svg class="ld-ball" viewBox="0 0 48 48" width="40" height="40" fill="none" aria-hidden="true">
+                <circle class="body" cx="22" cy="24" r="15" />
+                <polygon class="panel" points="22,16 29,21 26.5,29.5 17.5,29.5 15,21" />
+                <g class="seam" stroke-width="1.5" fill="none" stroke-linecap="round">
+                    <path d="M22 16V9M29 21l6.3-2.3M26.5 29.5l4.4 5.5M17.5 29.5l-4.4 5.5M15 21l-6.3-2.3" />
+                </g>
+                <circle class="seam" cx="22" cy="24" r="15" fill="none" stroke-width="1.6" />
+                <circle cx="39" cy="11" r="5" fill="#FF3D3D" />
+            </svg>
+            <span class="ld-word"><b>Live<span class="a">Goal</span></b></span>
         </div>
 
         <div class="ld-pitch">
