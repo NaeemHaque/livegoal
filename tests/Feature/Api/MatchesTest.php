@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Http;
@@ -309,6 +310,37 @@ class MatchesTest extends TestCase
         $this->getJson('/api/matches/upcoming')
             ->assertOk()
             ->assertJsonPath('data', []);
+    }
+
+    // --- 5d. resilience: serve last-good, never block on the rate-limited API -
+
+    public function test_upcoming_serves_last_good_without_calling_the_rate_limited_upstream(): void
+    {
+        Date::setTestNow('2026-06-09T00:00:00Z');
+        Config::set('football.featured', ['WC']);
+
+        $future = $this->matchWithStatus(900001, 'TIMED');
+        $future['utcDate'] = '2026-06-11T19:00:00Z';
+        $future['competition'] = ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'];
+
+        // Only the last-known-good copy is cached (no fresh) — the state the warmer
+        // leaves once the fresh TTL lapses.
+        Cache::put('fd:last:competition:WC:matches', [
+            'data' => ['matches' => [$future]],
+            'at' => Date::now()->toIso8601String(),
+        ], 86400);
+
+        // The upstream would 429, but the read-only homepage path must never reach it.
+        Http::fake(['*' => Http::response(['error' => 'rate limited'], 429)]);
+
+        $response = $this->getJson('/api/matches/upcoming');
+
+        $response->assertOk();
+        $response->assertJsonPath('meta.stale', true);
+        $response->assertJsonPath('data.0.competition.code', 'WC');
+        $this->assertCount(1, $response->json('data'));
+
+        Http::assertNothingSent();
     }
 
     // --- 6. show happy path: single normalized match -------------------------

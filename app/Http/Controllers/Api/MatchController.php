@@ -108,7 +108,9 @@ class MatchController extends Controller
                 continue;
             }
 
-            $result = $this->football->cached("competition:{$code}:matches", $ttl, "/competitions/{$code}/matches", $query);
+            // Read-only: never block the homepage on the rate-limited upstream —
+            // serve cache/last-good and let app:warm-matches keep it fresh.
+            $result = $this->football->cached("competition:{$code}:matches", $ttl, "/competitions/{$code}/matches", $query, refresh: false);
 
             if (is_array($result->data)) {
                 $served = true;

@@ -69,7 +69,7 @@ class FootballData
      *
      * @param  array<string, mixed>  $query
      */
-    public function cached(string $key, int $ttl, string $path, array $query = []): Result
+    public function cached(string $key, int $ttl, string $path, array $query = [], bool $refresh = true): Result
     {
         $base = $this->cacheKey($key, $query);
         $freshKey = "fd:{$base}";
@@ -79,6 +79,19 @@ class FootballData
 
         if (is_array($hit) && is_array($hit['data'] ?? null) && is_string($hit['at'] ?? null)) {
             return new Result($hit['data'], stale: false, cached: true, lastUpdated: $hit['at']);
+        }
+
+        // Read-only callers (the homepage aggregation) must not block a browser
+        // request on the rate-limited upstream once there is something to show:
+        // serve the last-known-good immediately and let the scheduled warmer
+        // refresh the fresh copy. Only a truly cold feed (no last-good) falls
+        // through to a one-off fetch, so first-ever loads still populate.
+        if (! $refresh) {
+            $served = $this->lastGood($lastKey);
+
+            if ($served->data !== null) {
+                return $served;
+            }
         }
 
         $data = $this->get($path, $query);
@@ -91,6 +104,15 @@ class FootballData
             return new Result($data, stale: false, cached: false, lastUpdated: $entry['at']);
         }
 
+        return $this->lastGood($lastKey);
+    }
+
+    /**
+     * The last-known-good payload (flagged stale), or an empty result when none
+     * has ever been stored.
+     */
+    private function lastGood(string $lastKey): Result
+    {
         $last = Cache::get($lastKey);
 
         if (is_array($last) && is_array($last['data'] ?? null) && is_string($last['at'] ?? null)) {

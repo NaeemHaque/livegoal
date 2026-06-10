@@ -3,11 +3,13 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import Bracket from '@/components/Bracket.vue';
+import CompetitionLogo from '@/components/CompetitionLogo.vue';
 import Crest from '@/components/Crest.vue';
 import GroupCard from '@/components/GroupCard.vue';
-import { IcChevL, IcGlobe, IcStar, IcTrophy } from '@/components/icons';
+import { IcChevL, IcGlobe, IcStar } from '@/components/icons';
 import InlineLoader from '@/components/InlineLoader.vue';
 import MatchCard from '@/components/MatchCard.vue';
+import SectionHead from '@/components/SectionHead.vue';
 import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import TopScorersList from '@/components/TopScorersList.vue';
@@ -15,6 +17,7 @@ import { useApi } from '@/composables/useApi';
 import { useCompetition } from '@/composables/useCompetition';
 import { useScorers } from '@/composables/useScorers';
 import { useStandings } from '@/composables/useStandings';
+import { useTimeFormat } from '@/composables/useTimeFormat';
 import { buildKnockoutRounds } from '@/lib/bracket';
 import { compKey } from '@/lib/featured';
 import { useFavoritesStore } from '@/stores/favorites';
@@ -22,6 +25,7 @@ import { useFavoritesStore } from '@/stores/favorites';
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const favorites = useFavoritesStore();
+const time = useTimeFormat();
 
 const id = computed(() => props.id);
 const { data: competition } = useCompetition(id);
@@ -43,24 +47,46 @@ const fixtures = computed(() =>
         .filter((m) => m.status !== 'FT')
         .sort((a, b) =>
             String(a.kickoff ?? '').localeCompare(String(b.kickoff ?? '')),
-        )
-        .slice(0, 24),
+        ),
 );
 const results = computed(() =>
     matches.value
         .filter((m) => m.status === 'FT')
         .sort((a, b) =>
             String(b.kickoff ?? '').localeCompare(String(a.kickoff ?? '')),
-        )
-        .slice(0, 24),
+        ),
+);
+
+// Segment a kickoff-sorted list into day groups ("12 July 2026") so Fixtures and
+// Results read like the homepage's grouped sections instead of a flat grid.
+function groupByDay(list) {
+    const days = [];
+    let current = null;
+
+    for (const m of list) {
+        const label = time.longDate(m.kickoff);
+
+        if (!current || current.label !== label) {
+            current = { label, matches: [] };
+            days.push(current);
+        }
+
+        current.matches.push(m);
+    }
+
+    return days;
+}
+
+const dateGroups = computed(() =>
+    groupByDay(tab.value === 'fixtures' ? fixtures.value : results.value),
 );
 
 const tabs = computed(() => [
     hasGroups.value
         ? { id: 'groups', label: 'Groups' }
         : { id: 'table', label: 'Standings' },
-    ...(hasKnockout.value ? [{ id: 'knockout', label: 'Knockout' }] : []),
     { id: 'fixtures', label: 'Fixtures' },
+    ...(hasKnockout.value ? [{ id: 'knockout', label: 'Knockout' }] : []),
     { id: 'results', label: 'Results' },
     { id: 'scorers', label: 'Top Scorers' },
     { id: 'teams', label: 'Teams' },
@@ -98,23 +124,7 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
                 }"
             />
             <div class="eh-main">
-                <div
-                    class="ct-logo"
-                    style="width: 64px; height: 64px; margin: 0"
-                    :style="{
-                        background: `linear-gradient(135deg, ${competition?.color}, ${competition?.color}cc)`,
-                    }"
-                >
-                    <IcTrophy v-if="competition?.kind === 'cup'" :size="30" />
-                    <span
-                        v-else
-                        style="
-                            font-size: 24px;
-                            font-family: var(--font-display);
-                        "
-                        >{{ (competition?.short || '?')[0] }}</span
-                    >
-                </div>
+                <CompetitionLogo :competition="competition" :size="64" />
                 <div>
                     <h1>{{ competition?.name ?? '…' }}</h1>
                     <div class="eh-sub">
@@ -184,19 +194,28 @@ const openMatch = (m) => router.push(`/match/${m.id}`);
             />
         </div>
 
-        <!-- Fixtures / Results -->
+        <!-- Fixtures / Results — segmented into day groups -->
         <template v-else-if="tab === 'fixtures' || tab === 'results'">
-            <div
-                v-if="(tab === 'fixtures' ? fixtures : results).length"
-                class="pp-grid cols-2"
-            >
-                <MatchCard
-                    v-for="m in tab === 'fixtures' ? fixtures : results"
-                    :key="m.id"
-                    :match="m"
-                    @open="openMatch"
-                />
-            </div>
+            <template v-if="dateGroups.length">
+                <div
+                    v-for="group in dateGroups"
+                    :key="group.label"
+                    style="margin-bottom: 18px"
+                >
+                    <SectionHead
+                        :title="group.label"
+                        :count="group.matches.length"
+                    />
+                    <div class="pp-grid cols-2">
+                        <MatchCard
+                            v-for="m in group.matches"
+                            :key="m.id"
+                            :match="m"
+                            @open="openMatch"
+                        />
+                    </div>
+                </div>
+            </template>
             <EmptyState
                 v-else
                 :title="

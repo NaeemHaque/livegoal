@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 import Crest from '@/components/Crest.vue';
-import { IcArrowR, IcClock, IcTrophy } from '@/components/icons';
+import { IcArrowR, IcCalendar, IcClock, IcTrophy } from '@/components/icons';
 import InlineLoader from '@/components/InlineLoader.vue';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import MatchCard from '@/components/MatchCard.vue';
@@ -27,6 +27,10 @@ const { data: standings } = useStandings('PL');
 const { data: wcScorers } = useScorers('WC');
 const { data: leagueScorers } = useScorers('PL');
 const time = useTimeFormat();
+
+// The World Cup 2026 window for the spotlight. Formatted from fixed dates so it
+// paints with the rest of the banner — no async fetch, no flash, no layout shift.
+const wcWindow = time.dateRange('2026-06-11', '2026-07-19');
 
 const live = computed(() => matches.live);
 const liveWc = computed(
@@ -100,6 +104,9 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                     </div>
                     <h2>FIFA World Cup 2026</h2>
                     <div class="sp-meta">USA · Canada · Mexico</div>
+                    <div class="sp-dates">
+                        <IcCalendar :size="14" /> {{ wcWindow }}
+                    </div>
                 </div>
                 <div class="sp-stats">
                     <div class="sp-stat">

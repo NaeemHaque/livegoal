@@ -1,4 +1,11 @@
-import { formatDate, formatDateTime, formatTime } from '@/lib/time';
+import {
+    formatDate,
+    formatDateRange,
+    formatDateTime,
+    formatLongDate,
+    formatShortDateTime,
+    formatTime,
+} from '@/lib/time';
 import { useSettingsStore } from '@/stores/settings';
 
 /**
@@ -9,8 +16,22 @@ export function useTimeFormat() {
     const settings = useSettingsStore();
 
     return {
-        time: (iso) => formatTime(iso, settings.timezone),
+        time: (iso) =>
+            formatTime(iso, settings.timezone, settings.timeFormat === '12h'),
         date: (iso) => formatDate(iso, settings.timezone),
-        dateTime: (iso) => formatDateTime(iso, settings.timezone),
+        longDate: (iso) => formatLongDate(iso, settings.timezone),
+        dateRange: (start, end) => formatDateRange(start, end),
+        shortDateTime: (iso) =>
+            formatShortDateTime(
+                iso,
+                settings.timezone,
+                settings.timeFormat === '12h',
+            ),
+        dateTime: (iso) =>
+            formatDateTime(
+                iso,
+                settings.timezone,
+                settings.timeFormat === '12h',
+            ),
     };
 }

@@ -527,6 +527,18 @@
     font-size: 13.5px;
     color: var(--text-2);
 }
+.pp-spotlight .sp-dates {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+}
+.pp-spotlight .sp-dates svg {
+    color: var(--accent);
+}
 .pp-spotlight .sp-stats {
     display: flex;
     gap: 26px;

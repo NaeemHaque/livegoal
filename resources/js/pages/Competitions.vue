@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
+import CompetitionLogo from '@/components/CompetitionLogo.vue';
 import FormationLoader from '@/components/FormationLoader.vue';
 import { IcArrowR, IcGlobe, IcTrophy } from '@/components/icons';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
@@ -118,17 +119,7 @@ const open = (c) => router.push(`/competition/${code(c)}`);
                     <span v-if="liveCount(c)" class="ct-live"
                         ><LivePulseBadge :label="`${liveCount(c)} LIVE`" small
                     /></span>
-                    <div
-                        class="ct-logo"
-                        :style="{
-                            background: `linear-gradient(135deg, ${c.color}, ${c.color}cc)`,
-                        }"
-                    >
-                        <IcTrophy v-if="c.kind === 'cup'" :size="24" />
-                        <span v-else style="font-size: 18px">{{
-                            (c.short || c.name)[0]
-                        }}</span>
-                    </div>
+                    <CompetitionLogo :competition="c" :size="48" />
                     <h3>{{ c.name }}</h3>
                     <div class="ct-region">
                         <IcGlobe :size="12" />{{ c.region }}

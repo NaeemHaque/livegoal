@@ -20,3 +20,11 @@ Schedule::command('app:poll-live-scores')
 Schedule::command('app:warm-scorers')
     ->everyTenMinutes()
     ->withoutOverlapping();
+
+// Keep the featured match feeds warm so /matches/upcoming and /matches/day serve
+// from cache instead of fanning out to the rate-limited upstream on a reload — a
+// cold aggregation can otherwise exceed the browser timeout and blank the page.
+// The command self-paces to a few feeds per run, so every minute is safe.
+Schedule::command('app:warm-matches')
+    ->everyMinute()
+    ->withoutOverlapping();
