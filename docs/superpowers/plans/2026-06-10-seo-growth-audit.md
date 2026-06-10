@@ -349,7 +349,14 @@ Full research briefs (with source URLs + dates) are in the conversation that pro
 
 Gate after these: 100/100 PHPUnit, PHPStan max 0 errors, Pint/ESLint/Prettier clean, build OK.
 
-**Not started (P1+):** Tasks 8–14 (slugs, HTTP cache headers + API throttle, real anchor links/breadcrumbs, date pages, content layer, PWA manifest, OG image generation).
+**Phase B shipped (2026-06-10):**
+- ✅ **Today's & upcoming fixtures prerender** on home + `/matches` (shared crawler-safe `FeaturedMatches` service).
+- ✅ **Task 11 — `/matches/{Y-m-d}` date pages** (server + Vue route; URL-driven `DateNavigator`; sitemap −2…+7 day window; invalid dates 404).
+- ✅ **Task 8 + Task 10 — slug URLs + internal crawl graph**: `App\Seo\Slug` builds ID-first keyword URLs (`/team/57-arsenal-fc`); prerendered partials link entities so crawlers can traverse competition → team/player/match; detail-page canonicals are the slug URL. SPA detail pages + resolver extract the numeric id.
+
+Gate after Phase B: 109/109 PHPUnit, PHPStan max 0 errors, Pint/ESLint/Prettier clean, build OK.
+
+**Not started (P1+):** how-to-watch-free pages (needs verified per-country broadcaster copy), Task 9 (HTTP cache headers + API throttle), content/FAQ layer (Task 12), PWA manifest (Task 13), breadcrumb UI component.
 
 ---
 
