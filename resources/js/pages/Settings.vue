@@ -78,6 +78,39 @@ const intervals = [10, 15, 30];
 
             <div class="pp-setrow">
                 <div>
+                    <div class="sr-label">Time format</div>
+                    <div class="sr-desc">
+                        Show kick-off times as 24-hour or AM/PM
+                    </div>
+                </div>
+                <div
+                    class="pp-segmented"
+                    role="radiogroup"
+                    aria-label="Time format"
+                >
+                    <button
+                        role="radio"
+                        :aria-checked="settings.timeFormat === '24h'"
+                        :class="{ on: settings.timeFormat === '24h' }"
+                        type="button"
+                        @click="settings.timeFormat = '24h'"
+                    >
+                        24h
+                    </button>
+                    <button
+                        role="radio"
+                        :aria-checked="settings.timeFormat === '12h'"
+                        :class="{ on: settings.timeFormat === '12h' }"
+                        type="button"
+                        @click="settings.timeFormat = '12h'"
+                    >
+                        12h
+                    </button>
+                </div>
+            </div>
+
+            <div class="pp-setrow">
+                <div>
                     <div class="sr-label">Auto-refresh interval</div>
                     <div class="sr-desc">How often live scores update</div>
                 </div>

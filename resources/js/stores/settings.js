@@ -12,6 +12,24 @@ export const useSettingsStore = defineStore('settings', () => {
     const paused = useStorage('pp_paused', false); // pause live polling
     const reduceMotion = useStorage('pp_reduce_motion', false);
 
+    // Default the clock convention to the browser locale's so nothing changes
+    // for existing users until they pick one explicitly. '12h' or '24h'.
+    const localeHour12 = (() => {
+        try {
+            return (
+                new Intl.DateTimeFormat(undefined, {
+                    hour: 'numeric',
+                }).resolvedOptions().hour12 ?? false
+            );
+        } catch {
+            return false;
+        }
+    })();
+    const timeFormat = useStorage(
+        'pp_time_format',
+        localeHour12 ? '12h' : '24h',
+    );
+
     const applyTheme = () => {
         document.documentElement.setAttribute('data-theme', theme.value);
     };
@@ -32,5 +50,13 @@ export const useSettingsStore = defineStore('settings', () => {
     watch(theme, applyTheme, { immediate: true });
     watch(reduceMotion, applyReduceMotion, { immediate: true });
 
-    return { theme, timezone, refresh, paused, reduceMotion, toggleTheme };
+    return {
+        theme,
+        timezone,
+        refresh,
+        paused,
+        reduceMotion,
+        timeFormat,
+        toggleTheme,
+    };
 });

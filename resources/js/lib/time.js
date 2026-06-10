@@ -5,15 +5,16 @@
 
 const zone = (tz) => (tz && tz !== 'local' ? tz : undefined);
 
-export function formatTime(iso, tz = 'local') {
+export function formatTime(iso, tz = 'local', hour12) {
     if (!iso) {
         return '';
     }
 
     try {
         return new Intl.DateTimeFormat(undefined, {
-            hour: '2-digit',
+            hour: hour12 ? 'numeric' : '2-digit',
             minute: '2-digit',
+            hour12,
             timeZone: zone(tz),
         }).format(new Date(iso));
     } catch {
@@ -55,14 +56,14 @@ export function formatLongDate(iso, tz = 'local') {
     }
 }
 
-export function formatDateTime(iso, tz = 'local') {
+export function formatDateTime(iso, tz = 'local', hour12) {
     const date = formatDate(iso, tz);
-    const time = formatTime(iso, tz);
+    const time = formatTime(iso, tz, hour12);
 
     return date && time ? `${date} · ${time}` : date || time;
 }
 
-export function formatShortDateTime(iso, tz = 'local') {
+export function formatShortDateTime(iso, tz = 'local', hour12) {
     if (!iso) {
         return '';
     }
@@ -71,8 +72,9 @@ export function formatShortDateTime(iso, tz = 'local') {
         return new Intl.DateTimeFormat(undefined, {
             month: 'short',
             day: 'numeric',
-            hour: '2-digit',
+            hour: hour12 ? 'numeric' : '2-digit',
             minute: '2-digit',
+            hour12,
             timeZone: zone(tz),
         }).format(new Date(iso));
     } catch {

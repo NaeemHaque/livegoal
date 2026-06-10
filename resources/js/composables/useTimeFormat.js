@@ -16,11 +16,22 @@ export function useTimeFormat() {
     const settings = useSettingsStore();
 
     return {
-        time: (iso) => formatTime(iso, settings.timezone),
+        time: (iso) =>
+            formatTime(iso, settings.timezone, settings.timeFormat === '12h'),
         date: (iso) => formatDate(iso, settings.timezone),
         longDate: (iso) => formatLongDate(iso, settings.timezone),
         dateRange: (start, end) => formatDateRange(start, end),
-        shortDateTime: (iso) => formatShortDateTime(iso, settings.timezone),
-        dateTime: (iso) => formatDateTime(iso, settings.timezone),
+        shortDateTime: (iso) =>
+            formatShortDateTime(
+                iso,
+                settings.timezone,
+                settings.timeFormat === '12h',
+            ),
+        dateTime: (iso) =>
+            formatDateTime(
+                iso,
+                settings.timezone,
+                settings.timeFormat === '12h',
+            ),
     };
 }
