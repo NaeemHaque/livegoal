@@ -40,6 +40,8 @@ const mono = computed(() =>
             v-if="showImg"
             :src="team.crest"
             :alt="team?.name"
+            :width="size"
+            :height="size"
             loading="lazy"
             @error="failed = true"
         />

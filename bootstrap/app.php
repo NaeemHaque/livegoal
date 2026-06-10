@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CacheApiResponse;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        // Rate-limit the open, unauthenticated JSON API (generous so it never
+        // trips real users / shared IPs, but caps scrapers hammering the feed).
+        $middleware->api(append: [
+            'throttle:300,1',
+        ]);
+
+        // Per-route HTTP caching for /api responses (see routes/api.php).
+        $middleware->alias([
+            'cache.api' => CacheApiResponse::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

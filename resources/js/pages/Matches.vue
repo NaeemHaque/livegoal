@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import DateNavigator from '@/components/DateNavigator.vue';
@@ -17,12 +17,37 @@ import { today } from '@/lib/dates';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useMatchesStore } from '@/stores/matches';
 
+const props = defineProps({ date: { type: String, default: '' } });
+
 const router = useRouter();
 const favorites = useFavoritesStore();
 const matches = useMatchesStore();
 
-const date = ref(today());
+// Empty = no date picked → the default view shows the full upcoming list.
+// Picking a date (incl. today) switches to that single day's fixtures.
+const date = ref(props.date);
 const filter = ref('all');
+
+// Keep the selected day in sync with the URL so dates are shareable and the
+// browser back/forward buttons work: route param → date, and date → URL.
+// The bare /matches is the no-date upcoming view.
+watch(
+    () => props.date,
+    (value) => {
+        date.value = value;
+    },
+);
+watch(date, (value) => {
+    const target = value ? `/matches/${value}` : '/matches';
+
+    if (router.currentRoute.value.path !== target) {
+        router.push(target);
+    }
+});
+
+const dateSelected = computed(() => date.value !== '');
+// The navigator always needs a concrete day to anchor on; default to today.
+const navDate = computed(() => date.value || today());
 
 const {
     matches: dayMatches,
@@ -117,13 +142,13 @@ const upcomingByDate = computed(() => {
     return [...groups.values()];
 });
 
-// Only when the whole day is empty (not merely a filtered subset) — keeps the
-// shown list in step with the tab counts.
+// Default (no date picked) always shows the full upcoming list; a picked date
+// that turns out empty still falls back to it. Only for the all/upcoming tabs.
 const showUpcoming = computed(
     () =>
-        all.value.length === 0 &&
         (filter.value === 'all' || filter.value === 'upcoming') &&
-        upcomingByDate.value.length > 0,
+        upcomingByDate.value.length > 0 &&
+        (!dateSelected.value || all.value.length === 0),
 );
 
 const open = (m) => router.push(`/match/${m.id}`);
@@ -150,7 +175,11 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
             "
         >
             <FilterTabs v-model="filter" :tabs="TABS" :counts="counts" />
-            <DateNavigator v-model="date" :live-count="counts.live" />
+            <DateNavigator
+                :model-value="navDate"
+                :live-count="counts.live"
+                @update:model-value="(value) => (date = value)"
+            />
         </div>
 
         <FormationLoader v-if="loading" label="Loading fixtures" />

@@ -15,6 +15,7 @@ import EmptyState from '@/components/states/EmptyState.vue';
 import TopScorersList from '@/components/TopScorersList.vue';
 import { useApi } from '@/composables/useApi';
 import { useCompetition } from '@/composables/useCompetition';
+import { usePageMeta } from '@/composables/usePageMeta';
 import { useScorers } from '@/composables/useScorers';
 import { useStandings } from '@/composables/useStandings';
 import { useTimeFormat } from '@/composables/useTimeFormat';
@@ -29,6 +30,8 @@ const time = useTimeFormat();
 
 const id = computed(() => props.id);
 const { data: competition } = useCompetition(id);
+
+usePageMeta(() => competition.value?.name || null);
 const { data: standings, loading: standingsLoading } = useStandings(id);
 const { data: scorers, loading: scorersLoading } = useScorers(id);
 const { data: teams } = useApi(() => `/competitions/${id.value}/teams`);

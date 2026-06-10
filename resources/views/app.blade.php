@@ -4,28 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>LiveGoal — Live Football Scores</title>
-    <meta name="description" content="Live football scores, fixtures, results, standings, and brackets.">
-
-    {{-- Set the theme before first paint to avoid a flash of the wrong theme. --}}
-    <script>
-        (function () {
-            try {
-                var t = localStorage.getItem('pp_theme')
-                    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                document.documentElement.setAttribute('data-theme', t);
-            } catch (e) {}
-        })();
-    </script>
-
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    @include('partials.seo-head')
 
     @vite(['resources/css/app.css', 'resources/js/main.js'])
 
@@ -169,6 +148,32 @@
         </div>
     </div>
 
-    <div id="app"></div>
+    {{-- Crawlable navigation for clients that don't run JavaScript (some search
+         and AI crawlers): a real link graph into the key sections and entities,
+         plus a one-line description of what LiveGoal is. --}}
+    <noscript>
+        <nav aria-label="LiveGoal sections">
+            <a href="{{ url('/') }}">Live scores</a>
+            <a href="{{ url('/matches') }}">Fixtures &amp; results</a>
+            <a href="{{ url('/competitions') }}">Competitions</a>
+            <a href="{{ url('/scorers') }}">Top scorers</a>
+            <a href="{{ url('/guides') }}">Guides</a>
+            @foreach (config('football.featured') as $code)
+                @php($competitionMeta = config('football.meta.'.$code))
+                @if ($competitionMeta)
+                    <a href="{{ url('/competition/'.$code) }}">{{ $competitionMeta['short'] ?? $code }}</a>
+                @endif
+            @endforeach
+        </nav>
+        <p>LiveGoal shows free, real-time football scores, fixtures, results, standings and
+            knockout brackets for the FIFA World Cup 2026 and major leagues — no betting ads.
+            New here? Read <a href="{{ url('/guides/world-cup-2026-format-explained') }}">how the
+            World Cup 2026 format works</a> or <a href="{{ url('/about') }}">about LiveGoal</a>.</p>
+    </noscript>
+
+    {{-- Server-rendered facts for crawlers/AI bots that don't run JavaScript.
+         Vue replaces #app on mount, so users get the live SPA — same data, so
+         this is content parity (SSR-style), not cloaking. --}}
+    <div id="app">@isset($prerender)@include($prerender['view'], $prerender['data'])@endisset</div>
 </body>
 </html>

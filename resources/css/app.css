@@ -1,3 +1,19 @@
+/* Self-hosted fonts (@fontsource) — no render-blocking third-party request to
+   Google Fonts. Each weight file declares @font-face per unicode-range, so the
+   browser only downloads the latin/latin-ext/etc. woff2 actually rendered. */
+@import '@fontsource/saira-condensed/500.css';
+@import '@fontsource/saira-condensed/600.css';
+@import '@fontsource/saira-condensed/700.css';
+@import '@fontsource/saira-condensed/800.css';
+@import '@fontsource/hanken-grotesk/400.css';
+@import '@fontsource/hanken-grotesk/500.css';
+@import '@fontsource/hanken-grotesk/600.css';
+@import '@fontsource/hanken-grotesk/700.css';
+@import '@fontsource/hanken-grotesk/800.css';
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/500.css';
+@import '@fontsource/geist-mono/600.css';
+
 @import 'tailwindcss';
 @import './tokens.css';
 @import './layout.css';

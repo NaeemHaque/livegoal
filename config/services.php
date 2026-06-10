@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Privacy-friendly, cookieless analytics. The tracking script only renders
+    // when a domain is set (so dev/tests stay clean); Plausible's default script
+    // tracks SPA pushState navigations automatically.
+    'plausible' => [
+        'domain' => env('PLAUSIBLE_DOMAIN'),
+        'src' => env('PLAUSIBLE_SRC', 'https://plausible.io/js/script.js'),
+    ],
+
 ];

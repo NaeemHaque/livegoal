@@ -16,13 +16,25 @@ export function useDayMatches(date) {
     let token = 0;
 
     async function load() {
+        const value = toValue(date);
+
+        // No date selected (the default upcoming view) — nothing to fetch.
+        if (!value) {
+            token++;
+            matches.value = [];
+            loading.value = false;
+            error.value = null;
+
+            return;
+        }
+
         const id = ++token;
         loading.value = true;
         error.value = null;
 
         try {
             const res = await api.get('/matches/day', {
-                params: { date: toValue(date) },
+                params: { date: value },
             });
 
             if (id !== token) {
