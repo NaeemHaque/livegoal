@@ -33,6 +33,15 @@ class SitemapController extends Controller
                 $urls[] = url('/matches/'.$start->copy()->addDays($offset)->toDateString());
             }
 
+            // Editorial content pages (guides, explainers, trust).
+            $urls[] = url('/guides');
+
+            foreach (Config::array('guides') as $page) {
+                if (is_array($page) && is_string($page['path'] ?? null)) {
+                    $urls[] = url($page['path']);
+                }
+            }
+
             $body = '';
 
             foreach ($urls as $url) {

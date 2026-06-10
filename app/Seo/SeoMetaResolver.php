@@ -304,6 +304,36 @@ class SeoMetaResolver
         );
     }
 
+    /**
+     * Metadata for an editorial content page (guide / explainer / trust).
+     *
+     * @param  array{path: string, title: string, description: string, group: string}  $page
+     */
+    public function content(array $page): SeoMeta
+    {
+        $canonical = url($page['path']);
+
+        $crumbs = [[Config::string('seo.site_name'), url('/')]];
+
+        if (str_starts_with($page['path'], '/guides/')) {
+            $crumbs[] = ['Guides', url('/guides')];
+        }
+
+        $crumbs[] = [$page['title'], $canonical];
+
+        // Trust pages ("About LiveGoal") already include the brand — don't double it.
+        $title = str_contains($page['title'], Config::string('seo.site_name'))
+            ? $page['title']
+            : $this->brand($page['title']);
+
+        return new SeoMeta(
+            title: $title,
+            description: $page['description'],
+            canonical: $canonical,
+            jsonLd: [$this->breadcrumb($crumbs)],
+        );
+    }
+
     public function notFound(): SeoMeta
     {
         return new SeoMeta(

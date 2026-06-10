@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ContentController;
 use App\Http\Controllers\SchedulerController;
 use App\Http\Controllers\SeoShellController;
 use App\Http\Controllers\SitemapController;
@@ -32,6 +33,14 @@ Route::get('/scorers', [SeoShellController::class, 'scorers'])->name('scorers');
 Route::get('/favorites', [SeoShellController::class, 'favorites'])->name('favorites');
 Route::get('/search', [SeoShellController::class, 'search'])->name('search');
 Route::get('/settings', [SeoShellController::class, 'settings'])->name('settings');
+
+// Server-rendered editorial content (guides/explainers/trust) — see
+// config/guides.php. Standalone HTML pages (not the SPA), the AEO/GEO layer.
+Route::get('/guides', [ContentController::class, 'index'])->name('guides');
+Route::get('/guides/{slug}', [ContentController::class, 'show'])->name('guides.show');
+Route::get('/about', [ContentController::class, 'show'])->defaults('slug', 'about')->name('about');
+Route::get('/how-our-data-works', [ContentController::class, 'show'])->defaults('slug', 'how-our-data-works')->name('data');
+Route::get('/contact', [ContentController::class, 'show'])->defaults('slug', 'contact')->name('contact');
 
 // Unknown paths: render the shell (so the SPA's NotFound page shows on a direct
 // hit) but with a real 404 status, keeping junk URLs out of the index.

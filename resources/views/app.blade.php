@@ -4,73 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    @php
-        // Per-URL SEO metadata is injected by App\Http\Controllers\SeoShellController.
-        // The fallback keeps the shell renderable if a view is built without it.
-        $seo ??= new \App\Seo\SeoMeta(config('seo.default_title'), config('seo.default_description'), url()->current());
-        $ogImage = config('seo.og_image');
-        $ogImage = $ogImage ? (\Illuminate\Support\Str::startsWith($ogImage, 'http') ? $ogImage : url($ogImage)) : null;
-    @endphp
-
-    <title>{{ $seo->title }}</title>
-    <meta name="description" content="{{ $seo->description }}">
-    <meta name="robots" content="{{ $seo->robots }}">
-    <link rel="canonical" href="{{ $seo->canonical }}">
-
-    {{-- Open Graph / Twitter so shared links (WhatsApp, X, Discord, Slack) render a preview. --}}
-    <meta property="og:site_name" content="{{ config('seo.site_name') }}">
-    <meta property="og:type" content="{{ $seo->ogType }}">
-    <meta property="og:title" content="{{ $seo->title }}">
-    <meta property="og:description" content="{{ $seo->description }}">
-    <meta property="og:url" content="{{ $seo->canonical }}">
-    <meta property="og:locale" content="{{ config('seo.locale') }}">
-    @if ($ogImage)
-        <meta property="og:image" content="{{ $ogImage }}">
-    @endif
-    <meta name="twitter:card" content="{{ config('seo.og_image_wide') ? 'summary_large_image' : 'summary' }}">
-    <meta name="twitter:title" content="{{ $seo->title }}">
-    <meta name="twitter:description" content="{{ $seo->description }}">
-    @if ($ogImage)
-        <meta name="twitter:image" content="{{ $ogImage }}">
-    @endif
-    @if ($handle = config('seo.twitter'))
-        <meta name="twitter:site" content="{{ $handle }}">
-    @endif
-
-    {{-- Structured data (Organization/WebSite site-wide; SportsEvent/SportsTeam/
-         Person/SportsOrganization + breadcrumbs on detail pages). --}}
-    @foreach ($seo->jsonLdScripts() as $jsonLd)
-        <script type="application/ld+json">{!! $jsonLd !!}</script>
-    @endforeach
-
-    {{-- Set the theme before first paint to avoid a flash of the wrong theme. --}}
-    <script>
-        (function () {
-            try {
-                var t = localStorage.getItem('pp_theme')
-                    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                document.documentElement.setAttribute('data-theme', t);
-            } catch (e) {}
-        })();
-    </script>
-
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-
-    {{-- Crests/emblems are loaded from here on nearly every page. Fonts are now
-         self-hosted (bundled via @fontsource in app.css), so there's no
-         render-blocking request to Google Fonts. --}}
-    <link rel="preconnect" href="https://crests.football-data.org" crossorigin>
+    @include('partials.seo-head')
 
     @vite(['resources/css/app.css', 'resources/js/main.js'])
-
-    {{-- Privacy-friendly, cookieless analytics. Renders only when configured
-         (PLAUSIBLE_DOMAIN); the default script auto-tracks SPA navigations. --}}
-    @if ($plausibleDomain = config('services.plausible.domain'))
-        <script defer data-domain="{{ $plausibleDomain }}" src="{{ config('services.plausible.src') }}"></script>
-    @endif
 
     {{-- Full-page boot loader ("Formation build"). Paints instantly (inline,
          before the JS bundle runs) so there's no layout shift, then main.js
@@ -221,6 +157,7 @@
             <a href="{{ url('/matches') }}">Fixtures &amp; results</a>
             <a href="{{ url('/competitions') }}">Competitions</a>
             <a href="{{ url('/scorers') }}">Top scorers</a>
+            <a href="{{ url('/guides') }}">Guides</a>
             @foreach (config('football.featured') as $code)
                 @php($competitionMeta = config('football.meta.'.$code))
                 @if ($competitionMeta)
@@ -229,7 +166,9 @@
             @endforeach
         </nav>
         <p>LiveGoal shows free, real-time football scores, fixtures, results, standings and
-            knockout brackets for the FIFA World Cup 2026 and major leagues — no betting ads.</p>
+            knockout brackets for the FIFA World Cup 2026 and major leagues — no betting ads.
+            New here? Read <a href="{{ url('/guides/world-cup-2026-format-explained') }}">how the
+            World Cup 2026 format works</a> or <a href="{{ url('/about') }}">about LiveGoal</a>.</p>
     </noscript>
 
     {{-- Server-rendered facts for crawlers/AI bots that don't run JavaScript.
