@@ -30,6 +30,10 @@
     <p>New to the terms? The <a href="{{ url('/guides/football-glossary') }}">football glossary</a>
         explains goal difference, points and more.</p>
 
+    @isset($live)
+        @include('content.partials.wc-live')
+    @endisset
+
     <h2>What comes after the groups?</h2>
     <p>The 32 qualifiers enter a single-elimination bracket. See the
         <a href="{{ url('/guides/world-cup-2026-knockout-bracket-explained') }}">knockout bracket

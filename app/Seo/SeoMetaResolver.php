@@ -306,32 +306,47 @@ class SeoMetaResolver
 
     /**
      * Metadata for an editorial content page (guide / explainer / trust).
-     *
-     * @param  array{path: string, title: string, description: string, group: string}  $page
      */
-    public function content(array $page): SeoMeta
+    public function content(string $path, string $title, string $description): SeoMeta
     {
-        $canonical = url($page['path']);
+        $canonical = url($path);
 
         $crumbs = [[Config::string('seo.site_name'), url('/')]];
 
-        if (str_starts_with($page['path'], '/guides/')) {
+        if (str_starts_with($path, '/guides/')) {
             $crumbs[] = ['Guides', url('/guides')];
         }
 
-        $crumbs[] = [$page['title'], $canonical];
+        $crumbs[] = [$title, $canonical];
 
         // Trust pages ("About LiveGoal") already include the brand — don't double it.
-        $title = str_contains($page['title'], Config::string('seo.site_name'))
-            ? $page['title']
-            : $this->brand($page['title']);
+        $brandedTitle = str_contains($title, Config::string('seo.site_name'))
+            ? $title
+            : $this->brand($title);
 
         return new SeoMeta(
-            title: $title,
-            description: $page['description'],
+            title: $brandedTitle,
+            description: $description,
             canonical: $canonical,
             jsonLd: [$this->breadcrumb($crumbs)],
         );
+    }
+
+    /**
+     * Live World Cup snapshot (group tables + next fixtures) embedded into the WC
+     * explainer pages — the unique, can't-copy-from-Wikipedia angle. Cache-only.
+     *
+     * @return array{groups: list<array{key: string, label: string, rows: list<array<string, mixed>>}>, fixtures: list<array<string, mixed>>, updatedAt: string|null}
+     */
+    public function worldCupSnapshot(): array
+    {
+        $standingsEntry = $this->football->peekEntry('standings:WC');
+        $groups = $standingsEntry !== null ? $this->normalizer->standings($standingsEntry['data'])['groups'] : [];
+
+        $matchesRaw = $this->football->peek('competition:WC:matches');
+        $fixtures = $matchesRaw !== null ? $this->upcoming($this->normalizer->matches($matchesRaw), 6) : [];
+
+        return ['groups' => $groups, 'fixtures' => $fixtures, 'updatedAt' => $standingsEntry['at'] ?? null];
     }
 
     public function notFound(): SeoMeta

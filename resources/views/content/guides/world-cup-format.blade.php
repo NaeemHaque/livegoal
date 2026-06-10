@@ -30,6 +30,10 @@
     <p>It's the first World Cup hosted by three countries, across 16 cities — 11 in the USA and three
         in Mexico and two in Canada. The opening match is in Mexico City and the final is in the USA.</p>
 
+    @isset($live)
+        @include('content.partials.wc-live')
+    @endisset
+
     <p>Follow every fixture and result as it happens on <a href="{{ url('/') }}">LiveGoal's live
         scores</a>, or browse the <a href="{{ url('/matches') }}">full fixtures by date</a>.</p>
 @endsection

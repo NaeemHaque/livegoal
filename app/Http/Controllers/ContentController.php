@@ -45,15 +45,71 @@ class ContentController extends Controller
 
     public function show(string $slug): View
     {
-        /** @var array<string, mixed>|null $page */
-        $page = Config::get("guides.{$slug}");
+        $guide = Config::get("guides.{$slug}");
 
-        abort_if(! is_array($page), 404);
+        if (is_array($guide)) {
+            $page = [
+                'path' => $this->str($guide['path'] ?? null),
+                'title' => $this->str($guide['title'] ?? null),
+                'description' => $this->str($guide['description'] ?? null),
+                'group' => $this->str($guide['group'] ?? null),
+            ];
 
-        /** @var array{path: string, title: string, description: string, group: string, view: string} $page */
-        return $this->views->make($this->str($page['view']), [
-            'seo' => $this->seo->content($page),
+            $data = [
+                'seo' => $this->seo->content($page['path'], $page['title'], $page['description']),
+                'page' => $page,
+            ];
+
+            // WC explainers embed the live group tables + fixtures — the unique angle.
+            if (($guide['live'] ?? null) === 'WC') {
+                $data['live'] = $this->seo->worldCupSnapshot();
+            }
+
+            return $this->views->make($this->str($guide['view'] ?? null), $data);
+        }
+
+        $term = Config::get("glossary.{$slug}");
+
+        if (is_array($term)) {
+            $page = [
+                'path' => '/guides/'.$slug,
+                'title' => $this->str($term['title'] ?? null),
+                'description' => $this->str($term['description'] ?? null),
+                'group' => 'Football glossary',
+            ];
+
+            return $this->views->make('content.guides.glossary-term', [
+                'seo' => $this->seo->content($page['path'], $page['title'], $page['description']),
+                'page' => $page,
+                'term' => $term,
+            ]);
+        }
+
+        abort(404);
+    }
+
+    /**
+     * A per-country "how to watch free" page (the winnable long-tail).
+     */
+    public function watch(string $country): View
+    {
+        $data = Config::get("watch.{$country}");
+
+        abort_if(! is_array($data), 404);
+
+        $name = $this->str($data['country'] ?? $country);
+
+        $page = [
+            'path' => '/guides/how-to-watch-world-cup-2026-free/'.$country,
+            'title' => 'How to Watch the World Cup 2026 Free in '.$name,
+            'description' => 'Where to watch the 2026 World Cup free in '.$name.': the free-to-air channels, free streams, and how many of the 104 matches are free.',
+            'group' => 'World Cup 2026',
+        ];
+
+        return $this->views->make('content.guides.watch-country', [
+            'seo' => $this->seo->content($page['path'], $page['title'], $page['description']),
             'page' => $page,
+            'watch' => $data,
         ]);
     }
 

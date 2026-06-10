@@ -3,24 +3,21 @@
 @section('content')
     <h1>How to watch the World Cup 2026 free</h1>
     <p class="lede">All 104 matches of the 2026 World Cup are shown free-to-air in some countries, and
-        partly free in others. Here's where to watch free in major markets — and how much of the
-        tournament is included.</p>
+        partly free in others. Pick your country for the free-to-air channels, free streams, and how
+        much of the tournament is free.</p>
 
     <table>
         <thead>
             <tr><th>Country</th><th>Free-to-air</th><th>How much is free</th></tr>
         </thead>
         <tbody>
-            <tr><td>United Kingdom</td><td>BBC &amp; ITV (BBC iPlayer, ITVX)</td><td>All 104 matches free</td></tr>
-            <tr><td>Australia</td><td>SBS (SBS On Demand)</td><td>All 104 matches free</td></tr>
-            <tr><td>Mexico</td><td>TV Azteca &amp; TelevisaUnivision (Canal 5)</td><td>Free nationwide</td></tr>
-            <tr><td>USA (English)</td><td>FOX / FS1 (over-the-air)</td><td>Most matches free OTA; all 104 on paid FOX One</td></tr>
-            <tr><td>USA (Spanish)</td><td>Telemundo (over-the-air)</td><td>92 of 104 free; all 104 on paid Peacock</td></tr>
-            <tr><td>Germany</td><td>ARD &amp; ZDF</td><td>~60 of 104 free; rest on paid MagentaTV</td></tr>
-            <tr><td>France</td><td>M6</td><td>~54 matches free; rest on beIN Sports (paid)</td></tr>
-            <tr><td>Brazil</td><td>TV Globo &amp; CazéTV (YouTube)</td><td>Selected matches free; rest on pay TV</td></tr>
-            <tr><td>Canada</td><td>CTV</td><td>Marquee games free (opener, Canada matches, final); all 104 on paid TSN/RDS</td></tr>
-            <tr><td>India</td><td>DD Sports (DD Free Dish)</td><td>Opener, quarter-finals, semi-finals &amp; final free; rest on paid Zee/ZEE5</td></tr>
+            @foreach (config('watch') as $slug => $market)
+                <tr>
+                    <td><a href="{{ url('/guides/how-to-watch-world-cup-2026-free/'.$slug) }}">{{ ucfirst($market['country']) }}</a></td>
+                    <td>{{ $market['fta'] }}</td>
+                    <td>{{ $market['free'] ? 'Free-to-air' : 'Partly free' }}</td>
+                </tr>
+            @endforeach
         </tbody>
     </table>
 

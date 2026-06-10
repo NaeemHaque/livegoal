@@ -37,6 +37,7 @@ Route::get('/settings', [SeoShellController::class, 'settings'])->name('settings
 // Server-rendered editorial content (guides/explainers/trust) — see
 // config/guides.php. Standalone HTML pages (not the SPA), the AEO/GEO layer.
 Route::get('/guides', [ContentController::class, 'index'])->name('guides');
+Route::get('/guides/how-to-watch-world-cup-2026-free/{country}', [ContentController::class, 'watch'])->name('guides.watch');
 Route::get('/guides/{slug}', [ContentController::class, 'show'])->name('guides.show');
 Route::get('/about', [ContentController::class, 'show'])->defaults('slug', 'about')->name('about');
 Route::get('/how-our-data-works', [ContentController::class, 'show'])->defaults('slug', 'how-our-data-works')->name('data');

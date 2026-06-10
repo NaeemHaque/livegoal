@@ -42,6 +42,19 @@ class SitemapController extends Controller
                 }
             }
 
+            // Per-term glossary pages and per-country "how to watch free" pages.
+            foreach (array_keys(Config::array('glossary')) as $slug) {
+                if (is_string($slug)) {
+                    $urls[] = url('/guides/'.$slug);
+                }
+            }
+
+            foreach (array_keys(Config::array('watch')) as $country) {
+                if (is_string($country)) {
+                    $urls[] = url('/guides/how-to-watch-world-cup-2026-free/'.$country);
+                }
+            }
+
             $body = '';
 
             foreach ($urls as $url) {

@@ -28,6 +28,10 @@
     <p>See the <a href="{{ url('/guides/football-glossary') }}">glossary</a> for extra time and penalty
         shootout definitions.</p>
 
+    @isset($live)
+        @include('content.partials.wc-live')
+    @endisset
+
     <h2>How do teams reach the knockouts?</h2>
     <p>The top two from each of the 12 groups plus the eight best third-placed teams qualify — read
         <a href="{{ url('/guides/world-cup-2026-groups-and-qualification') }}">how teams qualify</a>,

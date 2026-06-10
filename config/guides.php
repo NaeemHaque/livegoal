@@ -20,6 +20,7 @@ return [
         'group' => 'World Cup 2026',
         'nav' => 'World Cup 2026 format',
         'listed' => true,
+        'live' => 'WC',
     ],
 
     'world-cup-2026-groups-and-qualification' => [
@@ -30,6 +31,7 @@ return [
         'group' => 'World Cup 2026',
         'nav' => 'Groups & qualification',
         'listed' => true,
+        'live' => 'WC',
     ],
 
     'world-cup-2026-knockout-bracket-explained' => [
@@ -40,6 +42,7 @@ return [
         'group' => 'World Cup 2026',
         'nav' => 'Knockout bracket',
         'listed' => true,
+        'live' => 'WC',
     ],
 
     'how-to-watch-world-cup-2026-free' => [
