@@ -213,13 +213,14 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                     />
                     <template v-else-if="upcomingGroups.length">
                         <div
-                            v-for="group in upcomingGroups"
+                            v-for="(group, i) in upcomingGroups"
                             :key="group.competition?.id"
                             style="margin-bottom: 18px"
                         >
                             <SectionHead
                                 :competition="group.competition"
                                 :count="group.matches.length"
+                                :line="i !== 0"
                             />
                             <div class="pp-grid cols-2">
                                 <MatchCard

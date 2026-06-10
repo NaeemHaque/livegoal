@@ -569,6 +569,9 @@
 .pp-standings tbody tr:hover {
     background: var(--hover);
 }
+.pp-standings tbody tr:last-child td {
+    border-bottom: none;
+}
 .pp-standings td.c-team {
     text-align: left;
     padding-left: 4px;

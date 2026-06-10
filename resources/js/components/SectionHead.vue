@@ -3,6 +3,9 @@ defineProps({
     competition: { type: Object, default: null },
     title: { type: String, default: '' },
     count: { type: Number, default: null },
+    // The trailing divider line — hidden for the first group under a section
+    // header that already has its own line.
+    line: { type: Boolean, default: true },
 });
 </script>
 
@@ -19,7 +22,7 @@ defineProps({
         <span v-if="count != null" class="sh-count"
             >{{ count }} {{ count === 1 ? 'match' : 'matches' }}</span
         >
-        <span class="sh-line" />
+        <span v-if="line" class="sh-line" />
         <slot />
     </div>
 </template>
