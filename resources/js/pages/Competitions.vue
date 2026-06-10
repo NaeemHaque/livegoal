@@ -78,14 +78,23 @@ const open = (c) => router.push(`/competition/${code(c)}`);
                 @keydown.space.prevent="open(hero)"
             >
                 <div class="sp-inner">
-                    <div>
-                        <div class="sp-tag">
-                            <IcTrophy :size="14" /> Featured Competition
-                        </div>
-                        <h2>{{ hero.name }}</h2>
-                        <div class="sp-meta">
-                            <IcGlobe :size="13" />{{ hero.region }} · Summer
-                            2026
+                    <div class="sp-lead">
+                        <span v-if="hero.emblem" class="sp-emblem">
+                            <img
+                                :src="hero.emblem"
+                                :alt="hero.name"
+                                loading="lazy"
+                            />
+                        </span>
+                        <div>
+                            <div class="sp-tag">
+                                <IcTrophy :size="14" /> Featured Competition
+                            </div>
+                            <h2>{{ hero.name }}</h2>
+                            <div class="sp-meta">
+                                <IcGlobe :size="13" />{{ hero.region }} · Summer
+                                2026
+                            </div>
                         </div>
                     </div>
                     <div class="sp-stats">

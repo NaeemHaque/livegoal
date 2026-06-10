@@ -32,6 +32,15 @@ const time = useTimeFormat();
 // paints with the rest of the banner — no async fetch, no flash, no layout shift.
 const wcWindow = time.dateRange('2026-06-11', '2026-07-19');
 
+// Static WC identity for the banner emblem, matching the synchronous design above.
+const wcCompetition = {
+    code: 'WC',
+    name: 'FIFA World Cup',
+    kind: 'cup',
+    color: '#C6FF3A',
+    emblem: 'https://crests.football-data.org/wm26.png',
+};
+
 const live = computed(() => matches.live);
 const liveWc = computed(
     () => live.value.filter((m) => m.competition?.code === 'WC').length,
@@ -98,14 +107,23 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
         <!-- World Cup spotlight -->
         <div class="pp-spotlight">
             <div class="sp-inner">
-                <div>
-                    <div class="sp-tag">
-                        <IcTrophy :size="14" /> Featured Competition
-                    </div>
-                    <h2>FIFA World Cup 2026</h2>
-                    <div class="sp-meta">USA · Canada · Mexico</div>
-                    <div class="sp-dates">
-                        <IcCalendar :size="14" /> {{ wcWindow }}
+                <div class="sp-lead">
+                    <span class="sp-emblem">
+                        <img
+                            :src="wcCompetition.emblem"
+                            :alt="wcCompetition.name"
+                            loading="lazy"
+                        />
+                    </span>
+                    <div>
+                        <div class="sp-tag">
+                            <IcTrophy :size="14" /> Featured Competition
+                        </div>
+                        <h2>FIFA World Cup 2026</h2>
+                        <div class="sp-meta">USA · Canada · Mexico</div>
+                        <div class="sp-dates">
+                            <IcCalendar :size="14" /> {{ wcWindow }}
+                        </div>
                     </div>
                 </div>
                 <div class="sp-stats">

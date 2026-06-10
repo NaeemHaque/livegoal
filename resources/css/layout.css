@@ -504,6 +504,27 @@
     gap: 20px;
     flex-wrap: wrap;
 }
+/* Two columns — a square emblem that matches the full height of the text block,
+   then the text. Grid (not flex) so the stretched-to-content-height emblem
+   resolves its width from aspect-ratio. The image is absolutely placed so its
+   own intrinsic size doesn't drive the row height. */
+.pp-spotlight .sp-lead {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: stretch;
+    gap: 14px;
+}
+.pp-spotlight .sp-emblem {
+    position: relative;
+    aspect-ratio: 1;
+}
+.pp-spotlight .sp-emblem img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
 .pp-spotlight .sp-tag {
     display: inline-flex;
     align-items: center;
@@ -1178,8 +1199,13 @@
     .pp-spotlight h2 {
         font-size: 26px;
     }
+    /* Stats group on the left, Explore pushes to the right edge (justify-between). */
     .pp-spotlight .sp-stats {
         gap: 18px;
+        width: 100%;
+    }
+    .pp-spotlight .sp-stats > .sp-stat:last-child {
+        margin-left: auto;
     }
     .pp-entity-head .eh-stats {
         margin-left: 0;
