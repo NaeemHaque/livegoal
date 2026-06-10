@@ -1103,6 +1103,23 @@
             var(--tabbar-h) + env(safe-area-inset-bottom, 0px)
         );
     }
+
+    /* Settings: stack each segmented control beneath its label and let it span
+       the row, so labels keep their width instead of wrapping one word per line.
+       Switch rows (no .pp-segmented) stay inline — label left, switch right. */
+    .pp-setrow:has(.pp-segmented) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .pp-setrow .pp-segmented {
+        display: flex;
+        width: 100%;
+    }
+    .pp-setrow .pp-segmented button {
+        flex: 1;
+        padding: 8px 6px;
+    }
     .pp-topbar,
     .pp-topnav {
         display: none;
