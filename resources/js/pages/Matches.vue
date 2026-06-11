@@ -55,11 +55,14 @@ const {
     error,
     reload,
 } = useDayMatches(() => date.value);
-const all = computed(() => dayMatches.value);
+// Overlay the live feed so mid-match status/score lag in the upstream list
+// endpoints never shows a live match as scheduled here.
+const all = computed(() => matches.overlay(dayMatches.value));
 
 // Next scheduled fixtures across competitions — fills empty days and drives the
 // tab counts when the selected day has nothing.
 const { data: upcomingData } = useUpcoming();
+const upcomingAll = computed(() => matches.overlay(upcomingData.value));
 const time = useTimeFormat();
 
 const LIVE = ['LIVE', 'HT', 'ET', 'PEN'];
@@ -70,42 +73,40 @@ const TABS = [
     { id: 'finished', label: 'Finished' },
 ];
 
-const counts = computed(() => {
-    const day = all.value;
-
-    // On an empty day the screen surfaces the cross-day upcoming list, so count
-    // that instead — the tabs then reflect what's actually on screen.
-    if (day.length === 0 && (upcomingData.value ?? []).length) {
-        const total = upcomingData.value.length;
-
-        return { all: total, live: 0, upcoming: total, finished: 0 };
-    }
-
-    return {
-        all: day.length,
-        live: day.filter((m) => LIVE.includes(m.status)).length,
-        upcoming: day.filter((m) => m.status === 'SCHEDULED').length,
-        finished: day.filter((m) => m.status === 'FT').length,
-    };
+const statusCounts = (list) => ({
+    all: list.length,
+    live: list.filter((m) => LIVE.includes(m.status)).length,
+    upcoming: list.filter((m) => m.status === 'SCHEDULED').length,
+    finished: list.filter((m) => m.status === 'FT').length,
 });
 
-const filtered = computed(() =>
-    all.value.filter((m) => {
-        if (filter.value === 'live') {
-            return LIVE.includes(m.status);
-        }
+const counts = computed(() => {
+    // On an empty day the screen surfaces the cross-day upcoming list, so count
+    // that instead — the tabs then reflect what's actually on screen.
+    if (all.value.length === 0 && upcomingAll.value.length) {
+        return statusCounts(upcomingAll.value);
+    }
 
-        if (filter.value === 'upcoming') {
-            return m.status === 'SCHEDULED';
-        }
+    return statusCounts(all.value);
+});
 
-        if (filter.value === 'finished') {
-            return m.status === 'FT';
-        }
+const byTab = (m) => {
+    if (filter.value === 'live') {
+        return LIVE.includes(m.status);
+    }
 
-        return true;
-    }),
-);
+    if (filter.value === 'upcoming') {
+        return m.status === 'SCHEDULED';
+    }
+
+    if (filter.value === 'finished') {
+        return m.status === 'FT';
+    }
+
+    return true;
+};
+
+const filtered = computed(() => all.value.filter(byTab));
 
 const isFav = (m) => favorites.isMatchFavorite(m);
 const favMatches = computed(() => filtered.value.filter(isFav));
@@ -125,11 +126,12 @@ const restGroups = computed(() => {
     return [...groups.values()];
 });
 
-// Empty-day upcoming fixtures, grouped by their displayed (local) date.
+// Empty-day upcoming fixtures (filtered by the active tab, so a live match
+// shows under Live — not Upcoming), grouped by their displayed (local) date.
 const upcomingByDate = computed(() => {
     const groups = new Map();
 
-    for (const m of upcomingData.value ?? []) {
+    for (const m of upcomingAll.value.filter(byTab)) {
         const label = time.date(m.kickoff);
 
         if (!groups.has(label)) {
@@ -143,10 +145,9 @@ const upcomingByDate = computed(() => {
 });
 
 // Default (no date picked) always shows the full upcoming list; a picked date
-// that turns out empty still falls back to it. Only for the all/upcoming tabs.
+// that turns out empty still falls back to it.
 const showUpcoming = computed(
     () =>
-        (filter.value === 'all' || filter.value === 'upcoming') &&
         upcomingByDate.value.length > 0 &&
         (!dateSelected.value || all.value.length === 0),
 );
@@ -190,7 +191,14 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
         <template v-else-if="filtered.length === 0 && showUpcoming">
             <div class="pp-section-head" style="margin-bottom: 18px">
                 <span class="sh-title"
-                    ><IcClock :size="16" /> Upcoming fixtures</span
+                    ><IcClock :size="16" />
+                    {{
+                        filter === 'live'
+                            ? 'Live now'
+                            : filter === 'finished'
+                              ? 'Finished'
+                              : 'Upcoming fixtures'
+                    }}</span
                 >
                 <span class="sh-line" />
             </div>

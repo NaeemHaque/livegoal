@@ -46,8 +46,13 @@ const liveWc = computed(
     () => live.value.filter((m) => m.competition?.code === 'WC').length,
 );
 // The next handful of scheduled fixtures (server already filtered + sorted).
-const upcoming = computed(() => (upcomingData.value ?? []).slice(0, 6));
-const nextMatch = computed(() => (upcomingData.value ?? [])[0] ?? null);
+// Matches currently in the live feed are excluded — the upstream list can lag
+// mid-match, and they already render in the live rail above.
+const upcomingScheduled = computed(() =>
+    (upcomingData.value ?? []).filter((m) => !matches.byId(m.id)),
+);
+const upcoming = computed(() => upcomingScheduled.value.slice(0, 6));
+const nextMatch = computed(() => upcomingScheduled.value[0] ?? null);
 
 // Top of the table — a league standings snapshot.
 const tableRows = computed(() =>

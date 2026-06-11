@@ -22,6 +22,24 @@ export const useMatchesStore = defineStore('matches', () => {
     const byId = (id) =>
         live.value.find((m) => String(m.id) === String(id)) ?? null;
 
+    // Merge the (fresher) live feed over a fetched match list: upstream list
+    // endpoints can lag or misreport status mid-match, so any match currently
+    // in the live feed takes its status, minute and score from there.
+    const overlay = (list) =>
+        (list ?? []).map((m) => {
+            const fresh = byId(m.id);
+
+            return fresh
+                ? {
+                      ...m,
+                      status: fresh.status,
+                      minute: fresh.minute ?? m.minute,
+                      homeScore: fresh.homeScore ?? m.homeScore,
+                      awayScore: fresh.awayScore ?? m.awayScore,
+                  }
+                : m;
+        });
+
     function detectGoals(previous, incoming) {
         if (previous.length === 0) {
             return; // no baseline on first poll — don't fire on initial load
@@ -86,6 +104,7 @@ export const useMatchesStore = defineStore('matches', () => {
         justScoredId,
         liveCount,
         byId,
+        overlay,
         setLive,
         setError,
         clearGoal,
