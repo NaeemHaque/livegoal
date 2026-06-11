@@ -415,7 +415,108 @@ class PollLiveScoresTest extends TestCase
         $this->assertNull(Cache::get(PollLiveScores::EMPTY_STREAK_KEY));
     }
 
-    // --- 6. upstream failure: keep last good cache --------------------------
+    // --- 6. self-built timeline events ---------------------------------------
+
+    public function test_it_records_kickoff_goal_and_half_time_timeline_events(): void
+    {
+        Date::setTestNow('2026-06-08T14:46:00Z');
+
+        $this->assertSame('live:events:1', PollLiveScores::eventsKey('1'));
+
+        Http::fake([
+            '*/matches*' => Http::sequence()
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 0, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 1, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'PAUSED', '2026-06-08T14:00:00Z', 1, 0)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        // First poll: first time seen LIVE -> a single KICKOFF event.
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $events = Cache::get(PollLiveScores::eventsKey('1'));
+        $this->assertIsArray($events);
+        $this->assertCount(1, $events);
+        $this->assertSame('KICKOFF', $events[0]['type']);
+        $this->assertSame('2026-06-08T14:46:00+00:00', $events[0]['at']);
+
+        // Second poll: home score 0 -> 1 -> a home GOAL with the running score.
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $events = Cache::get(PollLiveScores::eventsKey('1'));
+        $this->assertCount(2, $events);
+        $this->assertSame('GOAL', $events[1]['type']);
+        $this->assertSame('home', $events[1]['side']);
+        $this->assertSame(46, $events[1]['minute']);
+        $this->assertSame(1, $events[1]['homeScore']);
+        $this->assertSame(0, $events[1]['awayScore']);
+
+        // Third poll: first time seen PAUSED -> an HT event with the HT score.
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $events = Cache::get(PollLiveScores::eventsKey('1'));
+        $this->assertCount(3, $events);
+        $this->assertSame('HT', $events[2]['type']);
+        $this->assertSame(45, $events[2]['minute']);
+        $this->assertSame(1, $events[2]['homeScore']);
+        $this->assertSame(0, $events[2]['awayScore']);
+    }
+
+    public function test_it_records_one_goal_event_per_side_that_scored(): void
+    {
+        Http::fake([
+            '*/matches*' => Http::sequence()
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 0, 0)]], 200)
+                // Both sides score between polls (two goals in one cadence).
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 1, 1)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $events = Cache::get(PollLiveScores::eventsKey('1'));
+
+        $this->assertIsArray($events);
+        $this->assertSame(['KICKOFF', 'GOAL', 'GOAL'], array_column($events, 'type'));
+        $this->assertSame('home', $events[1]['side']);
+        $this->assertSame('away', $events[2]['side']);
+    }
+
+    public function test_it_records_kickoff_and_half_time_only_once(): void
+    {
+        Http::fake([
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(1, 'PAUSED', '2026-06-08T14:00:00Z', 1, 1),
+            ]], 200),
+        ]);
+
+        // Two polls both seeing the match paused at half-time.
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $events = Cache::get(PollLiveScores::eventsKey('1'));
+
+        // One HT event only — and no KICKOFF, since it was never seen LIVE.
+        $this->assertIsArray($events);
+        $this->assertCount(1, $events);
+        $this->assertSame('HT', $events[0]['type']);
+    }
+
+    public function test_it_records_no_events_for_matches_that_are_not_live(): void
+    {
+        Http::fake([
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(3, 'TIMED', '2026-06-08T18:00:00Z', null, null),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $this->assertNull(Cache::get(PollLiveScores::eventsKey('3')));
+    }
+
+    // --- 7. upstream failure: keep last good cache --------------------------
 
     public function test_it_keeps_the_last_good_cache_when_upstream_fails(): void
     {

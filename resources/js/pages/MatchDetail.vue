@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 
 import Crest from '@/components/Crest.vue';
 import {
+    IcBall,
     IcCalendar,
     IcChevL,
     IcList,
@@ -15,6 +16,7 @@ import {
 import InlineLoader from '@/components/InlineLoader.vue';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import MatchStatus from '@/components/MatchStatus.vue';
+import MatchTimeline from '@/components/MatchTimeline.vue';
 import ScoreDigit from '@/components/ScoreDigit.vue';
 import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
@@ -25,6 +27,7 @@ import { useMatch } from '@/composables/useMatch';
 import { usePageMeta } from '@/composables/usePageMeta';
 import { useTimeFormat } from '@/composables/useTimeFormat';
 import { numericId } from '@/lib/slugs';
+import { useMatchesStore } from '@/stores/matches';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
@@ -32,7 +35,33 @@ const goBack = useBack();
 const { time, date, dateTime } = useTimeFormat();
 
 const id = computed(() => numericId(props.id));
-const { data: match, loading, error, reload } = useMatch(id);
+const { data: fetched, loading, error, reload } = useMatch(id);
+const matchesStore = useMatchesStore();
+
+// The site-wide live poll (matches store) is fresher than the cached
+// single-match endpoint, which can flap to SCHEDULED/null scores mid-match —
+// prefer the live entry's status, minute and score whenever it has this match.
+const liveMatch = computed(() => matchesStore.byId(id.value));
+const match = computed(() => {
+    const base = fetched.value;
+    const live = liveMatch.value;
+
+    if (!live) {
+        return base;
+    }
+
+    if (!base) {
+        return live;
+    }
+
+    return {
+        ...base,
+        status: live.status,
+        minute: live.minute ?? base.minute,
+        homeScore: live.homeScore ?? base.homeScore,
+        awayScore: live.awayScore ?? base.awayScore,
+    };
+});
 
 usePageMeta(() => {
     const m = match.value;
@@ -80,17 +109,47 @@ const standingGroup = computed(() => {
     );
 });
 
+// Self-built goal/period events recorded by the live poller (no player names
+// on the free data tier).
+const events = computed(() => match.value?.events ?? []);
+
 const tabs = computed(() => [
+    { id: 'summary', label: 'Summary', icon: IcBall },
     ...(standingGroup.value
         ? [{ id: 'standings', label: 'Standings', icon: IcTrophy }]
         : []),
     { id: 'details', label: 'Details', icon: IcList },
 ]);
 
+// Summary is the default tab once a live or finished match has events; until
+// then fall back to standings/details. A manual tab choice is never overridden.
+const summaryDefault = computed(
+    () =>
+        (isLive.value || match.value?.status === 'FT') &&
+        events.value.length > 0,
+);
+
 const tab = ref('details');
-watch(standingGroup, (g) => (tab.value = g ? 'standings' : 'details'), {
-    immediate: true,
-});
+const tabTouched = ref(false);
+
+const selectTab = (next) => {
+    tab.value = next;
+    tabTouched.value = true;
+};
+
+watch(
+    [summaryDefault, standingGroup],
+    () => {
+        if (!tabTouched.value) {
+            tab.value = summaryDefault.value
+                ? 'summary'
+                : standingGroup.value
+                  ? 'standings'
+                  : 'details';
+        }
+    },
+    { immediate: true },
+);
 
 const meta = computed(() => {
     const m = match.value;
@@ -133,7 +192,7 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
             label="Loading match"
             :min-height="240"
         />
-        <ErrorState v-else-if="error" @retry="reload" />
+        <ErrorState v-else-if="error && !match" @retry="reload" />
 
         <template v-else-if="match">
             <!-- Score header -->
@@ -155,7 +214,10 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                             · {{ match.stage.replaceAll('_', ' ') }}</template
                         ></span
                     >
-                    <LivePulseBadge v-if="isLive" />
+                    <LivePulseBadge
+                        v-if="isLive"
+                        :label="match.status === 'HT' ? 'HT' : 'LIVE'"
+                    />
                     <MatchStatus v-else :match="match" />
                 </div>
 
@@ -194,21 +256,7 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                                     :size="60"
                                 />
                             </span>
-                            <MatchStatus v-if="!isLive" :match="match" />
-                            <span
-                                v-else
-                                class="mono"
-                                style="
-                                    color: var(--text-muted);
-                                    font-size: 13px;
-                                "
-                            >
-                                {{
-                                    match.minute != null
-                                        ? `${match.minute}'`
-                                        : 'Live'
-                                }}
-                            </span>
+                            <MatchStatus :match="match" />
                         </template>
                     </div>
 
@@ -249,14 +297,37 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                     class="tab"
                     :class="{ on: tab === t.id }"
                     type="button"
-                    @click="tab = t.id"
+                    @click="selectTab(t.id)"
                 >
                     <component :is="t.icon" :size="15" /> {{ t.label }}
                 </button>
             </div>
 
+            <!-- Summary: self-built events timeline -->
+            <div v-if="tab === 'summary'" class="pp-panel">
+                <h3 class="panel-title">
+                    <IcBall :size="16" /> Match events
+                    <span v-if="isLive" style="margin-left: auto">
+                        <LivePulseBadge
+                            small
+                            :label="match.status === 'HT' ? 'HT' : 'LIVE'"
+                        />
+                    </span>
+                </h3>
+                <MatchTimeline
+                    v-if="events.length"
+                    :match="match"
+                    :events="events"
+                />
+                <EmptyState
+                    v-else
+                    title="No events yet"
+                    text="Updates appear live during the match."
+                />
+            </div>
+
             <!-- Standings -->
-            <div v-if="tab === 'standings'" class="pp-panel">
+            <div v-else-if="tab === 'standings'" class="pp-panel">
                 <h3 class="panel-title">
                     <IcTrophy :size="16" />
                     {{ standingGroup?.label || 'Standings' }}

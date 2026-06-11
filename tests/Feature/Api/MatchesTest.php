@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Console\Commands\PollLiveScores;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -368,6 +369,46 @@ class MatchesTest extends TestCase
         $response->assertJsonPath('data.home.tla', 'SUN');
         $response->assertJsonPath('data.away.tla', 'CHE');
         $response->assertJsonPath('data.referee', 'Chris Kavanagh');
+    }
+
+    // --- 6b. show merges the poller's self-built timeline events -------------
+
+    public function test_show_merges_recorded_timeline_events_into_the_payload(): void
+    {
+        // Events recorded by PollLiveScores under the per-match cache key.
+        Cache::put(PollLiveScores::eventsKey('538155'), [
+            ['type' => 'KICKOFF', 'minute' => 1, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-05-24T15:00:30+00:00'],
+            ['type' => 'GOAL', 'minute' => 23, 'side' => 'home', 'homeScore' => 1, 'awayScore' => 0, 'at' => '2026-05-24T15:23:30+00:00'],
+        ], PollLiveScores::EVENTS_TTL);
+
+        Http::fake([
+            '*/matches/538155' => Http::response($this->finishedMatch(), 200),
+        ]);
+
+        $response = $this->getJson('/api/matches/538155');
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data.events');
+        $response->assertJsonPath('data.events.0.type', 'KICKOFF');
+        $response->assertJsonPath('data.events.1.type', 'GOAL');
+        $response->assertJsonPath('data.events.1.side', 'home');
+        $response->assertJsonPath('data.events.1.minute', 23);
+        $response->assertJsonPath('data.events.1.homeScore', 1);
+        $response->assertJsonPath('data.events.1.awayScore', 0);
+
+        // Events come from cache only — the single upstream call is the match itself.
+        Http::assertSentCount(1);
+    }
+
+    public function test_show_returns_an_empty_events_list_when_none_were_recorded(): void
+    {
+        Http::fake([
+            '*/matches/538155' => Http::response($this->finishedMatch(), 200),
+        ]);
+
+        $this->getJson('/api/matches/538155')
+            ->assertOk()
+            ->assertJsonPath('data.events', []);
     }
 
     // --- 7. competition matches: normalized list + matchday forwarded --------

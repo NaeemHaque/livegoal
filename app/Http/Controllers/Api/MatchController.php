@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Console\Commands\PollLiveScores;
 use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 
@@ -96,7 +98,28 @@ class MatchController extends Controller
     {
         return $this->respond(
             $this->football->cached("match:{$id}", Config::integer('football.ttl.match_live'), "/matches/{$id}"),
-            $this->normalizer->match(...),
+            fn (array $payload): array => [
+                ...$this->normalizer->match($payload),
+                'events' => $this->timelineEvents($id),
+            ],
         );
+    }
+
+    /**
+     * Self-built timeline events recorded by the live poller (the free tier
+     * has no event feed) — possibly empty, read straight from cache with no
+     * upstream call.
+     *
+     * @return list<array<array-key, mixed>>
+     */
+    private function timelineEvents(string $id): array
+    {
+        $events = Cache::get(PollLiveScores::eventsKey($id));
+
+        if (! is_array($events)) {
+            return [];
+        }
+
+        return array_values(array_filter($events, is_array(...)));
     }
 }

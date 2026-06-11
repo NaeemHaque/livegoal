@@ -23,6 +23,15 @@ class PollLiveScores extends Command
     /** Cache key counting consecutive empty polls while matches were live. */
     public const EMPTY_STREAK_KEY = 'live:empty-streak';
 
+    /** Cache key prefix for the self-built per-match timeline events. */
+    public const EVENTS_KEY_PREFIX = 'live:events:';
+
+    /**
+     * TTL for per-match timeline events: ~26 hours, long enough to outlive
+     * the match day (delays, extra time) without piling up stale timelines.
+     */
+    public const EVENTS_TTL = 93600;
+
     /**
      * Consecutive empty polls required before clearing a non-empty live cache.
      * football-data.org's free tier flaps between "in play" and "no matches"
@@ -91,6 +100,13 @@ class PollLiveScores extends Command
         // match against its single-match status before letting it disappear.
         $matches = $this->withVerifiedHolds($matches, $football);
 
+        // Self-built timelines: the free tier has no event feed, so derive
+        // kickoff / goal / half-time events from the polls themselves —
+        // after the holds, so a held half-time still records its HT event.
+        foreach ($matches as $m) {
+            $this->recordTimelineEvents($m);
+        }
+
         Cache::put(self::CACHE_KEY, [
             'matches' => $matches,
             'count' => count($matches),
@@ -108,6 +124,104 @@ class PollLiveScores extends Command
         $this->info(sprintf('Live: %d match(es), %d score change(s).', count($matches), count($changed)));
 
         return self::SUCCESS;
+    }
+
+    /** Cache key holding the self-built event timeline for one match. */
+    public static function eventsKey(string $matchId): string
+    {
+        return self::EVENTS_KEY_PREFIX.$matchId;
+    }
+
+    /**
+     * Append self-built timeline events for one polled match: KICKOFF the
+     * first time it is seen LIVE, one GOAL per score increase (side derived
+     * from the prev-score diff), and HT the first time it is seen paused.
+     *
+     * @param  array<array-key, mixed>  $m  A normalized or cache-held live match (minute + prev scores already set).
+     */
+    private function recordTimelineEvents(array $m): void
+    {
+        $id = $this->str($m['id'] ?? null);
+        $status = $this->str($m['status'] ?? null);
+
+        if ($id === '' || ! in_array($status, ['LIVE', 'HT'], true)) {
+            return;
+        }
+
+        $events = $this->recordedEvents($id);
+        $before = count($events);
+
+        if ($status === 'LIVE' && ! $this->hasEvent($events, 'KICKOFF')) {
+            $events[] = $this->timelineEvent('KICKOFF', $m);
+        }
+
+        $scores = [
+            'home' => [$m['homeScore'] ?? null, $m['prevHomeScore'] ?? null],
+            'away' => [$m['awayScore'] ?? null, $m['prevAwayScore'] ?? null],
+        ];
+
+        foreach ($scores as $side => [$current, $previous]) {
+            $current = $this->nullableInt($current);
+            $previous = $this->nullableInt($previous);
+
+            if ($current !== null && $previous !== null && $current > $previous) {
+                $events[] = $this->timelineEvent('GOAL', $m, $side);
+            }
+        }
+
+        if ($status === 'HT' && ! $this->hasEvent($events, 'HT')) {
+            $events[] = $this->timelineEvent('HT', $m);
+        }
+
+        if (count($events) > $before) {
+            Cache::put(self::eventsKey($id), $events, self::EVENTS_TTL);
+        }
+    }
+
+    /**
+     * Previously recorded timeline events for a match, oldest first.
+     *
+     * @return list<array<array-key, mixed>>
+     */
+    private function recordedEvents(string $id): array
+    {
+        $cached = Cache::get(self::eventsKey($id));
+
+        if (! is_array($cached)) {
+            return [];
+        }
+
+        return array_values(array_filter($cached, is_array(...)));
+    }
+
+    /**
+     * @param  list<array<array-key, mixed>>  $events
+     */
+    private function hasEvent(array $events, string $type): bool
+    {
+        foreach ($events as $event) {
+            if (($event['type'] ?? null) === $type) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $m
+     * @return array{type: string, minute: int|null, side: string|null, homeScore: int|null, awayScore: int|null, at: string}
+     */
+    private function timelineEvent(string $type, array $m, ?string $side = null): array
+    {
+        return [
+            'type' => $type,
+            'minute' => $this->nullableInt($m['minute'] ?? null),
+            'side' => $side,
+            'homeScore' => $this->nullableInt($m['homeScore'] ?? null),
+            'awayScore' => $this->nullableInt($m['awayScore'] ?? null),
+            'at' => Date::now()->toIso8601String(),
+        ];
     }
 
     /**
@@ -290,5 +404,10 @@ class PollLiveScores extends Command
     private function str(mixed $value): string
     {
         return is_scalar($value) ? (string) $value : '';
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
     }
 }
