@@ -233,7 +233,102 @@ class PollLiveScoresTest extends TestCase
         $this->assertIsString($cached['lastUpdated']);
     }
 
-    // --- 5. upstream failure: keep last good cache --------------------------
+    // --- 5. empty-answer flap guard ------------------------------------------
+
+    /**
+     * @return array<string, mixed> A cached payload holding one live match.
+     */
+    private function liveCachePayload(): array
+    {
+        return [
+            'matches' => [[
+                'id' => '537327',
+                'status' => 'LIVE',
+                'homeScore' => 0,
+                'awayScore' => 0,
+                'minute' => 15,
+                'prevHomeScore' => null,
+                'prevAwayScore' => null,
+            ]],
+            'count' => 1,
+            'lastUpdated' => '2026-06-11T19:15:00+00:00',
+        ];
+    }
+
+    public function test_it_holds_the_live_cache_through_unconfirmed_empty_answers(): void
+    {
+        $existing = $this->liveCachePayload();
+        Cache::put(PollLiveScores::CACHE_KEY, $existing, 70);
+
+        Http::fake(['*/matches*' => Http::response(['matches' => []], 200)]);
+
+        // Two consecutive empty answers: both held, cache untouched.
+        foreach ([1, 2] as $streak) {
+            $this->artisan('app:poll-live-scores')
+                ->expectsOutputToContain(sprintf('held last cache (%d/3)', $streak))
+                ->assertSuccessful();
+
+            $this->assertSame($existing, Cache::get(PollLiveScores::CACHE_KEY));
+        }
+
+        // Third consecutive empty answer: confirmed, cache cleared to empty.
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 0 match(es)')
+            ->assertSuccessful();
+
+        $cached = Cache::get(PollLiveScores::CACHE_KEY);
+        $this->assertSame(0, $cached['count']);
+        $this->assertSame([], $cached['matches']);
+        $this->assertNull(Cache::get(PollLiveScores::EMPTY_STREAK_KEY));
+    }
+
+    public function test_a_non_empty_poll_resets_the_empty_streak(): void
+    {
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
+
+        Http::fake([
+            '*/matches*' => Http::sequence()
+                ->push(['matches' => []], 200)
+                ->push(['matches' => [$this->upstreamMatch(537327, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0)]], 200)
+                ->push(['matches' => []], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        // Empty (held, streak 1) -> live again (streak reset) -> empty (held, streak 1).
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('held last cache (1/3)')
+            ->assertSuccessful();
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 1 match(es)')
+            ->assertSuccessful();
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('held last cache (1/3)')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Cache::get(PollLiveScores::CACHE_KEY)['count']);
+    }
+
+    public function test_an_empty_answer_with_no_live_cache_is_written_immediately(): void
+    {
+        // Quiet site: prior cache is already empty; no holding, no streak.
+        Cache::put(PollLiveScores::CACHE_KEY, [
+            'matches' => [],
+            'count' => 0,
+            'lastUpdated' => '2026-06-11T18:00:00+00:00',
+        ], 70);
+
+        Http::fake(['*/matches*' => Http::response(['matches' => []], 200)]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 0 match(es)')
+            ->assertSuccessful();
+
+        $this->assertNull(Cache::get(PollLiveScores::EMPTY_STREAK_KEY));
+    }
+
+    // --- 6. upstream failure: keep last good cache --------------------------
 
     public function test_it_keeps_the_last_good_cache_when_upstream_fails(): void
     {

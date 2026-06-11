@@ -20,6 +20,17 @@ class PollLiveScores extends Command
     /** Cache key holding the live payload that GET /api/live serves. */
     public const CACHE_KEY = 'live:matches';
 
+    /** Cache key counting consecutive empty polls while matches were live. */
+    public const EMPTY_STREAK_KEY = 'live:empty-streak';
+
+    /**
+     * Consecutive empty polls required before clearing a non-empty live cache.
+     * football-data.org's free tier flaps between "in play" and "no matches"
+     * across requests (observed during WC 2026 kickoff); a single empty answer
+     * while matches are live is more likely upstream noise than full time.
+     */
+    public const EMPTY_CONFIRMATIONS = 3;
+
     protected $signature = 'app:poll-live-scores';
 
     protected $description = 'Poll in-play matches from football-data.org into cache for the whole site';
@@ -44,6 +55,15 @@ class PollLiveScores extends Command
         }
 
         $matches = $normalizer->matches($raw);
+
+        // Upstream flap guard: a sudden "no live matches" while matches were
+        // live is held back until confirmed by consecutive empty polls.
+        if ($matches === [] && $this->holdUnconfirmedEmpty()) {
+            return self::SUCCESS;
+        }
+
+        Cache::forget(self::EMPTY_STREAK_KEY);
+
         $prior = $this->priorScores();
         $changed = [];
 
@@ -101,6 +121,49 @@ class PollLiveScores extends Command
         }
 
         return $scores;
+    }
+
+    /**
+     * Whether an empty upstream answer should be held back as a likely flap.
+     *
+     * Keeps the existing live cache (TTL refreshed) until the empty result has
+     * been confirmed EMPTY_CONFIRMATIONS polls in a row; only holds while the
+     * current cache actually has matches, so a quiet site clears instantly.
+     */
+    private function holdUnconfirmedEmpty(): bool
+    {
+        $existing = Cache::get(self::CACHE_KEY);
+
+        $hasLiveMatches = is_array($existing)
+            && is_array($existing['matches'] ?? null)
+            && $existing['matches'] !== [];
+
+        if (! $hasLiveMatches) {
+            return false;
+        }
+
+        $previousStreak = Cache::get(self::EMPTY_STREAK_KEY, 0);
+        $streak = (is_int($previousStreak) ? $previousStreak : 0) + 1;
+
+        if ($streak >= self::EMPTY_CONFIRMATIONS) {
+            Cache::forget(self::EMPTY_STREAK_KEY);
+
+            return false;
+        }
+
+        $ttl = Config::integer('football.ttl.live');
+
+        Cache::put(self::EMPTY_STREAK_KEY, $streak, $ttl * self::EMPTY_CONFIRMATIONS);
+        Cache::put(self::CACHE_KEY, $existing, $ttl);
+
+        Log::notice(sprintf(
+            'PollLiveScores: empty upstream answer while matches are live; holding cache (%d/%d).',
+            $streak,
+            self::EMPTY_CONFIRMATIONS,
+        ));
+        $this->warn(sprintf('Empty answer while live; held last cache (%d/%d).', $streak, self::EMPTY_CONFIRMATIONS));
+
+        return true;
     }
 
     /**
