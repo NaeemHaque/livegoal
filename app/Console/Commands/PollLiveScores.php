@@ -95,6 +95,13 @@ class PollLiveScores extends Command
             $id = $this->str($m['id'] ?? null);
             $previous = $prior[$id] ?? null;
 
+            // Upstream nodes disagree mid-match and can serve yesterday's
+            // score; never let a score go backwards without confirmation.
+            if ($previous !== null) {
+                [$matches[$i]['homeScore'], $matches[$i]['awayScore']] = $this->guardedScores($id, $m, $previous);
+                $m = $matches[$i];
+            }
+
             $matches[$i]['minute'] = $this->liveMinute($m);
             $matches[$i]['prevHomeScore'] = $previous['home'] ?? null;
             $matches[$i]['prevAwayScore'] = $previous['away'] ?? null;
@@ -179,7 +186,8 @@ class PollLiveScores extends Command
             $current = $this->nullableInt($current);
             $previous = $this->nullableInt($previous);
 
-            if ($current !== null && $previous !== null && $current > $previous) {
+            if ($current !== null && $previous !== null && $current > $previous
+                && ! $this->hasGoalForSide($events, $side, $current)) {
                 $events[] = $this->timelineEvent('GOAL', $m, $side);
             }
         }
@@ -207,6 +215,28 @@ class PollLiveScores extends Command
         }
 
         return array_values(array_filter($cached, is_array(...)));
+    }
+
+    /**
+     * Whether this side's goal taking it to this score was already recorded —
+     * score oscillation across stale upstream nodes must not produce
+     * duplicate goal events for the same goal.
+     *
+     * @param  list<array<array-key, mixed>>  $events
+     */
+    private function hasGoalForSide(array $events, string $side, int $score): bool
+    {
+        $key = $side === 'home' ? 'homeScore' : 'awayScore';
+
+        foreach ($events as $event) {
+            if (($event['type'] ?? null) === 'GOAL'
+                && ($event['side'] ?? null) === $side
+                && ($event[$key] ?? null) === $score) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -408,6 +438,59 @@ class PollLiveScores extends Command
 
         // Lookup failed or unrecognized status: keep the last good state.
         return $m;
+    }
+
+    /**
+     * The score pair to publish for a match, holding back unconfirmed drops.
+     *
+     * A lower score than the previous poll usually means a stale upstream
+     * node, not a disallowed goal; the drop is published only after it has
+     * been answered consistently for EMPTY_CONFIRMATIONS polls.
+     *
+     * @param  array<array-key, mixed>  $m
+     * @param  array{home: mixed, away: mixed}  $previous
+     * @return array{0: mixed, 1: mixed}
+     */
+    private function guardedScores(string $id, array $m, array $previous): array
+    {
+        $home = $m['homeScore'] ?? null;
+        $away = $m['awayScore'] ?? null;
+        $prevHome = $previous['home'] ?? null;
+        $prevAway = $previous['away'] ?? null;
+        $streakKey = 'live:score-drop:'.$id;
+
+        $dropped = is_int($home) && is_int($away) && is_int($prevHome) && is_int($prevAway)
+            && ($home < $prevHome || $away < $prevAway);
+
+        if (! $dropped) {
+            Cache::forget($streakKey);
+
+            return [$home, $away];
+        }
+
+        $previousStreak = Cache::get($streakKey, 0);
+        $streak = (is_int($previousStreak) ? $previousStreak : 0) + 1;
+
+        if ($streak >= self::EMPTY_CONFIRMATIONS) {
+            Cache::forget($streakKey);
+
+            return [$home, $away];
+        }
+
+        Cache::put($streakKey, $streak, Config::integer('football.ttl.live') * self::EMPTY_CONFIRMATIONS);
+
+        Log::notice(sprintf(
+            'PollLiveScores: match %s score dropped %s-%s -> %s-%s; holding previous score (%d/%d).',
+            $id,
+            $this->str($prevHome),
+            $this->str($prevAway),
+            $this->str($home),
+            $this->str($away),
+            $streak,
+            self::EMPTY_CONFIRMATIONS,
+        ));
+
+        return [$prevHome, $prevAway];
     }
 
     /**

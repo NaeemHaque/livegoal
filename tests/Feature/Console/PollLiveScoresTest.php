@@ -400,6 +400,58 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('LIVE', $byId['9']['status'] ?? null);
     }
 
+    public function test_an_unconfirmed_score_drop_is_held_at_the_previous_score(): void
+    {
+        // A stale upstream node answers 0-0 after the cache saw 2-0: the drop
+        // is held back twice, then accepted once answered consistently.
+        Http::fake([
+            '*/matches*' => Http::sequence()
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 2, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+        $this->assertSame(2, Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['homeScore']);
+
+        // Drops 1 and 2: held at the last credible score.
+        foreach ([1, 2] as $attempt) {
+            $this->artisan('app:poll-live-scores')->assertSuccessful();
+            $this->assertSame(2, Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['homeScore'], "drop attempt {$attempt}");
+        }
+
+        // Third consistent answer: the drop is real (e.g. VAR) — accept it.
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+        $this->assertSame(0, Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['homeScore']);
+    }
+
+    public function test_score_oscillation_does_not_record_duplicate_goal_events(): void
+    {
+        // 1-0 -> (stale) 0-0 held -> 2-0: exactly one extra GOAL at 2-0.
+        Http::fake([
+            '*/matches*' => Http::sequence()
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 1, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 2, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 1, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 2, 0)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        foreach (range(1, 4) as $i) {
+            $this->artisan('app:poll-live-scores')->assertSuccessful();
+        }
+
+        $goals = array_filter(
+            Cache::get(PollLiveScores::eventsKey('1')),
+            fn (array $e): bool => $e['type'] === 'GOAL',
+        );
+
+        // One goal to 2-0 — the oscillating re-announcements are deduped.
+        $this->assertCount(1, $goals);
+    }
+
     // --- 7. anchored live minute ----------------------------------------------
 
     public function test_the_live_minute_is_anchored_to_the_observed_second_half_restart(): void
