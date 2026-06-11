@@ -260,9 +260,14 @@ class PollLiveScoresTest extends TestCase
         $existing = $this->liveCachePayload();
         Cache::put(PollLiveScores::CACHE_KEY, $existing, 70);
 
-        Http::fake(['*/matches*' => Http::response(['matches' => []], 200)]);
+        Http::fake([
+            // Once the empty answer is confirmed, the vanished match is
+            // verified against its own record: FINISHED -> really drop it.
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'FINISHED'], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
 
-        // Two consecutive empty answers: both held, cache untouched.
+        // Two consecutive empty answers: both held, cache untouched, no verification call.
         foreach ([1, 2] as $streak) {
             $this->artisan('app:poll-live-scores')
                 ->expectsOutputToContain(sprintf('held last cache (%d/3)', $streak))
@@ -271,7 +276,7 @@ class PollLiveScoresTest extends TestCase
             $this->assertSame($existing, Cache::get(PollLiveScores::CACHE_KEY));
         }
 
-        // Third consecutive empty answer: confirmed, cache cleared to empty.
+        // Third consecutive empty answer: confirmed + verified FINISHED -> cleared.
         $this->artisan('app:poll-live-scores')
             ->expectsOutputToContain('Live: 0 match(es)')
             ->assertSuccessful();
@@ -280,6 +285,88 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame(0, $cached['count']);
         $this->assertSame([], $cached['matches']);
         $this->assertNull(Cache::get(PollLiveScores::EMPTY_STREAK_KEY));
+    }
+
+    // --- 6. vanished-match verification (free tier "erases" half-time) -------
+
+    public function test_a_vanished_match_reported_timed_is_held_as_half_time(): void
+    {
+        // The free-tier half-time lie: bulk feed empty, own record back to TIMED.
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'TIMED'], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 1 match(es)')
+            ->assertSuccessful();
+
+        $held = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+
+        $this->assertSame('HT', $held['status']);
+        $this->assertSame(45, $held['minute']);
+        // Last real score survives the upstream erasing it.
+        $this->assertSame(0, $held['homeScore']);
+        $this->assertSame(0, $held['awayScore']);
+    }
+
+    public function test_a_vanished_match_reported_paused_is_held_as_half_time(): void
+    {
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'PAUSED'], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $this->assertSame('HT', Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['status']);
+    }
+
+    public function test_a_vanished_match_still_in_play_per_its_own_record_is_kept(): void
+    {
+        // Bulk-feed flap: the answer is non-empty but missing one live match.
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
+
+        Http::fake([
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'IN_PLAY'], 200),
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(9, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 2 match(es)')
+            ->assertSuccessful();
+
+        $matches = Cache::get(PollLiveScores::CACHE_KEY)['matches'];
+        $byId = array_column($matches, 'status', 'id');
+
+        $this->assertSame('LIVE', $byId['537327'] ?? null);
+        $this->assertSame('LIVE', $byId['9'] ?? null);
+    }
+
+    public function test_a_vanished_match_is_kept_when_verification_fails(): void
+    {
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            // Verification 429s through all retries -> null -> keep last state.
+            '*/matches/537327' => Http::response(['error' => 'rate limited'], 429),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $kept = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+        $this->assertSame('LIVE', $kept['status']);
+        $this->assertSame('537327', $kept['id']);
     }
 
     public function test_a_non_empty_poll_resets_the_empty_streak(): void

@@ -31,6 +31,12 @@ class PollLiveScores extends Command
      */
     public const EMPTY_CONFIRMATIONS = 3;
 
+    /**
+     * Single-match statuses confirming a vanished match is genuinely over
+     * (or shelved), so it may be dropped from the live payload.
+     */
+    private const TERMINAL_STATUSES = ['FINISHED', 'AWARDED', 'POSTPONED', 'SUSPENDED', 'CANCELLED'];
+
     protected $signature = 'app:poll-live-scores';
 
     protected $description = 'Poll in-play matches from football-data.org into cache for the whole site';
@@ -79,6 +85,11 @@ class PollLiveScores extends Command
                 $changed[] = $matches[$i];
             }
         }
+
+        // The free tier "erases" matches during half-time (bulk feed drops
+        // them, their own record reverts to TIMED). Verify every vanished
+        // match against its single-match status before letting it disappear.
+        $matches = $this->withVerifiedHolds($matches, $football);
 
         Cache::put(self::CACHE_KEY, [
             'matches' => $matches,
@@ -164,6 +175,92 @@ class PollLiveScores extends Command
         $this->warn(sprintf('Empty answer while live; held last cache (%d/%d).', $streak, self::EMPTY_CONFIRMATIONS));
 
         return true;
+    }
+
+    /**
+     * Re-add vanished matches whose own record says they are not over.
+     *
+     * A match present in the previous poll but missing from the new bulk
+     * answer is verified against GET /matches/{id}: a terminal status drops
+     * it; IN_PLAY keeps it live (bulk-feed flap); PAUSED — and TIMED/SCHEDULED
+     * mid-match, the free tier's half-time lie — keep it with its last real
+     * score as HT; a failed lookup keeps the last good state untouched.
+     *
+     * @param  array<int, array<array-key, mixed>>  $matches
+     * @return array<int, array<array-key, mixed>>
+     */
+    private function withVerifiedHolds(array $matches, FootballData $football): array
+    {
+        $present = [];
+
+        foreach ($matches as $m) {
+            $present[$this->str($m['id'] ?? null)] = true;
+        }
+
+        $previous = Cache::get(self::CACHE_KEY);
+        $priorMatches = is_array($previous) && is_array($previous['matches'] ?? null)
+            ? $previous['matches']
+            : [];
+
+        foreach ($priorMatches as $m) {
+            if (! is_array($m)) {
+                continue;
+            }
+
+            $id = $this->str($m['id'] ?? null);
+
+            if ($id === '' || isset($present[$id])) {
+                continue;
+            }
+
+            $held = $this->verifyVanishedMatch($m, $id, $football);
+
+            if ($held !== null) {
+                $matches[] = $held;
+            }
+        }
+
+        return $matches;
+    }
+
+    /**
+     * The verified hold for one vanished match, or null to drop it.
+     *
+     * @param  array<array-key, mixed>  $m  A match as read back from the cache.
+     * @return array<array-key, mixed>|null
+     */
+    private function verifyVanishedMatch(array $m, string $id, FootballData $football): ?array
+    {
+        $detail = $football->get('/matches/'.$id);
+        $status = is_array($detail) ? $this->str($detail['status'] ?? null) : '';
+
+        if (in_array($status, self::TERMINAL_STATUSES, true)) {
+            return null;
+        }
+
+        // Still in play per its own record: the bulk feed flapped, keep as-is.
+        if ($status === 'IN_PLAY') {
+            return $m;
+        }
+
+        if (in_array($status, ['PAUSED', 'TIMED', 'SCHEDULED'], true)) {
+            Log::notice(sprintf(
+                'PollLiveScores: match %s vanished from the live feed (own status: %s); holding as half-time.',
+                $id,
+                $status,
+            ));
+
+            return [
+                ...$m,
+                'status' => 'HT',
+                'minute' => 45,
+                'prevHomeScore' => $m['homeScore'] ?? null,
+                'prevAwayScore' => $m['awayScore'] ?? null,
+            ];
+        }
+
+        // Lookup failed or unrecognized status: keep the last good state.
+        return $m;
     }
 
     /**
