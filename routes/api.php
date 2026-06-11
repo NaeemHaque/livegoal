@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 // Each route's cache.api:{seconds} window is matched to the data's volatility
 // (see config/football.php `ttl`): live scores refresh often, reference data rarely.
 
-Route::get('live', [LiveController::class, 'index'])->middleware('cache.api:15');
+Route::get('live', [LiveController::class, 'index'])->middleware('cache.api:5');
 
 Route::get('competitions', [CompetitionController::class, 'index'])->middleware('cache.api:3600');
 Route::get('competitions/{id}', [CompetitionController::class, 'show'])->middleware('cache.api:3600');

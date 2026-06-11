@@ -8,9 +8,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// The single site-wide live poller (see docs/LIVE_POLLING.md).
+// The single site-wide live poller (see docs/LIVE_POLLING.md). Sub-minute so
+// goals land faster; 2 bulk calls/minute stays well inside the free tier's
+// 10 req/min (vanished-match verification lookups are cached per match).
 Schedule::command('app:poll-live-scores')
-    ->everyMinute()
+    ->everyThirtySeconds()
     ->withoutOverlapping();
 
 // Keep the featured leagues' Golden Boot feed hot so the Top Scorers tabs are

@@ -117,7 +117,7 @@ class SchedulerTest extends TestCase
 
     // --- 4. schedule registration -------------------------------------------
 
-    public function test_it_registers_the_live_poller_to_run_every_minute(): void
+    public function test_it_registers_the_live_poller_to_run_every_thirty_seconds(): void
     {
         $schedule = app(Schedule::class);
 
@@ -128,8 +128,9 @@ class SchedulerTest extends TestCase
 
         $event = $events->first();
 
-        // Every minute.
+        // Sub-minute: every-minute cron expression repeated every 30 seconds.
         $this->assertSame('* * * * *', $event->expression);
+        $this->assertSame(30, $event->repeatSeconds);
     }
 
     public function test_the_live_poller_is_scheduled_without_overlapping(): void

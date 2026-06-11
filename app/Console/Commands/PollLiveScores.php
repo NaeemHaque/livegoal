@@ -390,7 +390,19 @@ class PollLiveScores extends Command
      */
     private function verifyVanishedMatch(array $m, string $id, FootballData $football, Normalizer $normalizer): ?array
     {
-        $detail = $football->get('/matches/'.$id);
+        // The poller runs sub-minute; cache each match's verification lookup
+        // briefly so vanished matches cost at most ~1 upstream call a minute.
+        $verifyKey = 'live:verify:'.$id;
+        $detail = Cache::get($verifyKey);
+
+        if (! is_array($detail)) {
+            $detail = $football->get('/matches/'.$id);
+
+            if (is_array($detail)) {
+                Cache::put($verifyKey, $detail, 55);
+            }
+        }
+
         $status = is_array($detail) ? $this->str($detail['status'] ?? null) : '';
 
         if (in_array($status, self::TERMINAL_STATUSES, true)) {
