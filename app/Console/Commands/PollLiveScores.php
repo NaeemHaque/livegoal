@@ -107,7 +107,7 @@ class PollLiveScores extends Command
         // The free tier "erases" matches during half-time (bulk feed drops
         // them, their own record reverts to TIMED). Verify every vanished
         // match against its single-match status before letting it disappear.
-        $matches = $this->withVerifiedHolds($matches, $football);
+        $matches = $this->withVerifiedHolds($matches, $football, $normalizer);
 
         // Self-built timelines: the free tier has no event feed, so derive
         // kickoff / goal / half-time events from the polls themselves —
@@ -162,6 +162,12 @@ class PollLiveScores extends Command
 
         if ($status === 'LIVE' && ! $this->hasEvent($events, 'KICKOFF')) {
             $events[] = $this->timelineEvent('KICKOFF', $m);
+        }
+
+        // Back LIVE after a recorded half-time: the second half restarted.
+        // The timestamp anchors the second-half clock (see liveMinute()).
+        if ($status === 'LIVE' && $this->hasEvent($events, 'HT') && ! $this->hasEvent($events, 'RESUME')) {
+            $events[] = $this->timelineEvent('RESUME', $m);
         }
 
         $scores = [
@@ -312,7 +318,7 @@ class PollLiveScores extends Command
      * @param  array<int, array<array-key, mixed>>  $matches
      * @return array<int, array<array-key, mixed>>
      */
-    private function withVerifiedHolds(array $matches, FootballData $football): array
+    private function withVerifiedHolds(array $matches, FootballData $football, Normalizer $normalizer): array
     {
         $present = [];
 
@@ -336,7 +342,7 @@ class PollLiveScores extends Command
                 continue;
             }
 
-            $held = $this->verifyVanishedMatch($m, $id, $football);
+            $held = $this->verifyVanishedMatch($m, $id, $football, $normalizer);
 
             if ($held !== null) {
                 $matches[] = $held;
@@ -352,7 +358,7 @@ class PollLiveScores extends Command
      * @param  array<array-key, mixed>  $m  A match as read back from the cache.
      * @return array<array-key, mixed>|null
      */
-    private function verifyVanishedMatch(array $m, string $id, FootballData $football): ?array
+    private function verifyVanishedMatch(array $m, string $id, FootballData $football, Normalizer $normalizer): ?array
     {
         $detail = $football->get('/matches/'.$id);
         $status = is_array($detail) ? $this->str($detail['status'] ?? null) : '';
@@ -361,15 +367,23 @@ class PollLiveScores extends Command
             return null;
         }
 
-        // Still in play per its own record: the bulk feed flapped — keep it
-        // live with the clock ticking on.
+        // The single record carries the freshest truth when it is in play or
+        // paused — use it (scores included), never the stale cached entry.
+        $fresh = null;
+
+        if (is_array($detail) && in_array($status, ['IN_PLAY', 'PAUSED'], true)) {
+            $fresh = $normalizer->matches(['matches' => [$detail]])[0] ?? null;
+        }
+
+        // Still in play per its own record: the bulk feed flapped — carry the
+        // fresh score over, with the clock ticking on.
         if ($status === 'IN_PLAY') {
-            return $this->keptLive($m);
+            return $fresh !== null ? $this->refreshedFromDetail($fresh, $m) : $this->keptLive($m);
         }
 
         // PAUSED is the documented interval status: genuinely half-time.
         if ($status === 'PAUSED') {
-            return $this->heldAtHalfTime($m, $id, $status);
+            return $fresh !== null ? $this->refreshedFromDetail($fresh, $m) : $this->heldAtHalfTime($m, $id, $status);
         }
 
         // TIMED/SCHEDULED mid-match is the free tier erasing the match. The
@@ -408,6 +422,24 @@ class PollLiveScores extends Command
     }
 
     /**
+     * A freshly normalized single-match record, enriched like a bulk entry:
+     * derived minute, and prev scores taken from the cached entry so goal
+     * detection still fires across the gap.
+     *
+     * @param  array<string, mixed>  $fresh
+     * @param  array<array-key, mixed>  $cached
+     * @return array<string, mixed>
+     */
+    private function refreshedFromDetail(array $fresh, array $cached): array
+    {
+        $fresh['minute'] = $this->liveMinute($fresh);
+        $fresh['prevHomeScore'] = $cached['homeScore'] ?? null;
+        $fresh['prevAwayScore'] = $cached['awayScore'] ?? null;
+
+        return $fresh;
+    }
+
+    /**
      * The half-time hold for a vanished match.
      *
      * @param  array<array-key, mixed>  $m
@@ -431,7 +463,13 @@ class PollLiveScores extends Command
     }
 
     /**
-     * Approximate live minute from kickoff (free tier has no real minute).
+     * Approximate live minute (free tier has no real minute).
+     *
+     * Anchored to transitions this poller observed itself — the recorded
+     * KICKOFF (first seen live) and RESUME (live again after half-time)
+     * timestamps — which track the real clock far better than the scheduled
+     * kickoff when a match starts late or after the 15-minute interval.
+     * Falls back to the scheduled kickoff when no anchors exist yet.
      *
      * @param  array<array-key, mixed>  $m
      */
@@ -443,15 +481,52 @@ class PollLiveScores extends Command
             return 45;
         }
 
-        $kickoff = $m['kickoff'] ?? null;
-
-        if ($status !== 'LIVE' || ! is_string($kickoff)) {
+        if ($status !== 'LIVE') {
             return null;
         }
 
-        $elapsed = (int) floor((Date::now()->getTimestamp() - Date::parse($kickoff)->getTimestamp()) / 60);
+        $events = $this->recordedEvents($this->str($m['id'] ?? null));
 
-        return max(1, min($elapsed, 120));
+        $resumedAt = $this->eventTime($events, 'RESUME');
+
+        if ($resumedAt !== null) {
+            return min(45 + max(1, $this->minutesSince($resumedAt)), 120);
+        }
+
+        $kickedOffAt = $this->eventTime($events, 'KICKOFF');
+
+        if ($kickedOffAt !== null) {
+            return min(max(1, $this->minutesSince($kickedOffAt)), 120);
+        }
+
+        $kickoff = $m['kickoff'] ?? null;
+
+        if (! is_string($kickoff)) {
+            return null;
+        }
+
+        return max(1, min($this->minutesSince($kickoff), 120));
+    }
+
+    /**
+     * Timestamp of the first recorded event of a type, or null.
+     *
+     * @param  list<array<array-key, mixed>>  $events
+     */
+    private function eventTime(array $events, string $type): ?string
+    {
+        foreach ($events as $event) {
+            if (($event['type'] ?? null) === $type && is_string($event['at'] ?? null)) {
+                return $event['at'];
+            }
+        }
+
+        return null;
+    }
+
+    private function minutesSince(string $iso): int
+    {
+        return (int) floor((Date::now()->getTimestamp() - Date::parse($iso)->getTimestamp()) / 60);
     }
 
     private function str(mixed $value): string

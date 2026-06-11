@@ -364,13 +364,18 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('HT', Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['status']);
     }
 
-    public function test_a_vanished_match_still_in_play_per_its_own_record_is_kept(): void
+    public function test_a_vanished_match_still_in_play_per_its_own_record_keeps_its_fresh_score(): void
     {
         // Bulk-feed flap: the answer is non-empty but missing one live match.
+        // The single record is fresher than the cache (a goal happened during
+        // the gap) — its score must be carried over, not the stale 0-0.
         Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
 
         Http::fake([
-            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'IN_PLAY'], 200),
+            '*/matches/537327' => Http::response(
+                $this->upstreamMatch(537327, 'IN_PLAY', '2026-06-11T19:00:00Z', 2, 0),
+                200,
+            ),
             '*/matches*' => Http::response(['matches' => [
                 $this->upstreamMatch(9, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0),
             ]], 200),
@@ -381,10 +386,63 @@ class PollLiveScoresTest extends TestCase
             ->assertSuccessful();
 
         $matches = Cache::get(PollLiveScores::CACHE_KEY)['matches'];
-        $byId = array_column($matches, 'status', 'id');
+        $byId = [];
 
-        $this->assertSame('LIVE', $byId['537327'] ?? null);
-        $this->assertSame('LIVE', $byId['9'] ?? null);
+        foreach ($matches as $m) {
+            $byId[$m['id']] = $m;
+        }
+
+        $this->assertSame('LIVE', $byId['537327']['status'] ?? null);
+        $this->assertSame(2, $byId['537327']['homeScore'] ?? null);
+        $this->assertSame(0, $byId['537327']['awayScore'] ?? null);
+        // Prev scores come from the cached entry, so goal detection can fire.
+        $this->assertSame(0, $byId['537327']['prevHomeScore'] ?? null);
+        $this->assertSame('LIVE', $byId['9']['status'] ?? null);
+    }
+
+    // --- 7. anchored live minute ----------------------------------------------
+
+    public function test_the_live_minute_is_anchored_to_the_observed_second_half_restart(): void
+    {
+        // Anchors observed by earlier polls: kicked off 14:02, resumed 15:02.
+        Date::setTestNow('2026-06-11T15:12:00Z');
+        Cache::put(PollLiveScores::eventsKey('1'), [
+            ['type' => 'KICKOFF', 'minute' => 1, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T14:02:00+00:00'],
+            ['type' => 'HT', 'minute' => 45, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T14:49:00+00:00'],
+            ['type' => 'RESUME', 'minute' => 46, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T15:02:00+00:00'],
+        ], 3600);
+
+        Http::fake([
+            '*/matches*' => Http::response(['matches' => [
+                // Scheduled kickoff 13:40 — schedule math would say 92'; the
+                // observed-restart anchor says 45 + 10 = 55'.
+                $this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T13:40:00Z', 1, 0),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $this->assertSame(55, Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['minute']);
+    }
+
+    public function test_a_resume_event_is_recorded_when_a_held_half_time_match_goes_live_again(): void
+    {
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(45, 'HT'), 70);
+        Cache::put(PollLiveScores::eventsKey('537327'), [
+            ['type' => 'KICKOFF', 'minute' => 1, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T19:12:00+00:00'],
+            ['type' => 'HT', 'minute' => 45, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T19:58:00+00:00'],
+        ], 3600);
+
+        Http::fake([
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(537327, 'IN_PLAY', '2026-06-11T19:00:00Z', 1, 0),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $types = array_column(Cache::get(PollLiveScores::eventsKey('537327')), 'type');
+        $this->assertContains('RESUME', $types);
     }
 
     public function test_a_vanished_match_is_kept_when_verification_fails(): void
@@ -457,6 +515,10 @@ class PollLiveScoresTest extends TestCase
     {
         Date::setTestNow('2026-06-08T14:46:00Z');
 
+        // The test clock jumps 46 minutes between polls; keep the live cache
+        // alive across that jump so the score diff has its baseline.
+        Config::set('football.ttl.live', 7200);
+
         $this->assertSame('live:events:1', PollLiveScores::eventsKey('1'));
 
         Http::fake([
@@ -476,7 +538,9 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('KICKOFF', $events[0]['type']);
         $this->assertSame('2026-06-08T14:46:00+00:00', $events[0]['at']);
 
-        // Second poll: home score 0 -> 1 -> a home GOAL with the running score.
+        // Second poll, 46 minutes later: home score 0 -> 1 -> a home GOAL with
+        // the running score; its minute is measured from the observed kickoff.
+        Date::setTestNow('2026-06-08T15:32:00Z');
         $this->artisan('app:poll-live-scores')->assertSuccessful();
 
         $events = Cache::get(PollLiveScores::eventsKey('1'));
