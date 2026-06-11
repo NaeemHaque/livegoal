@@ -46,6 +46,15 @@ class PollLiveScores extends Command
      */
     private const TERMINAL_STATUSES = ['FINISHED', 'AWARDED', 'POSTPONED', 'SUSPENDED', 'CANCELLED'];
 
+    /**
+     * Minute window in which a vanished LIVE match (whose own record lies
+     * TIMED) is plausibly at the interval. Later than this, the match was
+     * already deep into the second half — it stays LIVE, never back to HT.
+     */
+    private const HT_WINDOW_MIN = 40;
+
+    private const HT_WINDOW_MAX = 70;
+
     protected $signature = 'app:poll-live-scores';
 
     protected $description = 'Poll in-play matches from football-data.org into cache for the whole site';
@@ -352,25 +361,35 @@ class PollLiveScores extends Command
             return null;
         }
 
-        // Still in play per its own record: the bulk feed flapped, keep as-is.
+        // Still in play per its own record: the bulk feed flapped — keep it
+        // live with the clock ticking on.
         if ($status === 'IN_PLAY') {
-            return $m;
+            return $this->keptLive($m);
         }
 
-        if (in_array($status, ['PAUSED', 'TIMED', 'SCHEDULED'], true)) {
-            Log::notice(sprintf(
-                'PollLiveScores: match %s vanished from the live feed (own status: %s); holding as half-time.',
-                $id,
-                $status,
-            ));
+        // PAUSED is the documented interval status: genuinely half-time.
+        if ($status === 'PAUSED') {
+            return $this->heldAtHalfTime($m, $id, $status);
+        }
 
-            return [
-                ...$m,
-                'status' => 'HT',
-                'minute' => 45,
-                'prevHomeScore' => $m['homeScore'] ?? null,
-                'prevAwayScore' => $m['awayScore'] ?? null,
-            ];
+        // TIMED/SCHEDULED mid-match is the free tier erasing the match. The
+        // record carries no truth, so fall back to what we last knew:
+        // an interval-window LIVE match is presumed at half-time; an HT hold
+        // stays at half-time; anything deeper into the match stays LIVE.
+        if (in_array($status, ['TIMED', 'SCHEDULED'], true)) {
+            $priorStatus = $m['status'] ?? null;
+
+            if ($priorStatus === 'HT') {
+                return $m;
+            }
+
+            $minute = $m['minute'] ?? null;
+
+            if (is_int($minute) && $minute >= self::HT_WINDOW_MIN && $minute <= self::HT_WINDOW_MAX) {
+                return $this->heldAtHalfTime($m, $id, $status);
+            }
+
+            return $this->keptLive($m);
         }
 
         // Lookup failed or unrecognized status: keep the last good state.
@@ -378,9 +397,43 @@ class PollLiveScores extends Command
     }
 
     /**
+     * Keep a vanished match live, with its approximate minute ticking on.
+     *
+     * @param  array<array-key, mixed>  $m
+     * @return array<array-key, mixed>
+     */
+    private function keptLive(array $m): array
+    {
+        return [...$m, 'minute' => $this->liveMinute($m) ?? ($m['minute'] ?? null)];
+    }
+
+    /**
+     * The half-time hold for a vanished match.
+     *
+     * @param  array<array-key, mixed>  $m
+     * @return array<array-key, mixed>
+     */
+    private function heldAtHalfTime(array $m, string $id, string $status): array
+    {
+        Log::notice(sprintf(
+            'PollLiveScores: match %s vanished from the live feed (own status: %s); holding as half-time.',
+            $id,
+            $status,
+        ));
+
+        return [
+            ...$m,
+            'status' => 'HT',
+            'minute' => 45,
+            'prevHomeScore' => $m['homeScore'] ?? null,
+            'prevAwayScore' => $m['awayScore'] ?? null,
+        ];
+    }
+
+    /**
      * Approximate live minute from kickoff (free tier has no real minute).
      *
-     * @param  array<string, mixed>  $m
+     * @param  array<array-key, mixed>  $m
      */
     private function liveMinute(array $m): ?int
     {

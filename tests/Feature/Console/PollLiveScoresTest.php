@@ -238,15 +238,15 @@ class PollLiveScoresTest extends TestCase
     /**
      * @return array<string, mixed> A cached payload holding one live match.
      */
-    private function liveCachePayload(): array
+    private function liveCachePayload(int $minute = 15, string $status = 'LIVE'): array
     {
         return [
             'matches' => [[
                 'id' => '537327',
-                'status' => 'LIVE',
+                'status' => $status,
                 'homeScore' => 0,
                 'awayScore' => 0,
-                'minute' => 15,
+                'minute' => $minute,
                 'prevHomeScore' => null,
                 'prevAwayScore' => null,
             ]],
@@ -289,10 +289,11 @@ class PollLiveScoresTest extends TestCase
 
     // --- 6. vanished-match verification (free tier "erases" half-time) -------
 
-    public function test_a_vanished_match_reported_timed_is_held_as_half_time(): void
+    public function test_a_vanished_match_reported_timed_in_the_interval_window_is_held_as_half_time(): void
     {
-        // The free-tier half-time lie: bulk feed empty, own record back to TIMED.
-        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
+        // The free-tier half-time lie at the interval: bulk feed empty, own
+        // record back to TIMED, last seen LIVE around minute 47.
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(47), 70);
         Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
 
         Http::fake([
@@ -311,6 +312,41 @@ class PollLiveScoresTest extends TestCase
         // Last real score survives the upstream erasing it.
         $this->assertSame(0, $held['homeScore']);
         $this->assertSame(0, $held['awayScore']);
+    }
+
+    public function test_a_vanished_match_reported_timed_deep_in_the_second_half_stays_live(): void
+    {
+        // Same lie during the second half (last seen LIVE at 81') — the match
+        // must NOT regress to HT; it stays live with the clock ticking.
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(81), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'TIMED'], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $kept = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+
+        $this->assertSame('LIVE', $kept['status']);
+        $this->assertSame(81, $kept['minute']);
+    }
+
+    public function test_a_held_half_time_match_stays_at_half_time_while_the_record_lies_timed(): void
+    {
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(45, 'HT'), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'TIMED'], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $this->assertSame('HT', Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['status']);
     }
 
     public function test_a_vanished_match_reported_paused_is_held_as_half_time(): void
