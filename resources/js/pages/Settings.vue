@@ -192,6 +192,9 @@ const intervals = [10, 15, 30];
                             Blocked — allow notifications in your browser's site
                             settings first
                         </template>
+                        <template v-else-if="push.lastError.value">
+                            {{ push.lastError.value }}
+                        </template>
                         <template v-else>
                             Goal &amp; final-score notifications for teams and
                             competitions you follow, even when the tab is closed

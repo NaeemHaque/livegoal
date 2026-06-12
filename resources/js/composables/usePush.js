@@ -21,6 +21,9 @@ const supported =
 // Module-level so every component shares one reactive permission state.
 const permission = ref(supported ? Notification.permission : 'denied');
 
+// Why the last enable() attempt failed, for the Settings row to display.
+const lastError = ref(null);
+
 let followWatcherStarted = false;
 
 const vapidPublicKey = () =>
@@ -98,6 +101,8 @@ export function usePush() {
 
     /** Gesture path: prompt, subscribe, sync. Returns whether alerts are on. */
     const enable = async () => {
+        lastError.value = null;
+
         if (!supported || !vapidPublicKey()) {
             return false;
         }
@@ -108,8 +113,21 @@ export function usePush() {
             return false;
         }
 
-        const subscription = await subscribe();
-        await syncToServer(subscription, favorites.items);
+        try {
+            const subscription = await subscribe();
+            await syncToServer(subscription, favorites.items);
+        } catch (error) {
+            // Typical causes: the browser's push service is disabled (Brave
+            // ships "Use Google services for push messaging" off) or blocked
+            // by the network. Surface it instead of failing silently.
+            lastError.value =
+                error?.name === 'AbortError'
+                    ? 'Your browser could not reach its push service — in Brave, enable "Use Google services for push messaging" (Settings → Privacy) and relaunch.'
+                    : 'Could not subscribe — check the browser console.';
+
+            return false;
+        }
+
         settings.pushEnabled = true;
         startFollowWatcher();
 
@@ -155,5 +173,5 @@ export function usePush() {
         startFollowWatcher();
     };
 
-    return { supported, permission, enable, disable, init };
+    return { supported, permission, lastError, enable, disable, init };
 }
