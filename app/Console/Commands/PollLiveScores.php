@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
+use App\Services\Push\MatchAlerts;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -86,6 +87,11 @@ class PollLiveScores extends Command
     protected $signature = 'app:poll-live-scores';
 
     protected $description = 'Poll in-play matches from football-data.org into cache for the whole site';
+
+    public function __construct(private readonly MatchAlerts $alerts)
+    {
+        parent::__construct();
+    }
 
     public function handle(FootballData $football, Normalizer $normalizer): int
     {
@@ -223,6 +229,7 @@ class PollLiveScores extends Command
             if ($current !== null && $previous !== null && $current > $previous
                 && ! $this->hasGoalForSide($events, $side, $current)) {
                 $events[] = $this->timelineEvent('GOAL', $m, $side);
+                $this->alerts->goalScored($m);
             }
         }
 
@@ -661,6 +668,7 @@ class PollLiveScores extends Command
         $events = $this->recordedEvents($id);
 
         if (! $this->hasEvent($events, 'FT')) {
+            $this->alerts->fullTime($final);
             $events[] = [
                 'type' => 'FT',
                 'minute' => null,
