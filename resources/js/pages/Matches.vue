@@ -12,6 +12,7 @@ import SectionHead from '@/components/SectionHead.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
 import { useDayMatches } from '@/composables/useDayMatches';
+import { useResults } from '@/composables/useResults';
 import { useTimeFormat } from '@/composables/useTimeFormat';
 import { useUpcoming } from '@/composables/useUpcoming';
 import { useFavoritesStore } from '@/stores/favorites';
@@ -64,6 +65,10 @@ const all = computed(() => matches.overlay(dayMatches.value));
 // tab counts when the selected day has nothing.
 const { data: upcomingData } = useUpcoming();
 const upcomingAll = computed(() => matches.overlay(upcomingData.value));
+
+// Latest results (newest first) — the Finished view when no date is picked.
+const { data: resultsData } = useResults();
+const resultsAll = computed(() => matches.overlay(resultsData.value));
 const time = useTimeFormat();
 
 // Every side appearing in the visible lists; at the World Cup these are
@@ -109,14 +114,20 @@ const statusCounts = (list) => ({
 const counts = computed(() => {
     // On an empty day the screen surfaces the cross-day upcoming list, so count
     // that instead — the tabs then reflect what's actually on screen.
-    const base =
-        all.value.length === 0 && upcomingAll.value.length
-            ? statusCounts(upcomingAll.value.filter(byCountry))
-            : statusCounts(all.value.filter(byCountry));
+    const noDay = all.value.length === 0;
+    const base = noDay
+        ? statusCounts(upcomingAll.value.filter(byCountry))
+        : statusCounts(all.value.filter(byCountry));
 
-    // "Live" means right now, not the selected calendar date — the badge
-    // always reflects the site-wide live feed.
-    return { ...base, live: matches.live.filter(byCountry).length };
+    // With no day selected, Finished counts the recent-results feed, and
+    // "Live" always reflects the site-wide live feed (date-independent).
+    return {
+        ...base,
+        finished: noDay
+            ? resultsAll.value.filter(byCountry).length
+            : base.finished,
+        live: matches.live.filter(byCountry).length,
+    };
 });
 
 const byTab = (m) => {
@@ -163,14 +174,20 @@ const restGroups = computed(() => {
     return [...groups.values()];
 });
 
-// Empty-day upcoming fixtures (filtered by the active tab, so a live match
-// shows under Live — not Upcoming), grouped by their displayed (local) date.
+// No-day fallback list: recent results on the Finished tab (newest first),
+// upcoming fixtures elsewhere (filtered by the active tab, so a live match
+// shows under Live — not Upcoming). Grouped by their displayed (local) date.
 const upcomingByDate = computed(() => {
+    const source =
+        filter.value === 'finished'
+            ? resultsAll.value.filter(byCountry)
+            : upcomingAll.value.filter(
+                  (match) => byTab(match) && byCountry(match),
+              );
+
     const groups = new Map();
 
-    for (const m of upcomingAll.value.filter(
-        (match) => byTab(match) && byCountry(match),
-    )) {
+    for (const m of source) {
         const label = time.date(m.kickoff);
 
         if (!groups.has(label)) {
@@ -245,7 +262,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         filter === 'live'
                             ? 'Live now'
                             : filter === 'finished'
-                              ? 'Finished'
+                              ? 'Recent results'
                               : 'Upcoming fixtures'
                     }}</span
                 >

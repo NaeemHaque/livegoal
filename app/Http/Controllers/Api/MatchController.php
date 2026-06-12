@@ -87,6 +87,18 @@ class MatchController extends Controller
     }
 
     /**
+     * The latest results across the featured competitions — the Finished view
+     * when no date is selected. A standard count, newest first.
+     */
+    public function results(): JsonResponse
+    {
+        $today = Date::now()->toDateString();
+        $agg = $this->featured->all();
+
+        return $this->aggregateEnvelope($this->featured->recentResults($agg['matches'], $today, 30), $agg);
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $matches
      * @param  array{lastUpdated: string|null, stale: bool, served: bool}  $agg
      */
