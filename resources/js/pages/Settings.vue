@@ -10,6 +10,12 @@ const push = usePush();
 
 const pushBusy = ref(false);
 
+// iOS only delivers web push to Home Screen installs (16.4+).
+const needsIosInstall =
+    (/iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) &&
+    window.navigator.standalone !== true;
+
 const togglePush = async () => {
     if (pushBusy.value) {
         return;
@@ -206,6 +212,16 @@ const intervals = [10, 15, 30];
                     "
                     @click="togglePush"
                 />
+            </div>
+
+            <div v-if="needsIosInstall" class="pp-setrow">
+                <div>
+                    <div class="sr-desc">
+                        On iPhone/iPad, alerts need LiveGoal on your Home Screen
+                        first: tap Share, then “Add to Home Screen”, and enable
+                        alerts from the installed app.
+                    </div>
+                </div>
             </div>
 
             <div class="pp-setrow">
