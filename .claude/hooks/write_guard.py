@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PreToolUse hook — Write/Edit path guard for the socplay Laravel app.
+PreToolUse hook — Write/Edit path guard for the livegoal Laravel app.
 
 Forces a confirmation prompt when a write would land OUTSIDE the project root
 (temp dirs are allowed for scratch files). Writes inside the project defer to

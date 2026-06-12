@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`socplay` is a Laravel 13 + Inertia v3 + Vue 3 single-page application built from the `laravel/blank-vue-starter-kit`. There is no separate REST API: Laravel routes render Inertia pages that mount Vue components. The repo is currently a near-blank skeleton (one `Welcome` page, the default `User` model), so most "where does X go" answers come from the conventions below rather than existing examples.
+**LiveGoal** is a free, non-betting **football live-scores** web app (World Cup 2026–aware + major leagues): live scores, fixtures, results, standings/groups, knockout brackets, competitions, teams. It's a single Laravel app that serves a **decoupled Vue 3 SPA** and a **cached JSON `/api`** from one origin; a single scheduled poller hits football-data.org (free tier) so the browser never does. "Realtime" is polling.
+
+**Authoritative spec:** [`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md). **Plan + design + decisions:** [`docs/PLAN.md`](docs/PLAN.md) and the docs it references (`ARCHITECTURE`, `API`, `DATA_MODEL`, `DESIGN`, `LIVE_POLLING`, `DECISIONS`). Read those before building.
+
+> **Architecture transition (in progress).** The repo started as the `laravel/blank-vue-starter-kit` (**Inertia v3 + Wayfinder + TypeScript**). Per [`docs/DECISIONS.md`](docs/DECISIONS.md), the target is a **Vue Router + Pinia + axios SPA in plain JavaScript** consuming `/api` JSON — **Inertia and Wayfinder are being removed in Phase 0**, and TypeScript (`vue-tsc`) is dropped from the gate. Until Phase 0 lands, parts of the "Architecture" section below still describe the Inertia scaffold; trust `docs/` for the target.
 
 ## Commands
 
@@ -21,8 +25,8 @@ Run these from the repo root.
 | Single test by name | `php artisan test --compact --filter=testMethodName` |
 | Static analysis | `composer analyse` (PHPStan/Larastan, level `max` — config in `phpstan.neon`) |
 | Format PHP (do this before finishing) | `vendor/bin/pint --dirty --format agent` |
-| Lint/format/typecheck JS | `npm run lint` · `npm run format` · `npm run types:check` |
-| Full CI-equivalent gate | `composer ci:check` (JS lint + format + types + PHPStan + Pint + tests) |
+| Lint/format JS | `npm run lint` · `npm run format` (plain JS — no type-check step) |
+| Full CI-equivalent gate | `composer ci:check` (JS lint + format + PHPStan + Pint + tests) |
 
 The site is also served by Laravel Herd; use the `get-absolute-url` Boost tool to resolve URLs rather than constructing them.
 
@@ -43,8 +47,9 @@ The site is also served by Laravel Herd; use the `get-absolute-url` Boost tool t
 - **Pint preset is `laravel`** (`pint.json`); always run `vendor/bin/pint --dirty --format agent` after touching PHP.
 - **Static analysis is PHPStan via Larastan** (`phpstan.neon`, level `max`, analyses `app/`). Run `composer analyse` before pushing; keep new code passing at max strictness.
 - **PHPUnit, not Pest** — tests are plain PHPUnit classes under `tests/Feature` and `tests/Unit`. Scaffold with `php artisan make:test --phpunit {name}`.
-- **Git hooks live in `.githooks/`** (version-controlled) and are enabled via `core.hooksPath`, set automatically by the composer `post-install-cmd`. `pre-commit` runs Pint + ESLint + Prettier on staged files; `pre-push` runs PHPStan + vue-tsc + the test suite. Bypass with `--no-verify` only when necessary.
-- **CI** is a single workflow, `.github/workflows/pr-checks.yml`, triggered on pull requests to `develop`, `main`, `master`, `workos`. It has three jobs: `code-quality` (Pint, PHPStan, ESLint, Prettier, vue-tsc), `tests` (PHP 8.3/8.4/8.5 matrix, builds assets then runs the suite), and `security` (`composer audit`). A `pull_request_template.md` accompanies it.
+- **Git hooks live in `.githooks/`** (version-controlled) and are enabled via `core.hooksPath`, set automatically by the composer `post-install-cmd`. `pre-commit` runs Pint + ESLint + Prettier on staged files; `pre-push` runs PHPStan + ESLint + the test suite. Bypass with `--no-verify` only when necessary.
+- **CI** is a single workflow, `.github/workflows/pr-checks.yml`, triggered on pull requests to `dev` and `main`. It has three jobs: `code-quality` (Pint, PHPStan, ESLint, Prettier), `tests` (PHP 8.4/8.5 matrix, builds assets then runs the suite), and `security` (`composer audit`). A `pull_request_template.md` accompanies it.
+- **Branching / PRs** — `dev` is the integration root; each build phase ships on its own `phase/<n>-<slug>` branch and is merged to `dev` via PR. `dev → main` is the release PR. See [`docs/PR_PLAN.md`](docs/PR_PLAN.md).
 - **Laravel Boost MCP** is configured in `.mcp.json` (`php artisan boost:mcp`). Prefer Boost tools (`search-docs`, `database-schema`, `database-query`, `browser-logs`) over manual shell equivalents — see the Laravel Boost section below.
 - `AGENTS.md` is kept byte-identical to the Boost-guidelines portion of this file; if you regenerate Boost guidelines, both files update together.
 
@@ -60,10 +65,8 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
 - php - 8.4
-- inertiajs/inertia-laravel (INERTIA_LARAVEL) - v3
 - laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
-- laravel/wayfinder (WAYFINDER) - v0
 - larastan/larastan (LARASTAN) - v3
 - laravel/boost (BOOST) - v2
 - laravel/mcp (MCP) - v0
@@ -71,10 +74,8 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/pint (PINT) - v1
 - laravel/sail (SAIL) - v1
 - phpunit/phpunit (PHPUNIT) - v12
-- @inertiajs/vue3 (INERTIA_VUE) - v3
 - tailwindcss (TAILWINDCSS) - v4
 - vue (VUE) - v3
-- @laravel/vite-plugin-wayfinder (WAYFINDER_VITE) - v0
 - eslint (ESLINT) - v9
 - prettier (PRETTIER) - v3
 
@@ -171,28 +172,12 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - The application is served by Laravel Herd at `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs. Never run commands to serve the site. It is always available.
 - Use the `herd` CLI to manage services, PHP versions, and sites (e.g. `herd sites`, `herd services:start <service>`, `herd php:list`). Run `herd list` to discover all available commands.
 
-=== inertia-laravel/core rules ===
+=== tests rules ===
 
-# Inertia
+# Test Enforcement
 
-- Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
-- Components live in `resources/js/pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
-- ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
-- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
-
-# Inertia v3
-
-- Use all Inertia features from v1, v2, and v3. Check the documentation before making changes to ensure the correct approach.
-- New v3 features: standalone HTTP requests (`useHttp` hook), optimistic updates with automatic rollback, layout props (`useLayoutProps` hook), instant visits, simplified SSR via `@inertiajs/vite` plugin, custom exception handling for error pages.
-- Carried over from v2: deferred props, infinite scroll, merging props, polling, prefetching, once props, flash data.
-- When using deferred props, add an empty state with a pulsing or animated skeleton.
-- Axios has been removed. Use the built-in XHR client with interceptors, or install Axios separately if needed.
-- `Inertia::lazy()` / `LazyProp` has been removed. Use `Inertia::optional()` instead.
-- Prop types (`Inertia::optional()`, `Inertia::defer()`, `Inertia::merge()`) work inside nested arrays with dot-notation paths.
-- SSR works automatically in Vite dev mode with `@inertiajs/vite` - no separate Node.js server needed during development.
-- Event renames: `invalid` is now `httpException`, `exception` is now `networkError`.
-- `router.cancel()` replaced by `router.cancelAll()`.
-- The `future` configuration namespace has been removed - all v2 future options are now always enabled.
+- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
 
 === laravel/core rules ===
 
@@ -224,12 +209,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
 
-=== wayfinder/core rules ===
-
-# Laravel Wayfinder
-
-Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `@/actions/` (controllers) or `@/routes/` (named routes).
-
 === pint/core rules ===
 
 # Laravel Pint Code Formatter
@@ -254,12 +233,5 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - To run all tests: `php artisan test --compact`.
 - To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
-
-=== inertia-vue/core rules ===
-
-# Inertia + Vue
-
-Vue components must have a single root element.
-- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 </laravel-boost-guidelines>

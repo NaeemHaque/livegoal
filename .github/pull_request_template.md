@@ -4,35 +4,40 @@
 
 
 
+**Phase:** <!-- e.g. "Phase 2 — Backend API" (see docs/PLAN.md). Remove this line for non-phase PRs. -->
+
 ## Changes
 
 <!-- List the concrete changes. Delete any that don't apply. -->
 
-- [ ] PHP (controllers, models, services, middleware)
-- [ ] Inertia/Vue (pages, components, forms)
-- [ ] CSS/Tailwind (styling)
-- [ ] Database (migrations, factories, seeders)
-- [ ] Routes (web routes, Wayfinder helpers)
-- [ ] Build/config (Vite, composer, CI)
+- [ ] PHP — API controllers, FootballData service, poller, config
+- [ ] Vue SPA — pages, components, stores, composables
+- [ ] CSS / Tailwind / design tokens
+- [ ] Database — migrations, factories, seeders
+- [ ] JSON API (`/api/*`) or routes
+- [ ] Build / config (Vite, composer, CI, hooks)
 
 ## How to test
 
 <!--
 Steps for the reviewer to verify this works.
-Be specific — which page, what input, what to expect.
+Be specific — which route or endpoint, what input, what to expect.
 -->
 
 1.
 
 ## Screenshots
 
-<!-- If there are UI changes, paste before/after screenshots. Remove this section if not applicable. -->
+<!-- For UI changes, paste before/after in BOTH dark and light. Remove this section if not applicable. -->
 
 ## Checklist
 
-- [ ] `composer ci:check` passes locally (Pint, PHPStan, ESLint, Prettier, types, tests)
-- [ ] Added/updated tests for the change
+- [ ] `composer ci:check` passes locally (Pint, PHPStan max, ESLint, Prettier, tests)
+- [ ] Phase acceptance criteria met (see `docs/PLAN.md` / `docs/BUILD_PROMPT.md`)
+- [ ] No excluded tools added — no Pusher/Reverb/Echo/socket.io/SSE/Redis (only the commented broadcast hook)
+- [ ] Secrets stay in `.env` (the football-data token is never committed)
+- [ ] Added/updated tests where applicable
 
 ## Anything the reviewer should know?
 
-<!-- Edge cases, trade-offs, things you're unsure about, or areas you'd like extra scrutiny on. Leave blank if nothing comes to mind. -->
+<!-- Edge cases, trade-offs, free-tier data gaps, or areas you'd like extra scrutiny on. Leave blank if nothing comes to mind. -->

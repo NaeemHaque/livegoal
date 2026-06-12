@@ -22,8 +22,13 @@ npm-debug.log
 yarn-error.log
 /auth.json
 /.claude/agent-memory
+/docs/design-ref/project/screenshots
+/docs/design-ref/project/uploads
 /.fleet
 /.idea
 /.nova
 /.vscode
 /.zed
+
+# Browser MCP debug artifacts
+/.playwright-mcp

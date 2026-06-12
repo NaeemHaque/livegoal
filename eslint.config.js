@@ -1,102 +1,61 @@
+import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript';
 import prettier from 'eslint-config-prettier/flat';
 import importPlugin from 'eslint-plugin-import';
 import vue from 'eslint-plugin-vue';
 
-const controlStatements = [
-    'if',
-    'return',
-    'for',
-    'while',
-    'do',
-    'switch',
-    'try',
-    'throw',
-];
-const paddingAroundControl = [
-    ...controlStatements.flatMap((stmt) => [
-        { blankLine: 'always', prev: '*', next: stmt },
-        { blankLine: 'always', prev: stmt, next: '*' },
-    ]),
-];
+const browserGlobals = {
+    window: 'readonly',
+    document: 'readonly',
+    navigator: 'readonly',
+    localStorage: 'readonly',
+    sessionStorage: 'readonly',
+    console: 'readonly',
+    setTimeout: 'readonly',
+    clearTimeout: 'readonly',
+    setInterval: 'readonly',
+    clearInterval: 'readonly',
+    requestAnimationFrame: 'readonly',
+    cancelAnimationFrame: 'readonly',
+    fetch: 'readonly',
+    URL: 'readonly',
+    URLSearchParams: 'readonly',
+    IntersectionObserver: 'readonly',
+    matchMedia: 'readonly',
+};
 
-export default defineConfigWithVueTs(
-    vue.configs['flat/essential'],
-    vueTsConfigs.recommended,
+export default [
+    js.configs.recommended,
+    ...vue.configs['flat/essential'],
     {
-        plugins: {
-            import: importPlugin,
-        },
-        settings: {
-            'import/resolver': {
-                typescript: {
-                    alwaysTryTypes: true,
-                    project: './tsconfig.json',
-                },
-                node: true,
-            },
+        files: ['**/*.{js,mjs,vue}'],
+        plugins: { import: importPlugin },
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+            globals: browserGlobals,
         },
         rules: {
             'vue/multi-word-component-names': 'off',
-            '@typescript-eslint/no-explicit-any': 'off',
-            '@typescript-eslint/consistent-type-imports': [
-                'error',
-                {
-                    prefer: 'type-imports',
-                    fixStyle: 'separate-type-imports',
-                },
-            ],
+            curly: ['error', 'all'],
             'import/order': [
                 'error',
                 {
                     groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
-                    alphabetize: {
-                        order: 'asc',
-                        caseInsensitive: true,
-                    },
+                    'newlines-between': 'always',
+                    alphabetize: { order: 'asc', caseInsensitive: true },
                 },
             ],
-            'import/consistent-type-specifier-style': [
-                'error',
-                'prefer-top-level',
-            ],
         },
     },
     {
-        plugins: {
-            '@stylistic': stylistic,
-        },
+        plugins: { '@stylistic': stylistic },
         rules: {
             '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
-            '@stylistic/padding-line-between-statements': [
-                'error',
-                ...paddingAroundControl,
-            ],
         },
     },
+    prettier,
     {
-        ignores: [
-            'vendor',
-            'node_modules',
-            'public',
-            'bootstrap/ssr',
-            'tailwind.config.js',
-            'vite.config.ts',
-            'resources/js/actions/**',
-            'resources/js/components/ui/*',
-            'resources/js/routes/**',
-            'resources/js/wayfinder/**',
-        ],
+        ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'docs/design-ref'],
     },
-    prettier, // Turn off all rules that might conflict with Prettier
-    {
-        plugins: {
-            '@stylistic': stylistic,
-        },
-        rules: {
-            curly: ['error', 'all'],
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
-        },
-    },
-);
+];

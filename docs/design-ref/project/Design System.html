@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SocPlay — Design System</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="components.css" />
+  <style>
+    body { padding: 0; }
+    .ds-wrap { max-width: 1080px; margin: 0 auto; padding: 48px 32px 96px; }
+    .ds-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; flex-wrap: wrap; }
+    .ds-top > div { flex: 1; min-width: 0; }
+    .ds-mark { width: 46px; height: 46px; border-radius: 12px; background: var(--accent); display: grid; place-items: center; color: var(--accent-text); box-shadow: 0 0 30px -6px var(--accent-glow); }
+    .ds-mark svg { width: 26px; height: 26px; }
+    .ds-h1 { font-family: var(--font-display); font-size: 34px; font-weight: 800; margin: 0; letter-spacing: -.01em; white-space: nowrap; line-height: 1.05; }
+    .ds-h1 .a { color: var(--accent); }
+    .ds-lede { font-size: 16px; color: var(--text-muted); max-width: 640px; margin: 4px 0 0; line-height: 1.55; }
+    .ds-toggle { margin-left: auto; }
+    .ds-sec { margin-top: 56px; scroll-margin-top: 24px; }
+    .ds-sec-h { font-family: var(--font-display); font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; }
+    .ds-sec-t { font-family: var(--font-display); font-size: 28px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
+    .ds-sec-d { font-size: 14px; color: var(--text-muted); max-width: 640px; margin: 0 0 22px; line-height: 1.55; }
+    .ds-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; }
+    .ds-grid { display: grid; gap: 14px; }
+    .ds-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+    /* swatches */
+    .sw { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--border); }
+    .sw .chip { height: 76px; }
+    .sw .meta { padding: 10px 12px; }
+    .sw .nm { font-size: 13px; font-weight: 700; }
+    .sw .hex { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; }
+    .sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    /* type specimens */
+    .spec { display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .spec:last-child { border-bottom: none; }
+    .spec .lab { width: 130px; flex: none; font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+    .spec .samp { flex: 1; }
+    .tok-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .tok { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; }
+    .tok .box { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 4px; height: 28px; margin-bottom: 8px; }
+    .tok .k { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+    .tok .v { font-size: 13px; font-weight: 700; }
+    .radii { display: flex; gap: 16px; flex-wrap: wrap; }
+    .radii .r { width: 84px; height: 64px; background: var(--surface-3); border: 1px solid var(--border-strong); display: grid; place-items: end center; padding-bottom: 6px; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); }
+    .comp-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; letter-spacing: .03em; }
+    .comp-block { margin-bottom: 22px; }
+    .anim-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); text-align: center; }
+    .anim-card .nm { font-size: 13px; font-weight: 700; }
+    .anim-card .ds { font-size: 11.5px; color: var(--text-muted); }
+    /* sample match card (static) */
+    .ds-mc { max-width: 420px; }
+    .a11y-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .a11y-item:last-child { border: none; }
+    .a11y-item .ic { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: none; }
+    .a11y-item .tt { font-size: 13.5px; }
+    .a11y-item .tt b { display: block; margin-bottom: 2px; }
+    .a11y-item .tt span { color: var(--text-muted); }
+    .ds-nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg-base) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 12px 0; margin-bottom: 8px; }
+    .ds-nav .inner { max-width: 1080px; margin: 0 auto; padding: 0 32px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .ds-nav a { font-size: 12.5px; font-weight: 600; color: var(--text-muted); padding: 5px 11px; border-radius: 999px; }
+    .ds-nav a:hover { background: var(--hover); color: var(--text); }
+    .ds-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: var(--r-pill); font-size: 13.5px; font-weight: 700; }
+    .ds-btn.primary { background: var(--accent); color: var(--accent-text); }
+    .ds-btn.ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    .ds-themebtn { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+    .ds-themebtn button { padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+    .ds-themebtn button.on { background: var(--surface-3); color: var(--text); }
+  </style>
+</head>
+<body>
+  <nav class="ds-nav">
+    <div class="inner">
+      <a href="#brand">Brand</a><a href="#color">Color</a><a href="#type">Type</a>
+      <a href="#space">Spacing</a><a href="#motion">Motion</a><a href="#components">Components</a>
+      <a href="#status">Status</a><a href="#a11y">Accessibility</a>
+      <a href="SocPlay.html" style="margin-left:auto;color:var(--accent)">Open the app →</a>
+    </div>
+  </nav>
+
+  <div class="ds-wrap">
+    <header class="ds-top">
+      <span class="ds-mark"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.2 9 9.4l1.1 3.5h3.8L15 9.4 12 7.2Z" fill="currentColor"/></svg></span>
+      <div>
+        <h1 class="ds-h1">Soc<span class="a">Play</span> Design System</h1>
+      </div>
+      <span class="ds-toggle ds-themebtn">
+        <button id="t-dark" class="on" onclick="setTheme('dark')">Dark</button>
+        <button id="t-light" onclick="setTheme('light')">Light</button>
+      </span>
+    </header>
+    <p class="ds-lede">A broadcast-grade live-scores system. Energetic, premium, fast — a modern sports overlay crossed with a clean data product. Tokens map 1:1 to a Vue&nbsp;+&nbsp;Tailwind build.</p>
+
+    <!-- BRAND -->
+    <section class="ds-sec" id="brand">
+      <div class="ds-sec-h">01 — Brand</div>
+      <h2 class="ds-sec-t">Personality &amp; logo</h2>
+      <p class="ds-sec-d">Confident, alive, scoreboard-first. The volt accent signals “live energy” and primary action; everything else stays calm and high-contrast so the scores do the shouting.</p>
+      <div class="ds-card ds-row" style="gap:32px">
+        <span class="ds-mark" style="width:64px;height:64px;border-radius:16px"><svg viewBox="0 0 24 24" style="width:34px;height:34px"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.2 9 9.4l1.1 3.5h3.8L15 9.4 12 7.2Z" fill="currentColor"/></svg></span>
+        <div>
+          <div style="font-family:var(--font-display);font-size:30px;font-weight:800;letter-spacing:-.01em">Soc<span style="color:var(--accent)">Play</span></div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.22em;color:var(--text-muted);text-transform:uppercase">Live Football</div>
+        </div>
+        <div style="border-left:1px solid var(--border);padding-left:32px;font-size:13.5px;color:var(--text-2);line-height:1.7">
+          <div><b style="color:var(--text)">Voice</b> — punchy, knowledgeable, never hyperbolic</div>
+          <div><b style="color:var(--text)">Feel</b> — stadium night, neon under floodlights</div>
+          <div><b style="color:var(--text)">Rule</b> — status is never color-only (icon + shape too)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLOR -->
+    <section class="ds-sec" id="color">
+      <div class="ds-sec-h">02 — Color</div>
+      <h2 class="ds-sec-t">Stadium Night &amp; Daylight</h2>
+      <p class="ds-sec-d">Two fully-designed themes. Dark is default. Swatches below reflect the current theme — toggle it top-right to preview both.</p>
+
+      <div class="comp-label">Surfaces &amp; text</div>
+      <div class="sw-grid" id="sw-surface"></div>
+      <div class="comp-label" style="margin-top:22px">Accent &amp; energy</div>
+      <div class="sw-grid" id="sw-accent"></div>
+      <div class="comp-label" style="margin-top:22px">Semantic status</div>
+      <div class="sw-grid" id="sw-status"></div>
+    </section>
+
+    <!-- TYPE -->
+    <section class="ds-sec" id="type">
+      <div class="ds-sec-h">03 — Typography</div>
+      <h2 class="ds-sec-t">Scoreboard, grotesque, mono</h2>
+      <p class="ds-sec-d"><b>Saira Condensed</b> for scores &amp; display (tabular figures — reads like a scoreboard). <b>Hanken Grotesk</b> for UI &amp; body. <b>Geist Mono</b> for the match minute &amp; clock.</p>
+      <div class="ds-card">
+        <div class="spec"><span class="lab">Score / 56px / 800</span><span class="samp display tnum" style="font-size:56px;font-weight:800;line-height:1">2 – 1</span></div>
+        <div class="spec"><span class="lab">Display XL / 44</span><span class="samp display" style="font-size:44px;font-weight:800">World Cup 2026</span></div>
+        <div class="spec"><span class="lab">Display LG / 32</span><span class="samp display" style="font-size:32px;font-weight:700">Live Hub</span></div>
+        <div class="spec"><span class="lab">Heading / 18</span><span class="samp" style="font-size:18px;font-weight:700">Quarter-finals</span></div>
+        <div class="spec"><span class="lab">Body / 14</span><span class="samp" style="font-size:14px">Real-time scores, lineups, and stats across every major competition.</span></div>
+        <div class="spec"><span class="lab">Mono / minute</span><span class="samp mono" style="font-size:16px;font-weight:600">74:21</span></div>
+      </div>
+    </section>
+
+    <!-- SPACING -->
+    <section class="ds-sec" id="space">
+      <div class="ds-sec-h">04 — Spacing &amp; shape</div>
+      <h2 class="ds-sec-t">4px scale, soft radii</h2>
+      <p class="ds-sec-d">A 4px spacing rhythm. Cards 14–16px, pills fully rounded. Elevation is soft; the accent “glow” is reserved for live elements.</p>
+      <div class="ds-card">
+        <div class="comp-label">Spacing</div>
+        <div class="tok-list">
+          <div class="tok"><div class="box" style="height:4px"></div><div class="k">--s-1</div><div class="v">4px</div></div>
+          <div class="tok"><div class="box" style="height:8px"></div><div class="k">--s-2</div><div class="v">8px</div></div>
+          <div class="tok"><div class="box" style="height:12px"></div><div class="k">--s-3</div><div class="v">12px</div></div>
+          <div class="tok"><div class="box" style="height:16px"></div><div class="k">--s-4</div><div class="v">16px</div></div>
+          <div class="tok"><div class="box" style="height:24px"></div><div class="k">--s-6</div><div class="v">24px</div></div>
+          <div class="tok"><div class="box" style="height:32px"></div><div class="k">--s-7</div><div class="v">32px</div></div>
+        </div>
+        <div class="comp-label" style="margin-top:22px">Radius</div>
+        <div class="radii">
+          <div class="r" style="border-radius:8px">8</div>
+          <div class="r" style="border-radius:12px">12</div>
+          <div class="r" style="border-radius:14px">14</div>
+          <div class="r" style="border-radius:16px">16</div>
+          <div class="r" style="border-radius:999px">pill</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MOTION -->
+    <section class="ds-sec" id="motion">
+      <div class="ds-sec-h">05 — Motion</div>
+      <h2 class="ds-sec-t">Alive, not noisy</h2>
+      <p class="ds-sec-d">Score flips on change, the live dot pulses, a GOAL toast flashes, skeletons shimmer, cards lift on hover. All motion respects <code class="mono">prefers-reduced-motion</code> and the in-app toggle.</p>
+      <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+        <div class="anim-card"><span class="pp-live-badge"><span class="dot"></span><span class="lbl">LIVE</span></span><div class="nm">Pulsing live</div><div class="ds">1.4s ease-in-out, infinite</div></div>
+        <div class="anim-card"><span class="display tnum" id="flipdigit" style="font-size:40px;font-weight:800;color:var(--accent)">2</span><div class="nm">Score flip</div><div class="ds">420ms on value change</div></div>
+        <div class="anim-card"><span class="pp-skel" style="width:120px;height:14px;border-radius:8px"></span><div class="nm">Skeleton shimmer</div><div class="ds">1.4s linear, infinite</div></div>
+        <div class="anim-card"><span class="pp-refresh"><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="var(--border-strong)" stroke-width="2.2"/><circle cx="12" cy="12" r="9" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-dasharray="56" stroke-dashoffset="20" stroke-linecap="round" transform="rotate(-90 12 12)"/></svg><span class="mono">LIVE</span></span><div class="nm">Refresh ring</div><div class="ds">countdown to next poll</div></div>
+      </div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section class="ds-sec" id="components">
+      <div class="ds-sec-h">06 — Components</div>
+      <h2 class="ds-sec-t">Building blocks</h2>
+      <p class="ds-sec-d">Every screen is assembled from these. See them live in <a href="SocPlay.html" style="color:var(--accent)">the app</a>.</p>
+
+      <div class="ds-card">
+        <div class="comp-block">
+          <div class="comp-label">Buttons</div>
+          <div class="ds-row">
+            <button class="ds-btn primary">Explore</button>
+            <button class="ds-btn ghost">All fixtures</button>
+            <span class="pp-chip">Recent search</span>
+          </div>
+        </div>
+
+        <div class="comp-block">
+          <div class="comp-label">Form guide (color + letter + shape)</div>
+          <span class="pp-form" id="formdemo"></span>
+        </div>
+
+        <div class="comp-block">
+          <div class="comp-label">Score display</div>
+          <span class="pp-score display live" style="font-size:44px"><span class="pp-digit display tnum">2</span><span class="sep" style="font-size:31px">–</span><span class="pp-digit display tnum">1</span></span>
+        </div>
+
+        <div class="comp-block">
+          <div class="comp-label">Match card</div>
+          <article class="pp-matchcard expanded is-live ds-mc">
+            <div class="mc-top">
+              <span class="mc-comp"><span class="dot" style="background:#C6FF3A"></span>World Cup · Group F</span>
+              <span class="pp-status live sm"><span class="dot"></span><span class="mono">74'</span></span>
+            </div>
+            <div class="mc-body">
+              <div class="mc-team"><span class="pp-crest flag" style="width:28px;height:28px"><img src="https://flagcdn.com/w160/fr.png" alt=""></span><span class="t-name">France</span></div>
+              <div class="mc-score"><span class="pp-score display live" style="font-size:34px"><span class="pp-digit display tnum">2</span><span class="sep" style="font-size:24px">–</span><span class="pp-digit display tnum">1</span></span></div>
+              <div class="mc-team rev"><span class="t-name" style="text-align:right">Morocco</span><span class="pp-crest flag" style="width:28px;height:28px"><img src="https://flagcdn.com/w160/ma.png" alt=""></span></div>
+            </div>
+            <span class="mc-liveline"></span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATUS -->
+    <section class="ds-sec" id="status">
+      <div class="ds-sec-h">07 — Match states</div>
+      <h2 class="ds-sec-t">Every status, color-blind safe</h2>
+      <p class="ds-sec-d">Status is communicated by <b>icon + shape + label</b>, never color alone — so it works for color-blind users and in grayscale.</p>
+      <div class="ds-card ds-row">
+        <span class="pp-status sched">Scheduled · 19:00</span>
+        <span class="pp-status live"><span class="dot"></span><span class="mono">38'</span></span>
+        <span class="pp-status ht">HT</span>
+        <span class="pp-status ft">FT</span>
+        <span class="pp-status pen">PENS</span>
+        <span class="pp-status pp">PP</span>
+      </div>
+    </section>
+
+    <!-- A11Y -->
+    <section class="ds-sec" id="a11y">
+      <div class="ds-sec-h">08 — Accessibility</div>
+      <h2 class="ds-sec-t">Built in, not bolted on</h2>
+      <div class="ds-card">
+        <div class="a11y-item"><span class="ic">✓</span><span class="tt"><b>WCAG AA contrast</b><span>Text and accents meet AA in both themes; the light-theme accent darkens to hold contrast on white.</span></span></div>
+        <div class="a11y-item"><span class="ic">✓</span><span class="tt"><b>Visible focus &amp; keyboard nav</b><span>2px accent focus ring on every interactive element; cards and nav are Enter-activatable.</span></span></div>
+        <div class="a11y-item"><span class="ic">✓</span><span class="tt"><b>ARIA live region</b><span>Goals announce to screen readers: “Goal for France, Mbappé, 74 minutes. Score now 2–1.”</span></span></div>
+        <div class="a11y-item"><span class="ic">✓</span><span class="tt"><b>Color-blind-safe status</b><span>Win/draw/loss and live use distinct shapes &amp; icons in addition to color.</span></span></div>
+        <div class="a11y-item"><span class="ic">✓</span><span class="tt"><b>Reduced motion</b><span>All animation collapses under <code class="mono">prefers-reduced-motion</code> and the Settings toggle.</span></span></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function setTheme(t){
+      document.documentElement.setAttribute('data-theme', t);
+      document.getElementById('t-dark').classList.toggle('on', t==='dark');
+      document.getElementById('t-light').classList.toggle('on', t==='light');
+      renderSwatches();
+    }
+    function swatch(name, varName){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+      return `<div class="sw"><div class="chip" style="background:${v}"></div><div class="meta"><div class="nm">${name}</div><div class="hex">${v||'—'}</div></div></div>`;
+    }
+    function renderSwatches(){
+      document.getElementById('sw-surface').innerHTML =
+        swatch('Base','--bg-base')+swatch('Surface','--surface')+swatch('Elevated','--surface-2')+swatch('Border','--border')+swatch('Text','--text')+swatch('Muted','--text-muted');
+      document.getElementById('sw-accent').innerHTML =
+        swatch('Volt accent','--accent')+swatch('Cyan','--cyan')+swatch('Pitch green','--pitch');
+      document.getElementById('sw-status').innerHTML =
+        swatch('Live','--live')+swatch('Win','--win')+swatch('Draw','--draw')+swatch('Loss','--loss')+swatch('Info','--info');
+    }
+    document.getElementById('formdemo').innerHTML =
+      ['w','w','d','l','w'].map(r=>`<span class="fp ${r}" style="width:24px;height:24px;font-size:13px">${r.toUpperCase()}</span>`).join('');
+    // flip demo
+    const fd = document.getElementById('flipdigit'); let n=2;
+    setInterval(()=>{ n=n===2?3:2; fd.classList.add('flip'); fd.textContent=n; setTimeout(()=>fd.classList.remove('flip'),420); }, 2600);
+    renderSwatches();
+  </script>
+</body>
+</html>
