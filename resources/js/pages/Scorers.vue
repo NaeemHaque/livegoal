@@ -16,7 +16,8 @@ const router = useRouter();
 const { data: competitions } = useCompetitions();
 const selected = ref(null);
 
-// Default to the Premier League, then any league, then whatever's first.
+// Default to the World Cup (the headline race while it's on), then the
+// Premier League, then any league, then whatever's first.
 watch(
     competitions,
     (list) => {
@@ -25,6 +26,7 @@ watch(
         }
 
         const pick =
+            list.find((c) => (c.code || c.id) === 'WC') ??
             list.find((c) => (c.code || c.id) === 'PL') ??
             list.find((c) => c.kind === 'league') ??
             list[0];
@@ -42,12 +44,18 @@ const {
     selected.value ? `/competitions/${selected.value}/scorers` : null,
 );
 
-const tabs = computed(() =>
-    (competitions.value ?? []).map((c) => ({
+// World Cup leads the tab strip; the rest keep their served order.
+const tabs = computed(() => {
+    const list = competitions.value ?? [];
+
+    return [
+        ...list.filter((c) => (c.code || c.id) === 'WC'),
+        ...list.filter((c) => (c.code || c.id) !== 'WC'),
+    ].map((c) => ({
         id: String(c.code || c.id),
         label: c.short || c.name,
-    })),
-);
+    }));
+});
 const current = computed(() =>
     (competitions.value ?? []).find(
         (c) => String(c.code || c.id) === selected.value,
