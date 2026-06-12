@@ -83,11 +83,14 @@ const statusCounts = (list) => ({
 const counts = computed(() => {
     // On an empty day the screen surfaces the cross-day upcoming list, so count
     // that instead — the tabs then reflect what's actually on screen.
-    if (all.value.length === 0 && upcomingAll.value.length) {
-        return statusCounts(upcomingAll.value);
-    }
+    const base =
+        all.value.length === 0 && upcomingAll.value.length
+            ? statusCounts(upcomingAll.value)
+            : statusCounts(all.value);
 
-    return statusCounts(all.value);
+    // "Live" means right now, not the selected calendar date — the badge
+    // always reflects the site-wide live feed.
+    return { ...base, live: matches.live.length };
 });
 
 const byTab = (m) => {
@@ -106,7 +109,15 @@ const byTab = (m) => {
     return true;
 };
 
-const filtered = computed(() => all.value.filter(byTab));
+const filtered = computed(() => {
+    // The Live tab is date-independent: always the current live feed, even
+    // when browsing another day (matches are grouped by UTC date upstream).
+    if (filter.value === 'live') {
+        return matches.live;
+    }
+
+    return all.value.filter(byTab);
+});
 
 const isFav = (m) => favorites.isMatchFavorite(m);
 const favMatches = computed(() => filtered.value.filter(isFav));
