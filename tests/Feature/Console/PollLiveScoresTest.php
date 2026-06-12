@@ -535,6 +535,53 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame(2, $ft['homeScore']);
     }
 
+    public function test_an_ht_match_past_the_statutory_interval_is_presumed_back_live(): void
+    {
+        // HT marker 20 minutes old — the second half restarted ~5 minutes ago
+        // in reality, however much the feed lags. Presumed restart = HT + 15m.
+        Date::setTestNow('2026-06-12T03:15:00Z');
+        Cache::put(PollLiveScores::eventsKey('537328'), [
+            ['type' => 'KICKOFF', 'minute' => 1, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-12T02:06:00+00:00'],
+            ['type' => 'HT', 'minute' => 45, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-12T02:55:00+00:00'],
+        ], 3600);
+
+        Http::fake([
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(537328, 'PAUSED', '2026-06-12T02:00:00Z', 0, 0),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $m = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+
+        // Live again, clock anchored at HT(02:55) + 15m = 03:10 -> 45 + 5 = 50'.
+        $this->assertSame('LIVE', $m['status']);
+        $this->assertSame(50, $m['minute']);
+
+        $resume = collect(Cache::get(PollLiveScores::eventsKey('537328')))->firstWhere('type', 'RESUME');
+        $this->assertSame('2026-06-12T03:10:00+00:00', $resume['at']);
+    }
+
+    public function test_an_ht_match_within_the_interval_stays_at_half_time(): void
+    {
+        // HT marker only 8 minutes old — genuinely still the interval.
+        Date::setTestNow('2026-06-12T03:03:00Z');
+        Cache::put(PollLiveScores::eventsKey('537328'), [
+            ['type' => 'HT', 'minute' => 45, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-12T02:55:00+00:00'],
+        ], 3600);
+
+        Http::fake([
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(537328, 'PAUSED', '2026-06-12T02:00:00Z', 0, 0),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $this->assertSame('HT', Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['status']);
+    }
+
     // --- 7. anchored live minute ----------------------------------------------
 
     public function test_the_live_minute_is_anchored_to_the_observed_second_half_restart(): void

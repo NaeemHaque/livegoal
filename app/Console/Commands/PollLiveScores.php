@@ -75,6 +75,14 @@ class PollLiveScores extends Command
     /** Stages whose matches cannot go to extra time. */
     private const SINGLE_REGULATION_STAGES = ['GROUP_STAGE', 'REGULAR_SEASON', 'LEAGUE_STAGE'];
 
+    /**
+     * The interval lasts 15 minutes by law; once an HT marker is this old the
+     * second half has restarted in reality, however much the feed lags.
+     */
+    private const INTERVAL_SECONDS = 900;
+
+    private const PRESUME_SECOND_HALF_AFTER_SECONDS = 960;
+
     protected $signature = 'app:poll-live-scores';
 
     protected $description = 'Poll in-play matches from football-data.org into cache for the whole site';
@@ -135,6 +143,12 @@ class PollLiveScores extends Command
         // them, their own record reverts to TIMED). Verify every vanished
         // match against its single-match status before letting it disappear.
         $matches = $this->withVerifiedHolds($matches, $football, $normalizer);
+
+        // The feed lags minutes behind the real second-half restart; once the
+        // statutory interval has elapsed, an HT match is playing again.
+        foreach ($matches as $i => $m) {
+            $matches[$i] = $this->withPresumedSecondHalf($m);
+        }
 
         // Self-built timelines: the free tier has no event feed, so derive
         // kickoff / goal / half-time events from the polls themselves —
@@ -543,6 +557,59 @@ class PollLiveScores extends Command
         ));
 
         return [$prevHome, $prevAway];
+    }
+
+    /**
+     * Flip a stale HT entry to LIVE once the statutory interval is over.
+     *
+     * The presumed restart (HT marker + 15 minutes) is recorded as the RESUME
+     * anchor so the second-half clock starts from the right place; when the
+     * feed later confirms the restart, the normal flow takes over seamlessly.
+     *
+     * @param  array<array-key, mixed>  $m
+     * @return array<array-key, mixed>
+     */
+    private function withPresumedSecondHalf(array $m): array
+    {
+        if (($m['status'] ?? null) !== 'HT') {
+            return $m;
+        }
+
+        $id = $this->str($m['id'] ?? null);
+        $events = $this->recordedEvents($id);
+        $halfTimeAt = $this->eventTime($events, 'HT');
+
+        if ($id === '' || $halfTimeAt === null) {
+            return $m;
+        }
+
+        $elapsed = Date::now()->getTimestamp() - Date::parse($halfTimeAt)->getTimestamp();
+
+        if ($elapsed < self::PRESUME_SECOND_HALF_AFTER_SECONDS) {
+            return $m;
+        }
+
+        if (! $this->hasEvent($events, 'RESUME')) {
+            $events[] = [
+                'type' => 'RESUME',
+                'minute' => 46,
+                'side' => null,
+                'homeScore' => $this->nullableInt($m['homeScore'] ?? null),
+                'awayScore' => $this->nullableInt($m['awayScore'] ?? null),
+                'at' => Date::parse($halfTimeAt)->addSeconds(self::INTERVAL_SECONDS)->toIso8601String(),
+            ];
+            Cache::put(self::eventsKey($id), $events, self::EVENTS_TTL);
+
+            Log::notice(sprintf(
+                'PollLiveScores: match %s held at HT past the interval; presuming the second half restarted.',
+                $id,
+            ));
+        }
+
+        $live = [...$m, 'status' => 'LIVE'];
+        $live['minute'] = $this->liveMinute($live) ?? 46;
+
+        return $live;
     }
 
     /**
