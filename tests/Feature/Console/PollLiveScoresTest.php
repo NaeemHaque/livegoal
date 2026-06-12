@@ -582,6 +582,118 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('HT', Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['status']);
     }
 
+    // --- 7b. presumed kickoff --------------------------------------------------
+
+    /**
+     * Seed the featured schedule cache (peeked by the poller, never fetched).
+     *
+     * @param  list<array<string, mixed>>  $matches
+     */
+    private function seedSchedule(array $matches): void
+    {
+        Config::set('football.featured', ['WC']);
+        Cache::put('fd:competition:WC:matches', [
+            'data' => ['matches' => $matches],
+            'at' => '2026-06-12T18:00:00+00:00',
+        ], 600);
+    }
+
+    public function test_a_scheduled_match_past_kickoff_is_presumed_live(): void
+    {
+        // Kickoff 19:00, now 19:05 — the feed still claims nothing is live.
+        Date::setTestNow('2026-06-12T19:05:00Z');
+        $this->seedSchedule([$this->upstreamMatch(77, 'TIMED', '2026-06-12T19:00:00Z')]);
+
+        Http::fake(['*/matches*' => Http::response(['matches' => []], 200)]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 1 match(es)')
+            ->assertSuccessful();
+
+        $m = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+
+        $this->assertSame('LIVE', $m['status']);
+        $this->assertTrue($m['presumed']);
+        $this->assertSame(0, $m['homeScore']);
+        $this->assertSame(5, $m['minute']);
+
+        // Presumed entries record no anchors and send no pushes.
+        $this->assertNull(Cache::get(PollLiveScores::eventsKey('77')));
+    }
+
+    public function test_a_match_is_not_presumed_before_the_grace_or_after_the_window(): void
+    {
+        Date::setTestNow('2026-06-12T19:00:30Z');
+        $this->seedSchedule([
+            $this->upstreamMatch(77, 'TIMED', '2026-06-12T19:00:00Z'),  // 30s ago: too soon
+            $this->upstreamMatch(78, 'TIMED', '2026-06-12T18:20:00Z'),  // 40m ago: outside window
+        ]);
+
+        Http::fake(['*/matches*' => Http::response(['matches' => []], 200)]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 0 match(es)')
+            ->assertSuccessful();
+    }
+
+    public function test_the_real_feed_entry_replaces_the_presumed_one(): void
+    {
+        Date::setTestNow('2026-06-12T19:05:00Z');
+        $this->seedSchedule([$this->upstreamMatch(77, 'TIMED', '2026-06-12T19:00:00Z')]);
+
+        Http::fake(['*/matches*' => Http::sequence()
+            ->push(['matches' => []], 200)
+            ->push(['matches' => [$this->upstreamMatch(77, 'IN_PLAY', '2026-06-12T19:00:00Z', 1, 0)]], 200)
+            ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $m = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+
+        // Confirmed: real scores, no presumed flag, KICKOFF anchor recorded.
+        $this->assertSame(1, $m['homeScore']);
+        $this->assertArrayNotHasKey('presumed', $m);
+        $types = array_column(Cache::get(PollLiveScores::eventsKey('77')) ?? [], 'type');
+        $this->assertContains('KICKOFF', $types);
+
+        // Exactly the two bulk polls — presumed entries are never verified.
+        Http::assertSentCount(2);
+    }
+
+    public function test_an_on_time_kickoff_anchors_the_clock_at_the_schedule(): void
+    {
+        // Feed's first signal lands 7 minutes after the scheduled kickoff —
+        // an on-time start with a lagging feed: the clock reads ~7', not 1'.
+        Date::setTestNow('2026-06-12T19:07:00Z');
+
+        Http::fake(['*/matches*' => Http::response(['matches' => [
+            $this->upstreamMatch(88, 'IN_PLAY', '2026-06-12T19:00:00Z', 0, 0),
+        ]], 200)]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $kick = collect(Cache::get(PollLiveScores::eventsKey('88')))->firstWhere('type', 'KICKOFF');
+        $this->assertSame('2026-06-12T19:00:00+00:00', $kick['at']);
+    }
+
+    public function test_a_genuinely_delayed_kickoff_anchors_at_the_first_signal(): void
+    {
+        // First signal 15 minutes after schedule (opening-ceremony delay):
+        // anchoring at the schedule would overstate — anchor at the signal.
+        Date::setTestNow('2026-06-12T19:15:00Z');
+
+        Http::fake(['*/matches*' => Http::response(['matches' => [
+            $this->upstreamMatch(88, 'IN_PLAY', '2026-06-12T19:00:00Z', 0, 0),
+        ]], 200)]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $kick = collect(Cache::get(PollLiveScores::eventsKey('88')))->firstWhere('type', 'KICKOFF');
+        $this->assertSame('2026-06-12T19:15:00+00:00', $kick['at']);
+    }
+
     // --- 7. anchored live minute ----------------------------------------------
 
     public function test_the_live_minute_is_anchored_to_the_observed_second_half_restart(): void
