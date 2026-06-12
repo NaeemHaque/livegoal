@@ -98,6 +98,26 @@ class FeaturedMatches
     }
 
     /**
+     * Every scheduled fixture inside a date window, soonest first — no count
+     * cap, so a full tournament schedule (e.g. all 104 World Cup fixtures)
+     * comes through whole.
+     *
+     * @param  list<array<string, mixed>>  $matches
+     * @return list<array<string, mixed>>
+     */
+    public function scheduledWindow(array $matches, string $from, string $until): array
+    {
+        $upcoming = array_values(array_filter(
+            $matches,
+            fn (array $m): bool => ($m['status'] ?? null) === 'SCHEDULED'
+                && $this->day($m) >= $from
+                && $this->day($m) <= $until,
+        ));
+
+        return $this->sortByKickoff($upcoming);
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $matches
      * @return list<array<string, mixed>>
      */

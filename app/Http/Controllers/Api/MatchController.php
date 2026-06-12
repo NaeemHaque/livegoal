@@ -76,10 +76,14 @@ class MatchController extends Controller
      */
     public function upcoming(): JsonResponse
     {
+        // A 60-day window rather than a count cap: long enough to carry a
+        // whole tournament schedule (the WC's 104 fixtures) plus the other
+        // featured leagues, without ever serving entire future seasons.
         $today = Date::now()->toDateString();
+        $until = Date::now()->addDays(60)->toDateString();
         $agg = $this->featured->all();
 
-        return $this->aggregateEnvelope($this->featured->scheduledFrom($agg['matches'], $today, 24), $agg);
+        return $this->aggregateEnvelope($this->featured->scheduledWindow($agg['matches'], $today, $until), $agg);
     }
 
     /**
