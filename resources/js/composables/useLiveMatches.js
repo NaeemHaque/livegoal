@@ -20,7 +20,11 @@ export function useLiveMatches() {
 
         try {
             const res = await api.get('/live');
-            matches.setLive(res.data?.data?.matches, res.data?.meta ?? {});
+            matches.setLive(
+                res.data?.data?.matches,
+                res.data?.meta ?? {},
+                res.data?.data?.finals,
+            );
         } catch (e) {
             matches.setError(e);
         } finally {

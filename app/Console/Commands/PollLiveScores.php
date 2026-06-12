@@ -27,6 +27,14 @@ class PollLiveScores extends Command
     public const EVENTS_KEY_PREFIX = 'live:events:';
 
     /**
+     * Cache key holding final snapshots (id => match) of recently finished
+     * matches. The upstream "erases" matches at the final whistle just as it
+     * does at half-time, so this is what lets the site show FT with the real
+     * final score while the upstream record still claims the match never ran.
+     */
+    public const FINALS_KEY = 'live:finals';
+
+    /**
      * TTL for per-match timeline events: ~26 hours, long enough to outlive
      * the match day (delays, extra time) without piling up stale timelines.
      */
@@ -54,6 +62,18 @@ class PollLiveScores extends Command
     private const HT_WINDOW_MIN = 40;
 
     private const HT_WINDOW_MAX = 70;
+
+    /**
+     * Anchored minute beyond which a vanished, upstream-erased match is
+     * presumed finished: regulation (90') plus very generous stoppage.
+     * Knockout stages can run extra time, so their ceiling is far higher.
+     */
+    private const PRESUMED_FT_MINUTE = 105;
+
+    private const PRESUMED_FT_MINUTE_KNOCKOUT = 140;
+
+    /** Stages whose matches cannot go to extra time. */
+    private const SINGLE_REGULATION_STAGES = ['GROUP_STAGE', 'REGULAR_SEASON', 'LEAGUE_STAGE'];
 
     protected $signature = 'app:poll-live-scores';
 
@@ -406,6 +426,10 @@ class PollLiveScores extends Command
         $status = is_array($detail) ? $this->str($detail['status'] ?? null) : '';
 
         if (in_array($status, self::TERMINAL_STATUSES, true)) {
+            if ($status === 'FINISHED' || $status === 'AWARDED') {
+                $this->recordFinal($m, $detail);
+            }
+
             return null;
         }
 
@@ -431,7 +455,10 @@ class PollLiveScores extends Command
         // TIMED/SCHEDULED mid-match is the free tier erasing the match. The
         // record carries no truth, so fall back to what we last knew:
         // an interval-window LIVE match is presumed at half-time; an HT hold
-        // stays at half-time; anything deeper into the match stays LIVE.
+        // stays at half-time; anything deeper into the match stays LIVE —
+        // until the anchored clock passes any plausible final whistle, at
+        // which point the match is presumed finished (the upstream erases
+        // matches at full time exactly as it does at half-time).
         if (in_array($status, ['TIMED', 'SCHEDULED'], true)) {
             $priorStatus = $m['status'] ?? null;
 
@@ -443,6 +470,19 @@ class PollLiveScores extends Command
 
             if (is_int($minute) && $minute >= self::HT_WINDOW_MIN && $minute <= self::HT_WINDOW_MAX) {
                 return $this->heldAtHalfTime($m, $id, $status);
+            }
+
+            $anchored = $this->liveMinute($m);
+
+            if (is_int($anchored) && $anchored >= $this->presumedFullTimeMinute($m)) {
+                Log::notice(sprintf(
+                    'PollLiveScores: match %s vanished and erased upstream at anchored minute %d; presuming full-time.',
+                    $id,
+                    $anchored,
+                ));
+                $this->recordFinal($m, null);
+
+                return null;
             }
 
             return $this->keptLive($m);
@@ -503,6 +543,67 @@ class PollLiveScores extends Command
         ));
 
         return [$prevHome, $prevAway];
+    }
+
+    /**
+     * The anchored minute past which this match must be over.
+     *
+     * @param  array<array-key, mixed>  $m
+     */
+    private function presumedFullTimeMinute(array $m): int
+    {
+        $stage = $this->str($m['stage'] ?? null);
+
+        return $stage === '' || in_array($stage, self::SINGLE_REGULATION_STAGES, true)
+            ? self::PRESUMED_FT_MINUTE
+            : self::PRESUMED_FT_MINUTE_KNOCKOUT;
+    }
+
+    /**
+     * Store a finished match's final snapshot and FT timeline event, so the
+     * site can show full-time with the real score while the upstream record
+     * still misreports the match.
+     *
+     * @param  array<array-key, mixed>  $m  The last cached live entry.
+     * @param  array<array-key, mixed>|null  $detail  The raw single-match record, when it reported FINISHED.
+     */
+    private function recordFinal(array $m, ?array $detail): void
+    {
+        $id = $this->str($m['id'] ?? null);
+
+        if ($id === '') {
+            return;
+        }
+
+        $final = [...$m, 'status' => 'FT', 'minute' => null];
+
+        // A genuine FINISHED record carries the authoritative final score.
+        $score = is_array($detail) ? ($detail['score'] ?? null) : null;
+        $fullTime = is_array($score) ? ($score['fullTime'] ?? null) : null;
+
+        if (is_array($fullTime) && is_int($fullTime['home'] ?? null) && is_int($fullTime['away'] ?? null)) {
+            $final['homeScore'] = $fullTime['home'];
+            $final['awayScore'] = $fullTime['away'];
+        }
+
+        $finals = Cache::get(self::FINALS_KEY);
+        $finals = is_array($finals) ? $finals : [];
+        $finals[$id] = $final;
+        Cache::put(self::FINALS_KEY, $finals, self::EVENTS_TTL);
+
+        $events = $this->recordedEvents($id);
+
+        if (! $this->hasEvent($events, 'FT')) {
+            $events[] = [
+                'type' => 'FT',
+                'minute' => null,
+                'side' => null,
+                'homeScore' => $this->nullableInt($final['homeScore'] ?? null),
+                'awayScore' => $this->nullableInt($final['awayScore'] ?? null),
+                'at' => Date::now()->toIso8601String(),
+            ];
+            Cache::put(self::eventsKey($id), $events, self::EVENTS_TTL);
+        }
     }
 
     /**

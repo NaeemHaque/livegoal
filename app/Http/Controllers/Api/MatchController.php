@@ -100,9 +100,33 @@ class MatchController extends Controller
             $this->football->cached("match:{$id}", Config::integer('football.ttl.match_live'), "/matches/{$id}"),
             fn (array $payload): array => [
                 ...$this->normalizer->match($payload),
+                ...$this->finalSnapshot($id),
                 'events' => $this->timelineEvents($id),
             ],
         );
+    }
+
+    /**
+     * Status/score overrides from the poller's final snapshot, when this
+     * match recently finished but the upstream record still misreports it.
+     *
+     * @return array<string, mixed>
+     */
+    private function finalSnapshot(string $id): array
+    {
+        $finals = Cache::get(PollLiveScores::FINALS_KEY);
+        $final = is_array($finals) ? ($finals[$id] ?? null) : null;
+
+        if (! is_array($final)) {
+            return [];
+        }
+
+        return [
+            'status' => 'FT',
+            'minute' => null,
+            'homeScore' => $final['homeScore'] ?? null,
+            'awayScore' => $final['awayScore'] ?? null,
+        ];
     }
 
     /**

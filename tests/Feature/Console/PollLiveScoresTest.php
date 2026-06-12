@@ -452,6 +452,89 @@ class PollLiveScoresTest extends TestCase
         $this->assertCount(1, $goals);
     }
 
+    public function test_an_erased_match_past_any_plausible_final_whistle_is_presumed_finished(): void
+    {
+        // Anchored clock: resumed 20:00, now 21:10 -> 45 + 70 = 115' >= 105.
+        Date::setTestNow('2026-06-11T21:10:00Z');
+        Cache::put(PollLiveScores::eventsKey('537327'), [
+            ['type' => 'KICKOFF', 'minute' => 1, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T19:12:00+00:00'],
+            ['type' => 'HT', 'minute' => 45, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T19:58:00+00:00'],
+            ['type' => 'RESUME', 'minute' => 46, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T20:00:00+00:00'],
+        ], 3600);
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(98), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'TIMED'], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 0 match(es)')
+            ->assertSuccessful();
+
+        // Dropped from live; recorded as a final with its last known score.
+        $this->assertSame([], Cache::get(PollLiveScores::CACHE_KEY)['matches']);
+
+        $finals = Cache::get(PollLiveScores::FINALS_KEY);
+        $this->assertSame('FT', $finals['537327']['status']);
+        $this->assertSame(0, $finals['537327']['homeScore']);
+        $this->assertNull($finals['537327']['minute']);
+
+        $types = array_column(Cache::get(PollLiveScores::eventsKey('537327')), 'type');
+        $this->assertContains('FT', $types);
+    }
+
+    public function test_a_mid_second_half_erased_match_is_not_presumed_finished(): void
+    {
+        // Resumed 10 minutes ago -> anchored 55' — far from any final whistle.
+        Date::setTestNow('2026-06-11T20:10:00Z');
+        Cache::put(PollLiveScores::eventsKey('537327'), [
+            ['type' => 'RESUME', 'minute' => 46, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-11T20:00:00+00:00'],
+        ], 3600);
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(80), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            '*/matches/537327' => Http::response(['id' => 537327, 'status' => 'TIMED'], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $kept = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+        $this->assertSame('LIVE', $kept['status']);
+        $this->assertNull(Cache::get(PollLiveScores::FINALS_KEY));
+    }
+
+    public function test_a_genuinely_finished_match_is_recorded_as_a_final_with_the_authoritative_score(): void
+    {
+        Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(98), 70);
+        Cache::put(PollLiveScores::EMPTY_STREAK_KEY, 2, 300);
+
+        Http::fake([
+            '*/matches/537327' => Http::response([
+                'id' => 537327,
+                'status' => 'FINISHED',
+                'score' => ['winner' => 'HOME_TEAM', 'fullTime' => ['home' => 2, 'away' => 0]],
+            ], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 0 match(es)')
+            ->assertSuccessful();
+
+        $finals = Cache::get(PollLiveScores::FINALS_KEY);
+        $this->assertSame('FT', $finals['537327']['status']);
+        // The FINISHED record's full-time score wins over the cached one.
+        $this->assertSame(2, $finals['537327']['homeScore']);
+        $this->assertSame(0, $finals['537327']['awayScore']);
+
+        $ft = collect(Cache::get(PollLiveScores::eventsKey('537327')))->firstWhere('type', 'FT');
+        $this->assertSame(2, $ft['homeScore']);
+    }
+
     // --- 7. anchored live minute ----------------------------------------------
 
     public function test_the_live_minute_is_anchored_to_the_observed_second_half_restart(): void

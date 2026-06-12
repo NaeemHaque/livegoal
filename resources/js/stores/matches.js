@@ -8,6 +8,7 @@ import { computed, ref } from 'vue';
  */
 export const useMatchesStore = defineStore('matches', () => {
     const live = ref([]);
+    const finals = ref([]);
     const lastUpdated = ref(null);
     const stale = ref(false);
     const loading = ref(false);
@@ -22,18 +23,22 @@ export const useMatchesStore = defineStore('matches', () => {
     const byId = (id) =>
         live.value.find((m) => String(m.id) === String(id)) ?? null;
 
+    const finalById = (id) =>
+        finals.value.find((m) => String(m.id) === String(id)) ?? null;
+
     // Merge the (fresher) live feed over a fetched match list: upstream list
-    // endpoints can lag or misreport status mid-match, so any match currently
-    // in the live feed takes its status, minute and score from there.
+    // endpoints can lag or misreport status mid-match (and at full time), so
+    // any match in the live feed — or recently finished per our own poller —
+    // takes its status, minute and score from there.
     const overlay = (list) =>
         (list ?? []).map((m) => {
-            const fresh = byId(m.id);
+            const fresh = byId(m.id) ?? finalById(m.id);
 
             return fresh
                 ? {
                       ...m,
                       status: fresh.status,
-                      minute: fresh.minute ?? m.minute,
+                      minute: fresh.minute ?? null,
                       homeScore: fresh.homeScore ?? m.homeScore,
                       awayScore: fresh.awayScore ?? m.awayScore,
                   }
@@ -77,10 +82,11 @@ export const useMatchesStore = defineStore('matches', () => {
         }
     }
 
-    function setLive(matches, meta = {}) {
+    function setLive(matches, meta = {}, finished = []) {
         const incoming = Array.isArray(matches) ? matches : [];
         detectGoals(live.value, incoming);
         live.value = incoming;
+        finals.value = Array.isArray(finished) ? finished : [];
         lastUpdated.value = meta.lastUpdated ?? null;
         stale.value = meta.stale ?? false;
         error.value = null;
@@ -96,6 +102,7 @@ export const useMatchesStore = defineStore('matches', () => {
 
     return {
         live,
+        finals,
         lastUpdated,
         stale,
         loading,
@@ -104,6 +111,7 @@ export const useMatchesStore = defineStore('matches', () => {
         justScoredId,
         liveCount,
         byId,
+        finalById,
         overlay,
         setLive,
         setError,

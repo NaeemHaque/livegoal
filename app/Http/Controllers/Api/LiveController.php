@@ -30,6 +30,11 @@ class LiveController extends Controller
             lastUpdated: is_string($lastUpdated) ? $lastUpdated : null,
         );
 
-        return $this->envelope(['matches' => $matches, 'count' => count($matches)], $result);
+        // Recently finished matches (self-detected; the upstream erases them
+        // at the final whistle) — lets the frontend show FT scores in lists.
+        $finals = Cache::get(PollLiveScores::FINALS_KEY);
+        $finals = is_array($finals) ? array_values(array_filter($finals, is_array(...))) : [];
+
+        return $this->envelope(['matches' => $matches, 'count' => count($matches), 'finals' => $finals], $result);
     }
 }

@@ -49,7 +49,9 @@ const liveWc = computed(
 // Matches currently in the live feed are excluded — the upstream list can lag
 // mid-match, and they already render in the live rail above.
 const upcomingScheduled = computed(() =>
-    (upcomingData.value ?? []).filter((m) => !matches.byId(m.id)),
+    (upcomingData.value ?? []).filter(
+        (m) => !matches.byId(m.id) && !matches.finalById(m.id),
+    ),
 );
 const upcoming = computed(() => upcomingScheduled.value.slice(0, 6));
 const nextMatch = computed(() => upcomingScheduled.value[0] ?? null);
