@@ -98,6 +98,10 @@ php artisan config:cache
 systemctl restart livegoal-queue   # workers must load the new notification classes
 ```
 
+- **Gotcha:** `webpush:vapid` writes `.env` without a trailing newline — make sure
+  `VAPID_SUBJECT` lands on its own line, then sanity-check
+  `strlen(config('webpush.vapid.private_key')) === 43` in tinker. A glued line
+  corrupts the private key and every send fails with "Invalid data provided".
 - `php artisan app:push-test` sends a test notification to every subscriber (or
   `--endpoint=` for one) — the end-to-end smoke test without waiting for a goal.
 - nginx must serve `.webmanifest` as `application/manifest+json` (iOS install needs the
