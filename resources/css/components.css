@@ -1694,3 +1694,61 @@
 .pp-countryfilter .cf-btn {
     height: 32px;
 }
+
+/* ---------- Push pre-prompt banner ---------- */
+.pp-pushprompt {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 12px 14px;
+    background: var(--surface-raised, var(--surface));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgb(0 0 0 / 0.45);
+    color: var(--accent);
+}
+.pp-pushprompt .pq-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.pp-pushprompt .pq-text b {
+    font-size: 13px;
+    color: var(--text);
+}
+.pp-pushprompt .pq-text span {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.pp-pushprompt .pp-btn {
+    flex: none;
+}
+.pp-pushprompt .pq-dismiss {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: var(--text-muted);
+    transition: all var(--dur-fast);
+}
+.pp-pushprompt .pq-dismiss:hover {
+    background: var(--hover);
+    color: var(--text);
+}
+
+@media (max-width: 640px) {
+    .pp-pushprompt {
+        bottom: calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom, 0px));
+        flex-wrap: wrap;
+    }
+}

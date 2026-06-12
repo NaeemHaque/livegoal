@@ -1,8 +1,32 @@
 <script setup>
+import { ref } from 'vue';
+
 import { IcMoon, IcSun } from '@/components/icons';
+import { usePush } from '@/composables/usePush';
 import { useSettingsStore } from '@/stores/settings';
 
 const settings = useSettingsStore();
+const push = usePush();
+
+const pushBusy = ref(false);
+
+const togglePush = async () => {
+    if (pushBusy.value) {
+        return;
+    }
+
+    pushBusy.value = true;
+
+    try {
+        if (settings.pushEnabled) {
+            await push.disable();
+        } else {
+            await push.enable();
+        }
+    } finally {
+        pushBusy.value = false;
+    }
+};
 
 const zones = [
     { id: 'local', label: 'Local' },
@@ -146,6 +170,41 @@ const intervals = [10, 15, 30];
                     :aria-checked="!settings.paused"
                     aria-label="Auto-refresh live scores"
                     @click="settings.paused = !settings.paused"
+                />
+            </div>
+
+            <div class="pp-setrow">
+                <div>
+                    <div class="sr-label">Match alerts</div>
+                    <div class="sr-desc">
+                        <template v-if="!push.supported">
+                            Not supported in this browser
+                        </template>
+                        <template
+                            v-else-if="push.permission.value === 'denied'"
+                        >
+                            Blocked — allow notifications in your browser's site
+                            settings first
+                        </template>
+                        <template v-else>
+                            Goal &amp; final-score notifications for teams and
+                            competitions you follow, even when the tab is closed
+                        </template>
+                    </div>
+                </div>
+                <button
+                    class="pp-switch"
+                    :class="{ on: settings.pushEnabled }"
+                    type="button"
+                    role="switch"
+                    :aria-checked="settings.pushEnabled"
+                    aria-label="Match alerts"
+                    :disabled="
+                        !push.supported ||
+                        pushBusy ||
+                        push.permission.value === 'denied'
+                    "
+                    @click="togglePush"
                 />
             </div>
 
