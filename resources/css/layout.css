@@ -1529,7 +1529,9 @@
 
 /* No backdrop blur support at all: translucent bars would show the page
    through them — fall back to solid surfaces. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+@supports not (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
     .pp-topbar,
     .pp-mobile-top,
     .pp-tabbar {
