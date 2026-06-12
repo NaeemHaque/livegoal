@@ -15,6 +15,10 @@ Schedule::command('app:poll-live-scores')
     ->everyThirtySeconds()
     ->withoutOverlapping();
 
+// Sweep push subscribers whose endpoint expired (the webpush channel deletes
+// the subscription row on 404/410 sends; the owner row lingers a week).
+Schedule::command('model:prune')->daily();
+
 // Keep the featured leagues' Golden Boot feed hot so the Top Scorers tabs are
 // instant cache hits instead of slow on-demand football-data.org calls. cached()
 // no-ops while fresh (30m TTL), so this only refetches a handful of feeds twice

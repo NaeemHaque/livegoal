@@ -1,6 +1,6 @@
 <script setup>
 import { useEventListener, useOnline } from '@vueuse/core';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import GoalToast from '@/components/GoalToast.vue';
@@ -14,17 +14,23 @@ import {
 } from '@/components/icons';
 import LiveTicker from '@/components/LiveTicker.vue';
 import Logo from '@/components/Logo.vue';
+import PushPrompt from '@/components/PushPrompt.vue';
 import RefreshIndicator from '@/components/RefreshIndicator.vue';
 import SearchModal from '@/components/SearchModal.vue';
 import TabBar from '@/components/TabBar.vue';
 import TopNav from '@/components/TopNav.vue';
 import { useLiveMatches } from '@/composables/useLiveMatches';
+import { usePush } from '@/composables/usePush';
 import { useMatchesStore } from '@/stores/matches';
 import { useSettingsStore } from '@/stores/settings';
 
 const router = useRouter();
 const route = useRoute();
 const settings = useSettingsStore();
+
+// Repair the push subscription / follow-snapshot drift once per visit.
+const push = usePush();
+onMounted(() => push.init());
 const matches = useMatchesStore();
 const online = useOnline();
 
@@ -169,6 +175,8 @@ useEventListener(window, 'keydown', (e) => {
             :goal="matches.lastGoal"
             @done="matches.clearGoal()"
         />
+
+        <PushPrompt />
 
         <SearchModal :open="searchOpen" @close="searchOpen = false" />
     </div>

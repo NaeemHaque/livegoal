@@ -66,6 +66,23 @@ stays local). Purchase `livegoal.win` and run the go-live steps (DNS, HTTPS, `AP
 **Why:** User direction — test locally now, buy the domain and deploy when ready. Keeps everything
 host-agnostic per `BUILD_PROMPT` Appendix C; no cost until launch.
 
+## D8 — Web Push for match alerts (no third-party push service)
+
+**Decision:** Goal/full-time alerts for followed teams & competitions ship as **Web Push API +
+self-generated VAPID keys** through Laravel's notifications framework with the MIT
+`laravel-notification-channels/webpush` channel. Subscriptions stay **anonymous** (no user accounts):
+one `push_subscribers` row per browser endpoint carrying its own follow snapshot in a queryable
+`push_follows` pivot (not JSON — SQLite can't index JSON containment). Pushes dispatch from the live
+poller at the exact points where GOAL/FT timeline events are appended, inheriting every existing
+flap/dedupe guard. Full design: `docs/PUSH_NOTIFICATIONS.md`.
+
+**Why:** $0 forever and no vendor: browser push services are part of the web platform, VAPID is
+self-signed, the package is open source. FCM-direct/OneSignal/Pusher Beams add accounts and lock-in
+for nothing (the Pusher family is excluded by the build rules anyway). Dispatching at the
+timeline-append points avoids inventing a second dedupe layer for an upstream that flaps scores.
+Rejected: user accounts (overkill for a bookmark-style follow feature), JSON follow storage
+(unindexable in SQLite), SSE/WebSockets (excluded; can't reach closed tabs anyway).
+
 ## Resolved inputs
 
 - **`FOOTBALL_DATA_TOKEN`** — ✅ provided and **verified** (2026-06-07): HTTP 200, 13 free competitions,

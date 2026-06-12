@@ -52,6 +52,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0A0D12">
+{{-- iOS web push requires the site installed to the Home Screen (16.4+). --}}
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LiveGoal">
 
 {{-- Crests/emblems are loaded from here on nearly every page. Fonts are
      self-hosted (bundled via @fontsource in app.css), so there's no

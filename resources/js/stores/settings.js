@@ -11,6 +11,7 @@ export const useSettingsStore = defineStore('settings', () => {
     const refresh = useStorage('pp_refresh', 15); // live poll interval, seconds
     const paused = useStorage('pp_paused', false); // pause live polling
     const reduceMotion = useStorage('pp_reduce_motion', false);
+    const pushEnabled = useStorage('pp_push', false); // match alerts (web push)
 
     // Default the clock convention to the browser locale's so nothing changes
     // for existing users until they pick one explicitly. '12h' or '24h'.
@@ -56,6 +57,7 @@ export const useSettingsStore = defineStore('settings', () => {
         refresh,
         paused,
         reduceMotion,
+        pushEnabled,
         timeFormat,
         toggleTheme,
     };
