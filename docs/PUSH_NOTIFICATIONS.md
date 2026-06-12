@@ -108,6 +108,39 @@ systemctl restart livegoal-queue   # workers must load the new notification clas
   manifest; see below).
 - HTTPS is required by the Push API (already in place; `localhost` is exempt for dev).
 
+## Local demo walkthrough
+
+Three terminals: `php artisan serve --port=8123` (service workers need
+localhost/https), `php artisan queue:work --sleep=1` (pushes send from the
+worker — mandatory), and a console for the commands below.
+
+Browser prerequisites on http://localhost:8123 — each one silently breaks a
+different part of the demo when wrong:
+
+1. Site notification permission **Allow** (an accidental "Block" makes the
+   Settings row read "Blocked"; fix in the browser's site settings, reload).
+2. Settings → **Match alerts ON** (creates the subscription + follow snapshot).
+3. Settings → **Auto-refresh ON** (off = no polling = no goal toast).
+4. Settings → **Reduced motion OFF** (on disables the goal toast entirely).
+5. **Follow the World Cup** (Competitions → FIFA World Cup) — pushes only
+   target followers of the scoring match.
+
+Then:
+
+```bash
+php artisan app:push-test          # delivery smoke test (hide the tab first!)
+php artisan app:demo-live          # seed 4 fake live matches, reload browser
+php artisan app:demo-live --goal   # tab visible -> in-page toast, no push (by design)
+php artisan app:demo-live --goal   # tab hidden  -> system notification
+php artisan app:demo-live --end    # tab hidden  -> FT pushes (replace goal ones), rail empties
+php artisan app:demo-live --clear  # remove the fake matches
+```
+
+If a hidden-tab push never shows despite the worker logging DONE:
+macOS notification settings for the browser, Focus/DND, or
+`chrome://gcm-internals` → Connection State (VPNs/firewalls can block
+Chrome's push channel).
+
 ## Manual test checklist (service workers aren't unit-testable server-side)
 
 1. Settings → enable **Match alerts** → accept the prompt → a `push_subscriptions` row
