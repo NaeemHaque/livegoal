@@ -397,13 +397,15 @@ a {
     opacity: 0;
 }
 
+/* 10ms (not ~0) so Safari still fires transitionend — Vue's route
+   transitions otherwise occasionally hang on a never-ending leave phase. */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
         animation-duration: 0.001ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.001ms !important;
+        transition-duration: 0.01s !important;
         scroll-behavior: auto !important;
     }
 }
@@ -414,6 +416,59 @@ a {
 [data-reduce-motion] *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    transition-duration: 0.01s !important;
     scroll-behavior: auto !important;
+}
+
+/* Reduced motion must stay USABLE, not frozen:
+   1. the tiny LIVE dots keep their opacity-only pulse — they convey live
+      state (essential status), not decoration;
+   2. the ticker stops auto-scrolling but becomes swipeable by hand, with
+      the duplicate marquee copy hidden. */
+@media (prefers-reduced-motion: reduce) {
+    .pp-live-badge .dot,
+    .pp-status.live .dot,
+    .pp-ticker .tk-label .dot,
+    .pp-bnode .bn-live .d,
+    .pp-datenav .dn-current-live {
+        animation-duration: 1.4s !important;
+        animation-iteration-count: infinite !important;
+    }
+
+    .pp-ticker .tk-scroll {
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pp-ticker .tk-track {
+        animation: none !important;
+    }
+
+    .pp-ticker .tk-item.tk-dup {
+        display: none;
+    }
+}
+
+[data-reduce-motion] .pp-live-badge .dot,
+[data-reduce-motion] .pp-status.live .dot,
+[data-reduce-motion] .pp-ticker .tk-label .dot,
+[data-reduce-motion] .pp-bnode .bn-live .d,
+[data-reduce-motion] .pp-datenav .dn-current-live {
+    animation-duration: 1.4s !important;
+    animation-iteration-count: infinite !important;
+}
+
+[data-reduce-motion] .pp-ticker .tk-scroll {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+[data-reduce-motion] .pp-ticker .tk-track {
+    animation: none !important;
+}
+
+[data-reduce-motion] .pp-ticker .tk-item.tk-dup {
+    display: none;
 }

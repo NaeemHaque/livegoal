@@ -525,6 +525,23 @@
     height: 100%;
     object-fit: contain;
 }
+/* Narrow screens: the height-matched square emblem would otherwise balloon
+   as the text wraps taller (each feeding the other) and crush the text
+   column — pin it to a fixed size instead. */
+@media (max-width: 640px) {
+    .pp-spotlight .sp-lead {
+        grid-template-columns: 84px 1fr;
+        align-items: start;
+    }
+    .pp-spotlight .sp-emblem {
+        width: 84px;
+        height: 84px;
+        align-self: start;
+    }
+    .pp-spotlight h2 {
+        font-size: 26px;
+    }
+}
 .pp-spotlight .sp-tag {
     display: inline-flex;
     align-items: center;

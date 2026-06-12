@@ -27,6 +27,8 @@ const minuteLabel = (m) => {
                     :key="`${m.id}-${i < matches.length ? 'a' : 'b'}`"
                     :to="`/match/${m.id}`"
                     class="tk-item"
+                    :class="{ 'tk-dup': i >= matches.length }"
+                    :aria-hidden="i >= matches.length || undefined"
                 >
                     <span class="tk-comp">{{ m.competition?.short }}</span>
                     <span class="tk-teams">
