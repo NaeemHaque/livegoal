@@ -102,6 +102,13 @@ class PollLiveScores extends Command
      */
     private const KICKOFF_TRUST_SCHEDULE_SECONDS = 600;
 
+    /**
+     * Real first whistles trail the scheduled hour by the pre-match ceremony
+     * (+2 to +3 minutes observed across WC 2026 matchdays, never on the hour
+     * itself). Starting the clock here turns a consistent +3 drift into ±1.
+     */
+    private const KICKOFF_WHISTLE_DELAY_SECONDS = 120;
+
     private const PRESUME_KICKOFF_WINDOW_SECONDS = 2100;
 
     protected $signature = 'app:poll-live-scores';
@@ -150,6 +157,11 @@ class PollLiveScores extends Command
         foreach ($matches as $i => $m) {
             $id = $this->str($m['id'] ?? null);
             $previous = $prior[$id] ?? null;
+
+            // The single-match record often publishes a goal minutes before
+            // the bulk feed does — adopt whichever source knows it first.
+            $m = $this->withRecordScores($m, $id, $football);
+            $matches[$i] = $m;
 
             // Upstream nodes disagree mid-match and can serve yesterday's
             // score; never let a score go backwards without confirmation.
@@ -464,14 +476,14 @@ class PollLiveScores extends Command
     {
         // The poller runs sub-minute; cache each match's verification lookup
         // briefly so vanished matches cost at most ~1 upstream call a minute.
-        $verifyKey = 'live:verify:'.$id;
-        $detail = Cache::get($verifyKey);
+        $recordKey = 'live:record:'.$id;
+        $detail = Cache::get($recordKey);
 
         if (! is_array($detail)) {
             $detail = $football->get('/matches/'.$id);
 
             if (is_array($detail)) {
-                Cache::put($verifyKey, $detail, 55);
+                Cache::put($recordKey, $detail, 55);
             }
         }
 
@@ -765,6 +777,54 @@ class PollLiveScores extends Command
     }
 
     /**
+     * Raise a live match's score from its own record when that is fresher.
+     *
+     * Record consults are cached ~55s per match (every other poll at the
+     * 30s cadence), keeping even four simultaneous kickoffs inside the
+     * 10 req/min budget. Scores only ever go UP from the record — stale-node
+     * decreases stay with the bulk answer and the drop guard, and status
+     * transitions remain owned by the bulk feed + vanish verification.
+     *
+     * @param  array<array-key, mixed>  $m
+     * @return array<array-key, mixed>
+     */
+    private function withRecordScores(array $m, string $id, FootballData $football): array
+    {
+        if ($id === '' || ($m['status'] ?? null) !== 'LIVE' || ($m['presumed'] ?? false) === true) {
+            return $m;
+        }
+
+        $recordKey = 'live:record:'.$id;
+        $detail = Cache::get($recordKey);
+
+        if (! is_array($detail)) {
+            $detail = $football->get('/matches/'.$id);
+
+            if (is_array($detail)) {
+                Cache::put($recordKey, $detail, 55);
+            }
+        }
+
+        $score = is_array($detail) ? ($detail['score'] ?? null) : null;
+        $fullTime = is_array($score) ? ($score['fullTime'] ?? null) : null;
+
+        if (! is_array($fullTime)) {
+            return $m;
+        }
+
+        foreach (['home' => 'homeScore', 'away' => 'awayScore'] as $side => $key) {
+            $record = $fullTime[$side] ?? null;
+            $bulk = $m[$key] ?? null;
+
+            if (is_int($record) && is_int($bulk) && $record > $bulk) {
+                $m[$key] = $record;
+            }
+        }
+
+        return $m;
+    }
+
+    /**
      * Surface scheduled matches whose kickoff has passed as presumed-live.
      *
      * Stateless: rebuilt from the (cache-only) featured schedule every poll
@@ -809,7 +869,7 @@ class PollLiveScores extends Command
                 'status' => 'LIVE',
                 'homeScore' => 0,
                 'awayScore' => 0,
-                'minute' => max(1, min((int) floor($sinceKickoff / 60), 120)),
+                'minute' => max(1, min((int) floor(($sinceKickoff - self::KICKOFF_WHISTLE_DELAY_SECONDS) / 60), 120)),
                 'prevHomeScore' => null,
                 'prevAwayScore' => null,
                 'presumed' => true,
@@ -862,13 +922,20 @@ class PollLiveScores extends Command
             return null;
         }
 
-        return max(1, min($this->minutesSince($kickoff), 120));
+        // No anchor recorded (presumed entries, expired event caches): count
+        // from the presumed real whistle, not the scheduled hour.
+        $whistle = Date::parse($kickoff)
+            ->addSeconds(self::KICKOFF_WHISTLE_DELAY_SECONDS)
+            ->toIso8601String();
+
+        return max(1, min($this->minutesSince($whistle), 120));
     }
 
     /**
-     * Where the match clock starts: the scheduled kickoff when the feed's
-     * first live signal arrived within the trust window (on-time start,
-     * lagging feed — observed +6/+7 minutes), otherwise the signal time.
+     * Where the match clock starts: the presumed real whistle (schedule plus
+     * the ceremony delay) when the feed's first live signal arrived within
+     * the trust window (on-time start, lagging feed — observed +6/+7
+     * minutes), otherwise the signal time.
      *
      * @param  array<array-key, mixed>  $m
      */
@@ -880,7 +947,13 @@ class PollLiveScores extends Command
             $lag = Date::now()->getTimestamp() - Date::parse($scheduled)->getTimestamp();
 
             if ($lag >= 0 && $lag <= self::KICKOFF_TRUST_SCHEDULE_SECONDS) {
-                return Date::parse($scheduled)->toIso8601String();
+                $whistle = Date::parse($scheduled)->addSeconds(self::KICKOFF_WHISTLE_DELAY_SECONDS);
+
+                // A signal beating the presumed whistle means play already
+                // started — the whistle can never be later than the signal.
+                return $whistle->isAfter(Date::now())
+                    ? Date::now()->toIso8601String()
+                    : $whistle->toIso8601String();
             }
         }
 

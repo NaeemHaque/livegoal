@@ -76,7 +76,9 @@ class PollLiveScoresPushTest extends TestCase
         $bystander = $this->fanOf('team', '999');
 
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 0, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 1, 0)]], 200)
                 ->whenEmpty(Http::response(['unexpected' => true], 500)),
@@ -96,7 +98,9 @@ class PollLiveScoresPushTest extends TestCase
         // 1-0 seen, stale node answers 0-0 (held by the drop guard), 1-0 again:
         // the goal event dedupe means exactly one push ever goes out.
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 0, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 1, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 0, 0)]], 200)
@@ -121,7 +125,7 @@ class PollLiveScoresPushTest extends TestCase
 
         Http::fake([
             '*/matches/1' => Http::response($this->upstreamMatch(1, 'FINISHED', 2, 0), 200),
-            '*/matches*' => Http::sequence()
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 2, 0)]], 200)
                 ->push(['matches' => []], 200)
                 ->push(['matches' => []], 200)

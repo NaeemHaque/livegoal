@@ -84,6 +84,8 @@ class PollLiveScoresTest extends TestCase
     public function test_it_caches_normalized_live_matches_with_count_and_timestamp(): void
     {
         Http::fake([
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
             '*/matches*' => Http::response(['matches' => [
                 $this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 1, 0),
                 $this->upstreamMatch(2, 'PAUSED', '2026-06-08T14:30:00Z', 2, 2),
@@ -94,10 +96,11 @@ class PollLiveScoresTest extends TestCase
             ->expectsOutputToContain('Live: 2 match(es)')
             ->assertSuccessful();
 
-        // The command queries the in-play/paused endpoint, exactly once.
+        // One bulk query plus one record consult for the LIVE match — HT
+        // matches are never consulted (scores cannot change in the interval).
         Http::assertSent(fn ($request): bool => str_contains($request->url(), 'api.football-data.org/v4/matches')
             && ($request->data()['status'] ?? null) === 'IN_PLAY,PAUSED');
-        Http::assertSentCount(1);
+        Http::assertSentCount(2);
 
         $cached = Cache::get(PollLiveScores::CACHE_KEY);
 
@@ -164,11 +167,12 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('HT', $matches[0]['status']);
         $this->assertSame(45, $matches[0]['minute']);
 
-        // LIVE match -> positive int approximating elapsed minutes (~30).
+        // LIVE match, first poll (no anchor yet) -> elapsed minutes from the
+        // presumed real whistle (schedule + 2' of anthems): 30' reads 28.
         $this->assertSame('LIVE', $matches[1]['status']);
         $this->assertIsInt($matches[1]['minute']);
         $this->assertGreaterThan(0, $matches[1]['minute']);
-        $this->assertSame(30, $matches[1]['minute']);
+        $this->assertSame(28, $matches[1]['minute']);
 
         // Non-live, non-HT -> null.
         $this->assertSame('SCHEDULED', $matches[2]['status']);
@@ -183,7 +187,9 @@ class PollLiveScoresTest extends TestCase
         // Http::fake() cannot be re-stubbed mid-test, so drive both with one
         // sequence (each successful 200 consumes exactly one sequence item).
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 1, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 2, 0)]], 200)
                 ->whenEmpty(Http::response(['unexpected' => true], 500)),
@@ -210,7 +216,8 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame(1, $second['prevHomeScore']);
         $this->assertSame(0, $second['prevAwayScore']);
 
-        Http::assertSentCount(2);
+        // Two bulk polls plus poll one's record consult (cached on poll two).
+        Http::assertSentCount(3);
     }
 
     // --- 4. no live matches -------------------------------------------------
@@ -405,7 +412,9 @@ class PollLiveScoresTest extends TestCase
         // A stale upstream node answers 0-0 after the cache saw 2-0: the drop
         // is held back twice, then accepted once answered consistently.
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 2, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0)]], 200)
@@ -431,7 +440,9 @@ class PollLiveScoresTest extends TestCase
     {
         // 1-0 -> (stale) 0-0 held -> 2-0: exactly one extra GOAL at 2-0.
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 1, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 2, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-11T19:00:00Z', 1, 0)]], 200)
@@ -582,6 +593,55 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('HT', Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['status']);
     }
 
+    // --- 7a. record-score harvesting -------------------------------------------
+
+    public function test_a_fresher_single_record_score_is_adopted_for_a_live_match(): void
+    {
+        // The bulk feed lags on a goal the match's own record already has:
+        // poll two adopts the record's 1-0 and fires the GOAL event.
+        Http::fake([
+            '*/matches/1' => Http::sequence()
+                ->push(['id' => 1, 'status' => 'IN_PLAY', 'score' => ['winner' => null, 'fullTime' => ['home' => 0, 'away' => 0]]], 200)
+                ->push(['id' => 1, 'status' => 'IN_PLAY', 'score' => ['winner' => null, 'fullTime' => ['home' => 1, 'away' => 0]]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(1, 'IN_PLAY', '2026-06-12T19:00:00Z', 0, 0),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        // Record consults cache for ~55s; expire it so poll two re-fetches.
+        Cache::forget('live:record:1');
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $m = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+        $this->assertSame(1, $m['homeScore']);
+
+        // The goal event fired from the record-sourced score on poll two.
+        $types = array_column(Cache::get(PollLiveScores::eventsKey('1')) ?? [], 'type');
+        $this->assertContains('GOAL', $types);
+    }
+
+    public function test_a_stale_lower_record_score_is_ignored(): void
+    {
+        Http::fake([
+            '*/matches/1' => Http::response([
+                'id' => 1,
+                'status' => 'IN_PLAY',
+                'score' => ['winner' => null, 'fullTime' => ['home' => 0, 'away' => 0]],
+            ], 200),
+            '*/matches*' => Http::response(['matches' => [
+                $this->upstreamMatch(1, 'IN_PLAY', '2026-06-12T19:00:00Z', 2, 0),
+            ]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $this->assertSame(2, Cache::get(PollLiveScores::CACHE_KEY)['matches'][0]['homeScore']);
+    }
+
     // --- 7b. presumed kickoff --------------------------------------------------
 
     /**
@@ -615,7 +675,10 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('LIVE', $m['status']);
         $this->assertTrue($m['presumed']);
         $this->assertSame(0, $m['homeScore']);
-        $this->assertSame(5, $m['minute']);
+
+        // Minutes count from the presumed real whistle (schedule + 2'), not
+        // the scheduled hour: 19:05 reads 3', matching the broadcast clock.
+        $this->assertSame(3, $m['minute']);
 
         // Presumed entries record no anchors and send no pushes.
         $this->assertNull(Cache::get(PollLiveScores::eventsKey('77')));
@@ -641,10 +704,13 @@ class PollLiveScoresTest extends TestCase
         Date::setTestNow('2026-06-12T19:05:00Z');
         $this->seedSchedule([$this->upstreamMatch(77, 'TIMED', '2026-06-12T19:00:00Z')]);
 
-        Http::fake(['*/matches*' => Http::sequence()
-            ->push(['matches' => []], 200)
-            ->push(['matches' => [$this->upstreamMatch(77, 'IN_PLAY', '2026-06-12T19:00:00Z', 1, 0)]], 200)
-            ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        Http::fake([
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/77' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
+                ->push(['matches' => []], 200)
+                ->push(['matches' => [$this->upstreamMatch(77, 'IN_PLAY', '2026-06-12T19:00:00Z', 1, 0)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
         ]);
 
         $this->artisan('app:poll-live-scores')->assertSuccessful();
@@ -658,14 +724,16 @@ class PollLiveScoresTest extends TestCase
         $types = array_column(Cache::get(PollLiveScores::eventsKey('77')) ?? [], 'type');
         $this->assertContains('KICKOFF', $types);
 
-        // Exactly the two bulk polls — presumed entries are never verified.
-        Http::assertSentCount(2);
+        // Two bulk polls plus one record consult once the entry is real —
+        // presumed entries are never fetched upstream.
+        Http::assertSentCount(3);
     }
 
-    public function test_an_on_time_kickoff_anchors_the_clock_at_the_schedule(): void
+    public function test_an_on_time_kickoff_anchors_the_clock_at_the_presumed_whistle(): void
     {
         // Feed's first signal lands 7 minutes after the scheduled kickoff —
-        // an on-time start with a lagging feed: the clock reads ~7', not 1'.
+        // an on-time start with a lagging feed. The clock anchors at the
+        // presumed real whistle (schedule + 2' of anthems), reading ~5'.
         Date::setTestNow('2026-06-12T19:07:00Z');
 
         Http::fake(['*/matches*' => Http::response(['matches' => [
@@ -675,7 +743,23 @@ class PollLiveScoresTest extends TestCase
         $this->artisan('app:poll-live-scores')->assertSuccessful();
 
         $kick = collect(Cache::get(PollLiveScores::eventsKey('88')))->firstWhere('type', 'KICKOFF');
-        $this->assertSame('2026-06-12T19:00:00+00:00', $kick['at']);
+        $this->assertSame('2026-06-12T19:02:00+00:00', $kick['at']);
+    }
+
+    public function test_a_signal_beating_the_presumed_whistle_anchors_at_the_signal(): void
+    {
+        // First signal one minute after schedule — earlier than the presumed
+        // whistle. Play has provably started, so anchor at the signal itself.
+        Date::setTestNow('2026-06-12T19:01:00Z');
+
+        Http::fake(['*/matches*' => Http::response(['matches' => [
+            $this->upstreamMatch(88, 'IN_PLAY', '2026-06-12T19:00:00Z', 0, 0),
+        ]], 200)]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        $kick = collect(Cache::get(PollLiveScores::eventsKey('88')))->firstWhere('type', 'KICKOFF');
+        $this->assertSame('2026-06-12T19:01:00+00:00', $kick['at']);
     }
 
     public function test_a_genuinely_delayed_kickoff_anchors_at_the_first_signal(): void
@@ -762,7 +846,9 @@ class PollLiveScoresTest extends TestCase
         Cache::put(PollLiveScores::CACHE_KEY, $this->liveCachePayload(), 70);
 
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/537327' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => []], 200)
                 ->push(['matches' => [$this->upstreamMatch(537327, 'IN_PLAY', '2026-06-11T19:00:00Z', 0, 0)]], 200)
                 ->push(['matches' => []], 200)
@@ -816,7 +902,9 @@ class PollLiveScoresTest extends TestCase
         $this->assertSame('live:events:1', PollLiveScores::eventsKey('1'));
 
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 0, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 1, 0)]], 200)
                 ->push(['matches' => [$this->upstreamMatch(1, 'PAUSED', '2026-06-08T14:00:00Z', 1, 0)]], 200)
@@ -859,7 +947,9 @@ class PollLiveScoresTest extends TestCase
     public function test_it_records_one_goal_event_per_side_that_scored(): void
     {
         Http::fake([
-            '*/matches*' => Http::sequence()
+            // The per-live-match record consult answers inert (no score data).
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 0, 0)]], 200)
                 // Both sides score between polls (two goals in one cadence).
                 ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', '2026-06-08T14:00:00Z', 1, 1)]], 200)
@@ -934,7 +1024,7 @@ class PollLiveScoresTest extends TestCase
         // helper throws RequestException, which the service catches and returns
         // null. A null upstream result must NOT overwrite the cache.
         Http::fake([
-            '*/matches*' => Http::sequence()
+            '*/matches?*' => Http::sequence()
                 ->push(['error' => 'rate limited'], 429)
                 ->push(['error' => 'rate limited'], 429)
                 ->push(['error' => 'rate limited'], 429)
