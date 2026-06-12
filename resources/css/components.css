@@ -892,17 +892,23 @@
 }
 .pp-tl-row .tl-side {
     display: flex;
+    min-width: 0;
 }
-.pp-tl-row.right .tl-side:first-child {
-    order: 3;
+/* Explicit lanes: home cards left of the spine, away cards right; the minute
+   chip always sits centered ON the spine (column 2, same row). */
+.pp-tl-row .tl-side.home {
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: flex-end;
 }
-.pp-tl-row.right {
-    direction: rtl;
-}
-.pp-tl-row.right .tl-card {
-    direction: ltr;
+.pp-tl-row .tl-side.away {
+    grid-column: 3;
+    grid-row: 1;
+    justify-content: flex-start;
 }
 .pp-tl-row .tl-min {
+    grid-column: 2;
+    grid-row: 1;
     display: flex;
     justify-content: center;
 }
@@ -916,8 +922,10 @@
     border: 1px solid var(--border);
     z-index: 1;
 }
-.pp-tl-row.left .tl-side:first-child {
-    justify-content: flex-end;
+.pp-tl-row.goal .tl-min .mono {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    font-weight: 800;
 }
 .pp-tl-card,
 .tl-card {
@@ -1750,5 +1758,13 @@
     .pp-pushprompt {
         bottom: calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom, 0px));
         flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 640px) {
+    .pp-countryfilter .cf-pop {
+        left: 0;
+        right: auto;
+        width: min(300px, calc(100vw - 32px));
     }
 }

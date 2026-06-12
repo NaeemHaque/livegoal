@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 
+import Crest from '@/components/Crest.vue';
 import { IcBall, IcWhistle } from '@/components/icons';
 
 /**
@@ -25,10 +26,12 @@ const isFinished = computed(() => props.match.status === 'FT');
 const scoreline = (home, away) =>
     home != null && away != null ? `${home}–${away}` : null;
 
-const teamShort = (side) => {
-    const team = side === 'away' ? props.match.away : props.match.home;
+const team = (side) => (side === 'away' ? props.match.away : props.match.home);
 
-    return team?.short || team?.tla || team?.name || 'Goal';
+const teamName = (side) => {
+    const t = team(side);
+
+    return t?.name || t?.short || t?.tla || 'Goal';
 };
 </script>
 
@@ -57,25 +60,28 @@ const teamShort = (side) => {
                 <span class="tl-line" />
             </div>
 
-            <div
-                v-else
-                class="pp-tl-row goal"
-                :class="ev.side === 'away' ? 'right' : 'left'"
-            >
-                <div class="tl-side">
+            <div v-else class="pp-tl-row goal">
+                <div
+                    class="tl-side"
+                    :class="ev.side === 'away' ? 'away' : 'home'"
+                >
                     <div class="tl-card">
                         <span class="tl-ic goal"><IcBall :size="17" /></span>
+                        <Crest :team="team(ev.side)" :size="22" />
                         <span class="tl-txt">
-                            <span class="tl-player"
-                                >Goal — {{ teamShort(ev.side) }}</span
-                            >
-                            <span
-                                v-if="scoreline(ev.homeScore, ev.awayScore)"
-                                class="tl-detail tnum"
-                                >{{
-                                    scoreline(ev.homeScore, ev.awayScore)
-                                }}</span
-                            >
+                            <span class="tl-player">{{
+                                teamName(ev.side)
+                            }}</span>
+                            <span class="tl-detail">
+                                Goal<template
+                                    v-if="scoreline(ev.homeScore, ev.awayScore)"
+                                >
+                                    ·
+                                    <b class="tnum">{{
+                                        scoreline(ev.homeScore, ev.awayScore)
+                                    }}</b></template
+                                >
+                            </span>
                         </span>
                     </div>
                 </div>
@@ -84,7 +90,6 @@ const teamShort = (side) => {
                         ev.minute != null ? `${ev.minute}'` : '–'
                     }}</span>
                 </div>
-                <div class="tl-side empty" />
             </div>
         </template>
 
