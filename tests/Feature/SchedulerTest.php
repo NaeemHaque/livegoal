@@ -133,6 +133,17 @@ class SchedulerTest extends TestCase
         $this->assertSame(30, $event->repeatSeconds);
     }
 
+    public function test_it_registers_a_daily_model_prune(): void
+    {
+        $schedule = app(Schedule::class);
+
+        $event = collect($schedule->events())
+            ->first(fn ($event): bool => str_contains((string) $event->command, 'model:prune'));
+
+        $this->assertNotNull($event, 'model:prune should be scheduled.');
+        $this->assertSame('0 0 * * *', $event->expression);
+    }
+
     public function test_the_live_poller_is_scheduled_without_overlapping(): void
     {
         $schedule = app(Schedule::class);
