@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
+import CountryFilter from '@/components/CountryFilter.vue';
 import DateNavigator from '@/components/DateNavigator.vue';
 import FilterTabs from '@/components/FilterTabs.vue';
 import FormationLoader from '@/components/FormationLoader.vue';
@@ -11,9 +12,9 @@ import SectionHead from '@/components/SectionHead.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
 import { useDayMatches } from '@/composables/useDayMatches';
+import { useResults } from '@/composables/useResults';
 import { useTimeFormat } from '@/composables/useTimeFormat';
 import { useUpcoming } from '@/composables/useUpcoming';
-import { today } from '@/lib/dates';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useMatchesStore } from '@/stores/matches';
 
@@ -46,8 +47,9 @@ watch(date, (value) => {
 });
 
 const dateSelected = computed(() => date.value !== '');
-// The navigator always needs a concrete day to anchor on; default to today.
-const navDate = computed(() => date.value || today());
+
+// Multi-select country/team filter — names of selected sides.
+const countries = ref([]);
 
 const {
     matches: dayMatches,
@@ -63,7 +65,36 @@ const all = computed(() => matches.overlay(dayMatches.value));
 // tab counts when the selected day has nothing.
 const { data: upcomingData } = useUpcoming();
 const upcomingAll = computed(() => matches.overlay(upcomingData.value));
+
+// Latest results (newest first) — the Finished view when no date is picked.
+const { data: resultsData } = useResults();
+const resultsAll = computed(() => matches.overlay(resultsData.value));
 const time = useTimeFormat();
+
+// Every side appearing in the visible lists; at the World Cup these are
+// countries. Drives the searchable multi-select beside the date control.
+const countryPool = computed(() => {
+    const seen = new Map();
+
+    for (const m of [...all.value, ...upcomingAll.value]) {
+        for (const side of [m.home, m.away]) {
+            if (side?.name && !seen.has(side.name)) {
+                seen.set(side.name, {
+                    name: side.name,
+                    crest: side.crest ?? null,
+                    tla: side.tla ?? side.short ?? null,
+                });
+            }
+        }
+    }
+
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+});
+
+const byCountry = (m) =>
+    countries.value.length === 0 ||
+    countries.value.includes(m.home?.name) ||
+    countries.value.includes(m.away?.name);
 
 const LIVE = ['LIVE', 'HT', 'ET', 'PEN'];
 const TABS = [
@@ -83,14 +114,20 @@ const statusCounts = (list) => ({
 const counts = computed(() => {
     // On an empty day the screen surfaces the cross-day upcoming list, so count
     // that instead — the tabs then reflect what's actually on screen.
-    const base =
-        all.value.length === 0 && upcomingAll.value.length
-            ? statusCounts(upcomingAll.value)
-            : statusCounts(all.value);
+    const noDay = all.value.length === 0;
+    const base = noDay
+        ? statusCounts(upcomingAll.value.filter(byCountry))
+        : statusCounts(all.value.filter(byCountry));
 
-    // "Live" means right now, not the selected calendar date — the badge
-    // always reflects the site-wide live feed.
-    return { ...base, live: matches.live.length };
+    // With no day selected, Finished counts the recent-results feed, and
+    // "Live" always reflects the site-wide live feed (date-independent).
+    return {
+        ...base,
+        finished: noDay
+            ? resultsAll.value.filter(byCountry).length
+            : base.finished,
+        live: matches.live.filter(byCountry).length,
+    };
 });
 
 const byTab = (m) => {
@@ -113,10 +150,10 @@ const filtered = computed(() => {
     // The Live tab is date-independent: always the current live feed, even
     // when browsing another day (matches are grouped by UTC date upstream).
     if (filter.value === 'live') {
-        return matches.live;
+        return matches.live.filter(byCountry);
     }
 
-    return all.value.filter(byTab);
+    return all.value.filter((m) => byTab(m) && byCountry(m));
 });
 
 const isFav = (m) => favorites.isMatchFavorite(m);
@@ -137,12 +174,20 @@ const restGroups = computed(() => {
     return [...groups.values()];
 });
 
-// Empty-day upcoming fixtures (filtered by the active tab, so a live match
-// shows under Live — not Upcoming), grouped by their displayed (local) date.
+// No-day fallback list: recent results on the Finished tab (newest first),
+// upcoming fixtures elsewhere (filtered by the active tab, so a live match
+// shows under Live — not Upcoming). Grouped by their displayed (local) date.
 const upcomingByDate = computed(() => {
+    const source =
+        filter.value === 'finished'
+            ? resultsAll.value.filter(byCountry)
+            : upcomingAll.value.filter(
+                  (match) => byTab(match) && byCountry(match),
+              );
+
     const groups = new Map();
 
-    for (const m of upcomingAll.value.filter(byTab)) {
+    for (const m of source) {
         const label = time.date(m.kickoff);
 
         if (!groups.has(label)) {
@@ -187,11 +232,21 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
             "
         >
             <FilterTabs v-model="filter" :tabs="TABS" :counts="counts" />
-            <DateNavigator
-                :model-value="navDate"
-                :live-count="counts.live"
-                @update:model-value="(value) => (date = value)"
-            />
+            <div
+                style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                "
+            >
+                <CountryFilter v-model="countries" :options="countryPool" />
+                <DateNavigator
+                    :model-value="date"
+                    :live-count="counts.live"
+                    @update:model-value="(value) => (date = value)"
+                />
+            </div>
         </div>
 
         <FormationLoader v-if="loading" label="Loading fixtures" />
@@ -207,7 +262,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         filter === 'live'
                             ? 'Live now'
                             : filter === 'finished'
-                              ? 'Finished'
+                              ? 'Recent results'
                               : 'Upcoming fixtures'
                     }}</span
                 >

@@ -2,6 +2,8 @@
 
 namespace App\Services\Football;
 
+use App\Console\Commands\PollLiveScores;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 
 /**
@@ -64,7 +66,66 @@ class FeaturedMatches
             }
         }
 
-        return ['matches' => $matches, 'lastUpdated' => $lastUpdated, 'stale' => $stale, 'served' => $served];
+        return [
+            'matches' => $this->withFinalSnapshots($matches),
+            'lastUpdated' => $lastUpdated,
+            'stale' => $stale,
+            'served' => $served,
+        ];
+    }
+
+    /**
+     * Overlay the live poller's verified final snapshots onto the aggregate.
+     *
+     * The upstream season feeds revert finished matches to TIMED for hours
+     * after the final whistle; the poller's `live:finals` cache holds the
+     * truth (status FT + final score) the moment a match ends. Matching
+     * entries are overridden, and finals missing from the feeds entirely are
+     * appended so recent results never vanish.
+     *
+     * @param  list<array<string, mixed>>  $matches
+     * @return list<array<string, mixed>>
+     */
+    private function withFinalSnapshots(array $matches): array
+    {
+        $finals = Cache::get(PollLiveScores::FINALS_KEY);
+
+        if (! is_array($finals) || $finals === []) {
+            return $matches;
+        }
+
+        $remaining = $finals;
+
+        foreach ($matches as $i => $m) {
+            $id = is_scalar($m['id'] ?? null) ? (string) $m['id'] : '';
+            $final = $remaining[$id] ?? null;
+
+            if (is_array($final)) {
+                $matches[$i]['status'] = 'FT';
+                $matches[$i]['minute'] = null;
+                $matches[$i]['homeScore'] = $final['homeScore'] ?? $m['homeScore'] ?? null;
+                $matches[$i]['awayScore'] = $final['awayScore'] ?? $m['awayScore'] ?? null;
+                unset($remaining[$id]);
+            }
+        }
+
+        foreach ($remaining as $final) {
+            if (! is_array($final)) {
+                continue;
+            }
+
+            $entry = [];
+
+            foreach ($final as $key => $value) {
+                if (is_string($key)) {
+                    $entry[$key] = $value;
+                }
+            }
+
+            $matches[] = $entry;
+        }
+
+        return $matches;
     }
 
     /**
@@ -95,6 +156,42 @@ class FeaturedMatches
         ));
 
         return array_slice($this->sortByKickoff($upcoming), 0, $limit);
+    }
+
+    /**
+     * The most recent finished fixtures up to a date, newest first, limited.
+     *
+     * @param  list<array<string, mixed>>  $matches
+     * @return list<array<string, mixed>>
+     */
+    public function recentResults(array $matches, string $until, int $limit): array
+    {
+        $finished = array_values(array_filter(
+            $matches,
+            fn (array $m): bool => ($m['status'] ?? null) === 'FT' && $this->day($m) <= $until,
+        ));
+
+        return array_slice(array_reverse($this->sortByKickoff($finished)), 0, $limit);
+    }
+
+    /**
+     * Every scheduled fixture inside a date window, soonest first — no count
+     * cap, so a full tournament schedule (e.g. all 104 World Cup fixtures)
+     * comes through whole.
+     *
+     * @param  list<array<string, mixed>>  $matches
+     * @return list<array<string, mixed>>
+     */
+    public function scheduledWindow(array $matches, string $from, string $until): array
+    {
+        $upcoming = array_values(array_filter(
+            $matches,
+            fn (array $m): bool => ($m['status'] ?? null) === 'SCHEDULED'
+                && $this->day($m) >= $from
+                && $this->day($m) <= $until,
+        ));
+
+        return $this->sortByKickoff($upcoming);
     }
 
     /**

@@ -22,6 +22,7 @@ Route::get('competitions/{id}/scorers', [CompetitionController::class, 'scorers'
 Route::get('matches', [MatchController::class, 'index'])->middleware('cache.api:120');
 Route::get('matches/day', [MatchController::class, 'day'])->middleware('cache.api:120');
 Route::get('matches/upcoming', [MatchController::class, 'upcoming'])->middleware('cache.api:120');
+Route::get('matches/results', [MatchController::class, 'results'])->middleware('cache.api:120');
 Route::get('matches/{id}', [MatchController::class, 'show'])->middleware('cache.api:30');
 
 Route::get('teams/{id}', [TeamController::class, 'show'])->middleware('cache.api:3600');

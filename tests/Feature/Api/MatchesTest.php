@@ -274,6 +274,31 @@ class MatchesTest extends TestCase
 
     // --- 5c. upcoming view: next scheduled fixtures across featured ----------
 
+    public function test_results_returns_recent_finished_fixtures_newest_first(): void
+    {
+        Date::setTestNow('2026-06-09T00:00:00Z');
+        Config::set('football.featured', ['PL', 'WC']);
+
+        // A finished league match (included) alongside a future fixture (excluded).
+        $future = $this->matchWithStatus(900001, 'TIMED');
+        $future['utcDate'] = '2026-06-11T19:00:00Z';
+        $future['competition'] = ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'];
+
+        Http::fake([
+            '*/competitions/PL/matches*' => Http::response(['matches' => [$this->finishedMatch()]], 200),
+            '*/competitions/WC/matches*' => Http::response(['matches' => [$future]], 200),
+        ]);
+
+        $response = $this->getJson('/api/matches/results');
+
+        $response->assertOk();
+        $data = $response->json('data');
+        $this->assertIsArray($data);
+        $this->assertCount(1, $data, 'only the finished fixture is a result');
+        $response->assertJsonPath('data.0.status', 'FT');
+        $response->assertJsonPath('data.0.competition.code', 'PL');
+    }
+
     public function test_upcoming_returns_soonest_scheduled_featured_fixtures(): void
     {
         Date::setTestNow('2026-06-09T00:00:00Z');
