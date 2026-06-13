@@ -83,6 +83,23 @@ timeline-append points avoids inventing a second dedupe layer for an upstream th
 Rejected: user accounts (overkill for a bookmark-style follow feature), JSON follow storage
 (unindexable in SQLite), SSE/WebSockets (excluded; can't reach closed tabs anyway).
 
+## D9 — Frontend state: native reactive singletons (remove Pinia)
+
+**Decision:** Drop **Pinia**. Shared client state lives in module-level `reactive()` singletons under
+`resources/js/stores/` (`settings`, `favorites`, `matches`), each exposed through an unchanged
+`useXStore()` accessor. Supersedes the Pinia choice in D1.
+
+**Why:** The app's shared state is three small stores over simple data (the live feed, user prefs,
+favorites). Pinia's value-add — devtools, plugins, SSR-safe per-request instancing — buys nothing in a
+client-only SPA this size, so native Vue reactivity is the right-sized tool: one fewer dependency and no
+extra concepts. Vue's own State Management guide endorses `reactive()` singletons for exactly this case.
+Ergonomics are unchanged — a Pinia setup store is itself `reactive()` over unwrapped refs, so components
+read and write `store.prop` (and `store.method()`) identically. User direction.
+
+**Impact:** Remove `pinia` and `createPinia()` from `resources/js/main.js`. No consumer changes were
+needed — nothing used a Pinia-only API (`$patch`, `$reset`, `storeToRefs`, …), so the swap is internal to
+the three store modules.
+
 ## Resolved inputs
 
 - **`FOOTBALL_DATA_TOKEN`** — ✅ provided and **verified** (2026-06-07): HTTP 200, 13 free competitions,
