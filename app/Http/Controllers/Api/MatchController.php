@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Console\Commands\PollLiveScores;
+use App\Services\Football\EspnFootball;
+use App\Services\Football\EspnNormalizer;
 use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
@@ -18,6 +20,8 @@ class MatchController extends Controller
         private readonly FootballData $football,
         private readonly Normalizer $normalizer,
         private readonly FeaturedMatches $featured,
+        private readonly EspnFootball $espn,
+        private readonly EspnNormalizer $espnNormalizer,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -120,6 +124,51 @@ class MatchController extends Controller
                 'events' => $this->timelineEvents($id),
             ],
         );
+    }
+
+    /**
+     * Proof-of-concept: live data for this match from ESPN's keyless API — a
+     * real match clock and official event minutes, which football-data's free
+     * tier doesn't provide. Resolved from the football-data match's teams +
+     * date; returns a `found: false` envelope when no ESPN event matches (the
+     * frontend then simply hides the panel). See the `espn-keyless-football-api`
+     * note. football-data stays the source of record; this only augments.
+     */
+    public function espn(string $id): JsonResponse
+    {
+        $result = $this->football->cached("match:{$id}", Config::integer('football.ttl.match_live'), "/matches/{$id}");
+
+        if (! is_array($result->data)) {
+            return response()->json(['data' => $this->espnNormalizer->notFound()]);
+        }
+
+        $match = $this->normalizer->match($result->data);
+        $slug = $this->espn->slugFor($this->asString(data_get($match, 'competition.code')) ?? '');
+        $kickoff = $this->asString(data_get($match, 'kickoff'));
+
+        if ($slug === null || $kickoff === null) {
+            return response()->json(['data' => $this->espnNormalizer->notFound()]);
+        }
+
+        $scoreboard = $this->espn->scoreboard($slug, Date::parse($kickoff)->toDateString());
+
+        $resolved = $this->espnNormalizer->resolve($scoreboard, [
+            'home' => ['tla' => $this->asString(data_get($match, 'home.tla')), 'name' => $this->asString(data_get($match, 'home.name'))],
+            'away' => ['tla' => $this->asString(data_get($match, 'away.tla')), 'name' => $this->asString(data_get($match, 'away.name'))],
+        ]);
+
+        if ($resolved === null) {
+            return response()->json(['data' => $this->espnNormalizer->notFound()]);
+        }
+
+        $summary = $this->espn->summary($slug, $this->asString(data_get($resolved, 'event.id')) ?? '');
+
+        return response()->json(['data' => $this->espnNormalizer->liveData($resolved, $summary)]);
+    }
+
+    private function asString(mixed $value): ?string
+    {
+        return is_string($value) ? $value : null;
     }
 
     /**
