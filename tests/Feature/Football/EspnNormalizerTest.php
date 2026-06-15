@@ -42,6 +42,9 @@ class EspnNormalizerTest extends TestCase
                 ['type' => ['text' => 'Goal'], 'clock' => ['displayValue' => "27'"], 'team' => ['id' => '628'], 'participants' => [['athlete' => ['displayName' => 'Irankunda']], ['athlete' => ['displayName' => 'Okon-Engstler']]]],
                 ['type' => ['text' => 'Yellow Card'], 'clock' => ['displayValue' => "86'"], 'team' => ['id' => '465'], 'participants' => [['athlete' => ['displayName' => 'Akgün']]]],
                 ['type' => ['text' => 'Start Delay'], 'clock' => ['displayValue' => "23'"], 'team' => []],
+                ['type' => ['text' => 'Halftime'], 'clock' => ['displayValue' => "45'+2'"], 'team' => []],
+                // Listed out of order (a 5' goal after later events) — must sort first.
+                ['type' => ['text' => 'Goal'], 'clock' => ['displayValue' => "5'"], 'team' => ['id' => '465'], 'participants' => [['athlete' => ['displayName' => 'Yildiz']]]],
             ],
         ];
     }
@@ -85,21 +88,35 @@ class EspnNormalizerTest extends TestCase
 
         $events = $norm->liveData($resolved, $this->summary())['events'];
 
-        // The "Start Delay" is dropped; goal + card remain.
-        $this->assertCount(2, $events);
+        // "Start Delay" dropped; 2 goals + HT + card remain, sorted chronologically
+        // (the 5' goal was listed last in the feed but sorts first).
+        $this->assertCount(4, $events);
 
-        // Australia's goal — our away side — at its official minute, with assist.
+        // Turkey's 5' goal — our home — running score 1-0.
         $this->assertSame('GOAL', $events[0]['type']);
-        $this->assertSame(27, $events[0]['minute']);
-        $this->assertSame('away', $events[0]['side']);
-        $this->assertSame('Irankunda', $events[0]['player']);
-        $this->assertSame('Okon-Engstler', $events[0]['assist']);
+        $this->assertSame(5, $events[0]['minute']);
+        $this->assertSame('home', $events[0]['side']);
+        $this->assertSame('Yildiz', $events[0]['player']);
+        $this->assertSame(1, $events[0]['homeScore']);
+        $this->assertSame(0, $events[0]['awayScore']);
+
+        // Australia's 27' goal — our away — with assist; running score 1-1.
+        $this->assertSame('GOAL', $events[1]['type']);
+        $this->assertSame(27, $events[1]['minute']);
+        $this->assertSame('away', $events[1]['side']);
+        $this->assertSame('Irankunda', $events[1]['player']);
+        $this->assertSame('Okon-Engstler', $events[1]['assist']);
+        $this->assertSame(1, $events[1]['homeScore']);
+        $this->assertSame(1, $events[1]['awayScore']);
+
+        // Half-time marker sorts between the goals and the late card.
+        $this->assertSame('HT', $events[2]['type']);
 
         // Turkey's yellow card — our home side.
-        $this->assertSame('YELLOW_CARD', $events[1]['type']);
-        $this->assertSame(86, $events[1]['minute']);
-        $this->assertSame('home', $events[1]['side']);
-        $this->assertNull($events[1]['assist']);
+        $this->assertSame('YELLOW_CARD', $events[3]['type']);
+        $this->assertSame(86, $events[3]['minute']);
+        $this->assertSame('home', $events[3]['side']);
+        $this->assertNull($events[3]['assist']);
     }
 
     public function test_it_returns_null_when_no_event_matches(): void

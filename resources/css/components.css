@@ -955,6 +955,24 @@
     background: var(--accent);
     color: var(--accent-text);
 }
+/* Substitution icon (ESPN events). */
+.tl-ic.sub {
+    background: color-mix(in srgb, #22c55e 22%, var(--surface-3));
+    color: #16a34a;
+}
+/* Booking cards (ESPN events) — a small coloured card instead of an icon. */
+.tl-card-badge {
+    width: 15px;
+    height: 21px;
+    border-radius: 3px;
+    flex: none;
+}
+.tl-card-badge.yellow {
+    background: #f4c20d;
+}
+.tl-card-badge.red {
+    background: #e0242b;
+}
 .tl-txt {
     display: flex;
     flex-direction: column;

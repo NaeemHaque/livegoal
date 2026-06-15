@@ -38,12 +38,14 @@ const id = computed(() => numericId(props.id));
 const { data: fetched, loading, error, reload } = useMatch(id);
 const matchesStore = useMatchesStore();
 
-// POC: ESPN live layer — a real match clock and official event minutes (which
-// the football-data free tier lacks), shown alongside our inferred timeline for
-// accuracy comparison. See the `espn-keyless-football-api` note.
+// ESPN live layer — a real match clock and official event minutes (goals,
+// assists, cards, subs) that football-data's free tier lacks. Primary source
+// for the live header + timeline; football-data stays the fallback. See the
+// `espn-keyless-football-api` note.
 const { data: espn, reload: reloadEspn } = useApi(
     () => `/matches/${id.value}/espn`,
 );
+const espnLive = computed(() => (espn.value?.found ? espn.value : null));
 
 // The site-wide live poll (matches store) is fresher than the cached
 // single-match endpoint, which can flap to SCHEDULED/null scores mid-match —
@@ -53,21 +55,39 @@ const match = computed(() => {
     const base = fetched.value;
     const live = liveMatch.value;
 
-    if (!live) {
-        return base;
+    // Base: football-data + the (fresher) site-wide live poll.
+    let m = base ?? live;
+
+    if (base && live) {
+        m = {
+            ...base,
+            status: live.status,
+            minute: live.minute ?? base.minute,
+            homeScore: live.homeScore ?? base.homeScore,
+            awayScore: live.awayScore ?? base.awayScore,
+        };
     }
 
-    if (!base) {
-        return live;
+    if (!m) {
+        return null;
     }
 
-    return {
-        ...base,
-        status: live.status,
-        minute: live.minute ?? base.minute,
-        homeScore: live.homeScore ?? base.homeScore,
-        awayScore: live.awayScore ?? base.awayScore,
-    };
+    // ESPN is authoritative for the live clock/status/score when it resolved
+    // this match — football-data values remain the fallback.
+    const e = espnLive.value;
+
+    if (e) {
+        m = {
+            ...m,
+            status: e.status ?? m.status,
+            minute: e.minute ?? m.minute,
+            displayClock: e.displayClock ?? null,
+            homeScore: e.homeScore ?? m.homeScore,
+            awayScore: e.awayScore ?? m.awayScore,
+        };
+    }
+
+    return m;
 });
 
 usePageMeta(() => {
@@ -123,22 +143,13 @@ const standingGroup = computed(() => {
     );
 });
 
-// Self-built goal/period events recorded by the live poller (no player names
-// on the free data tier).
-const events = computed(() => match.value?.events ?? []);
-
-// POC: human labels for ESPN's richer event types in the comparison panel.
-const ESPN_LABELS = {
-    GOAL: '⚽ Goal',
-    OWN_GOAL: '⚽ Own goal',
-    YELLOW_CARD: '🟨 Yellow card',
-    RED_CARD: '🟥 Red card',
-    SUBSTITUTION: '🔁 Substitution',
-    KICKOFF: 'Kick-off',
-    HT: 'Half-time',
-    FT: 'Full-time',
-};
-const espnLabel = (type) => ESPN_LABELS[type] ?? type;
+// Timeline events: ESPN's rich events (scorer, assist, cards, subs, official
+// minutes) when available, else the poller's self-built goal/HT events.
+const timelineEvents = computed(() =>
+    espnLive.value?.events?.length
+        ? espnLive.value.events
+        : (match.value?.events ?? []),
+);
 
 const tabs = computed(() => [
     { id: 'summary', label: 'Summary', icon: IcBall },
@@ -153,7 +164,7 @@ const tabs = computed(() => [
 const summaryDefault = computed(
     () =>
         (isLive.value || match.value?.status === 'FT') &&
-        events.value.length > 0,
+        timelineEvents.value.length > 0,
 );
 
 const tab = ref('details');
@@ -316,41 +327,6 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                 </div>
             </div>
 
-            <!-- POC: ESPN live source — real clock + official event minutes -->
-            <div v-if="espn && espn.found" class="pp-panel pp-espn-poc">
-                <h3 class="panel-title">
-                    <IcBall :size="16" /> ESPN — live source
-                    <span class="pp-espn-tag">POC</span>
-                    <span class="pp-espn-clock tnum">
-                        {{ espn.displayClock || espn.status }} ·
-                        {{ espn.homeScore ?? 0 }}–{{ espn.awayScore ?? 0 }}
-                    </span>
-                </h3>
-                <ul v-if="espn.events.length" class="pp-espn-events">
-                    <li
-                        v-for="(ev, i) in espn.events"
-                        :key="i"
-                        :class="ev.side"
-                    >
-                        <span class="min tnum">{{
-                            ev.clock ||
-                            (ev.minute != null ? ev.minute + "'" : '·')
-                        }}</span>
-                        <span class="lbl">{{ espnLabel(ev.type) }}</span>
-                        <span class="who"
-                            >{{ ev.player
-                            }}<template v-if="ev.assist">
-                                · {{ ev.assist }}</template
-                            ></span
-                        >
-                    </li>
-                </ul>
-                <p class="pp-espn-note">
-                    Real clock and official event minutes from ESPN — compare
-                    against the inferred header clock and the Summary timeline.
-                </p>
-            </div>
-
             <!-- Tabs -->
             <div class="pp-tabs" style="margin-bottom: 18px">
                 <button
@@ -377,9 +353,9 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                     </span>
                 </h3>
                 <MatchTimeline
-                    v-if="events.length"
+                    v-if="timelineEvents.length"
                     :match="match"
-                    :events="events"
+                    :events="timelineEvents"
                 />
                 <EmptyState
                     v-else
@@ -428,66 +404,3 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
         <EmptyState v-else title="Match not found" />
     </div>
 </template>
-
-<style scoped>
-/* POC: ESPN live-source comparison panel (temporary; remove or fold into the
-   main timeline once the source is validated). */
-.pp-espn-poc {
-    margin-bottom: 18px;
-    border: 1px dashed var(--accent);
-}
-
-.pp-espn-tag {
-    margin-left: 8px;
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: var(--accent);
-    color: #0a0d12;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-}
-
-.pp-espn-clock {
-    margin-left: auto;
-    font-weight: 700;
-}
-
-.pp-espn-events {
-    list-style: none;
-    margin: 12px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.pp-espn-events li {
-    display: grid;
-    grid-template-columns: 56px 130px 1fr;
-    align-items: baseline;
-    gap: 10px;
-    padding: 6px 8px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--card) 60%, transparent);
-}
-
-.pp-espn-events li.away {
-    text-align: left;
-}
-
-.pp-espn-events .min {
-    font-weight: 700;
-    opacity: 0.75;
-}
-
-.pp-espn-events .who {
-    opacity: 0.85;
-}
-
-.pp-espn-note {
-    margin: 12px 0 0;
-    font-size: 12px;
-    opacity: 0.6;
-}
-</style>

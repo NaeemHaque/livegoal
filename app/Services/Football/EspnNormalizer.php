@@ -243,7 +243,7 @@ class EspnNormalizer
     private function events(?array $summary, ?string $homeTeamId, ?string $awayTeamId): array
     {
         $keyEvents = is_array($summary['keyEvents'] ?? null) ? $summary['keyEvents'] : [];
-        $out = [];
+        $rows = [];
 
         foreach ($keyEvents as $event) {
             if (! is_array($event)) {
@@ -263,19 +263,74 @@ class EspnNormalizer
                 default => null,
             };
 
+            $clock = $this->str(data_get($event, 'clock.displayValue')) ?: null;
             $participants = is_array($event['participants'] ?? null) ? $event['participants'] : [];
 
-            $out[] = [
+            $rows[] = [
+                'sort' => $this->sortKey($clock),
                 'type' => $type,
-                'minute' => $this->parseMinute($this->str(data_get($event, 'clock.displayValue'))),
-                'clock' => $this->str(data_get($event, 'clock.displayValue')) ?: null,
+                'minute' => $this->parseMinute($clock),
+                'clock' => $clock,
                 'side' => $teamId === '' ? null : $side,
                 'player' => $this->participant($participants, 0),
                 'assist' => $type === 'GOAL' ? $this->participant($participants, 1) : null,
+                'homeScore' => null,
+                'awayScore' => null,
             ];
         }
 
-        return $out;
+        // Chronological order — ESPN's keyEvents arrive slightly out of order
+        // (e.g. a 45' substitution after the 45'+5' half-time marker).
+        usort($rows, fn (array $a, array $b): int => (int) $a['sort'] <=> (int) $b['sort']);
+
+        // Stamp the running score on each goal so the timeline shows the
+        // scoreline alongside the scorer (an own goal counts for the opponent).
+        $home = 0;
+        $away = 0;
+
+        foreach ($rows as $i => $row) {
+            if ($row['type'] === 'GOAL') {
+                if ($row['side'] === 'home') {
+                    $home++;
+                } elseif ($row['side'] === 'away') {
+                    $away++;
+                }
+            } elseif ($row['type'] === 'OWN_GOAL') {
+                if ($row['side'] === 'home') {
+                    $away++;
+                } elseif ($row['side'] === 'away') {
+                    $home++;
+                }
+            }
+
+            if ($row['type'] === 'GOAL' || $row['type'] === 'OWN_GOAL') {
+                $rows[$i]['homeScore'] = $home;
+                $rows[$i]['awayScore'] = $away;
+            }
+        }
+
+        return array_map(function (array $row): array {
+            unset($row['sort']);
+
+            return $row;
+        }, $rows);
+    }
+
+    /**
+     * A chronological sort key from a display clock: base minute, then any
+     * stoppage. "45'+5'" => 4505, "67'" => 6700, kickoff (no clock) => 0.
+     */
+    private function sortKey(?string $clock): int
+    {
+        if ($clock === null || $clock === '') {
+            return 0;
+        }
+
+        preg_match_all('/\d+/', $clock, $matches);
+        $base = isset($matches[0][0]) ? (int) $matches[0][0] : 0;
+        $extra = isset($matches[0][1]) ? (int) $matches[0][1] : 0;
+
+        return $base * 100 + $extra;
     }
 
     /**
