@@ -128,7 +128,56 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 php artisan migrate --force
 php artisan config:cache && php artisan route:cache && php artisan view:cache
+php artisan queue:restart            # let the push worker pick up the new code (see §9)
 ```
+
+## 9. Push notifications (queue worker + VAPID)
+
+Goal / full-time **web-push alerts** (see [`PUSH_NOTIFICATIONS.md`](PUSH_NOTIFICATIONS.md)) are sent as
+**queued** notifications, so production needs a **running queue worker** — without one the jobs pile up in the
+`jobs` table and nothing is ever delivered. With `QUEUE_CONNECTION=database` (the default) no broker is needed.
+
+**VAPID keys** (one-time). Generate a keypair into `.env`, set the subject, then rebuild the config cache so
+the public key reaches the SPA's `<meta name="vapid-public-key">`:
+
+```bash
+php artisan webpush:vapid          # writes VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY to .env
+# set VAPID_SUBJECT=mailto:you@yourdomain in .env (keep the private key quoted — it can contain newlines)
+php artisan config:cache
+```
+
+> Keys are stable: **do not regenerate** once subscribers exist, or every existing subscription breaks.
+
+**Queue worker** (systemd). One always-on worker drains the queue within the poll cycle:
+
+```ini
+# /etc/systemd/system/livegoal-queue.service
+[Unit]
+Description=LiveGoal queue worker
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/livegoal
+ExecStart=/usr/bin/php artisan queue:work --sleep=1 --tries=3 --max-time=3600
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now livegoal-queue     # start + run on boot
+sudo systemctl status livegoal-queue           # confirm "active (running)"
+```
+
+`--max-time=3600` recycles the worker hourly to cap memory; `php artisan queue:restart` (in §8) tells it to
+reload code on each deploy. Expired endpoints are pruned automatically on send; orphaned subscribers are swept
+by the daily `model:prune` schedule. Smoke-test end to end with `php artisan app:push-test` (sends a demo goal
+to every subscriber — keep the browser tab **hidden**, since visible tabs suppress the OS notification).
 
 ## Laravel Cloud (zero-config alternative)
 
