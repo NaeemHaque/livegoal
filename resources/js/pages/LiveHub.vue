@@ -32,6 +32,7 @@ const favorites = useFavoritesStore();
 const { data: upcomingData, loading } = useUpcoming();
 const { data: resultsData } = useResults();
 const { data: standings } = useStandings('PL');
+const { data: wcStandings } = useStandings('WC');
 const { data: wcScorers } = useScorers('WC');
 const { data: leagueScorers } = useScorers('PL');
 const time = useTimeFormat();
@@ -66,11 +67,6 @@ const nextMatch = computed(() => upcomingScheduled.value[0] ?? null);
 // Recent finished fixtures (server-aggregated, newest first) for the Finished tab.
 const finishedRecent = computed(() => resultsData.value ?? []);
 
-// Top of the table — a league standings snapshot.
-const tableRows = computed(() =>
-    (standings.value?.groups?.[0]?.rows ?? []).slice(0, 6),
-);
-
 // Feature the World Cup scorers while it's upcoming or under way; once it's no
 // longer current (no fixtures, no scorers) fall back to a league's golden boot.
 const wcCurrent = computed(
@@ -89,6 +85,40 @@ const topScorers = computed(() =>
 );
 const wcStartLabel = computed(() =>
     nextMatch.value ? time.date(nextMatch.value.kickoff) : null,
+);
+
+// Top of the table — the World Cup group standings while the WC is on, else a
+// league snapshot. For the WC, prefer a group containing a followed team so the
+// rail is relevant; otherwise the first group.
+const tableStandings = computed(() =>
+    wcCurrent.value ? wcStandings.value : standings.value,
+);
+const tableGroup = computed(() => {
+    const groups = tableStandings.value?.groups ?? [];
+
+    if (!groups.length) {
+        return null;
+    }
+
+    if (wcCurrent.value) {
+        const followed = favorites.teamIds;
+        const withFav = groups.find((g) =>
+            g.rows?.some((r) => followed.includes(String(r.team?.id))),
+        );
+
+        return withFav ?? groups[0];
+    }
+
+    return groups[0];
+});
+const tableRows = computed(() => (tableGroup.value?.rows ?? []).slice(0, 6));
+const tableLabel = computed(() =>
+    wcCurrent.value
+        ? (tableGroup.value?.label ?? 'World Cup')
+        : 'Premier League',
+);
+const tableLink = computed(() =>
+    wcCurrent.value ? '/competition/WC' : '/competition/PL',
 );
 
 // Fixture groups keyed by competition, each carrying up to 4 upcoming and 4
@@ -391,11 +421,9 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                 <div v-if="tableRows.length" class="pp-rail-card">
                     <div class="rc-head">
                         <span>Top of the table</span>
-                        <span
-                            class="more"
-                            @click="router.push('/competition/PL')"
-                            >Premier League</span
-                        >
+                        <span class="more" @click="router.push(tableLink)">{{
+                            tableLabel
+                        }}</span>
                     </div>
                     <div class="rc-body">
                         <StandingsTable
