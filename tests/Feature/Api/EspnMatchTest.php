@@ -105,4 +105,26 @@ class EspnMatchTest extends TestCase
         $response->assertJsonPath('data.found', false);
         $response->assertJsonPath('data.events', []);
     }
+
+    public function test_it_resolves_a_match_listed_on_an_adjacent_espn_day(): void
+    {
+        // Kickoff is 01:00 UTC on the 16th (football-data's date), but ESPN
+        // buckets it under the 15th (US calendar). The day-neighbour probe
+        // must still find it.
+        $fd = $this->footballDataMatch();
+        $fd['utcDate'] = '2026-06-16T01:00:00Z';
+
+        Http::fake([
+            '*api.football-data.org/v4/matches/777' => Http::response($fd, 200),
+            '*fifa.world/scoreboard?dates=20260615*' => Http::response($this->espnScoreboard(), 200),
+            '*fifa.world/scoreboard*' => Http::response(['events' => []], 200),
+            '*fifa.world/summary*' => Http::response($this->espnSummary(), 200),
+        ]);
+
+        $response = $this->getJson('/api/matches/777/espn');
+
+        $response->assertOk();
+        $response->assertJsonPath('data.found', true);
+        $response->assertJsonPath('data.minute', 67);
+    }
 }

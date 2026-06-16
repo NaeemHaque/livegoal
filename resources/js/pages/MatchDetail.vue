@@ -77,9 +77,18 @@ const match = computed(() => {
     const e = espnLive.value;
 
     if (e) {
+        // Never let a stale/pre ESPN scoreboard revert an already-started match
+        // back to SCHEDULED: that flips isLive off and pauses the refresh poll,
+        // stranding the page. Forward transitions (LIVE→HT/FT) are still taken.
+        const started = ['LIVE', 'HT', 'ET', 'PEN', 'FT'].includes(m.status);
+        const status =
+            started && e.status === 'SCHEDULED'
+                ? m.status
+                : (e.status ?? m.status);
+
         m = {
             ...m,
-            status: e.status ?? m.status,
+            status,
             minute: e.minute ?? m.minute,
             displayClock: e.displayClock ?? null,
             homeScore: e.homeScore ?? m.homeScore,

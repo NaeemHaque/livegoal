@@ -127,12 +127,12 @@ class MatchController extends Controller
     }
 
     /**
-     * Proof-of-concept: live data for this match from ESPN's keyless API — a
-     * real match clock and official event minutes, which football-data's free
-     * tier doesn't provide. Resolved from the football-data match's teams +
-     * date; returns a `found: false` envelope when no ESPN event matches (the
-     * frontend then simply hides the panel). See the `espn-keyless-football-api`
-     * note. football-data stays the source of record; this only augments.
+     * Live data for this match from ESPN's keyless API — a real match clock and
+     * official event minutes (goals, assists, cards, subs) the football-data
+     * free tier lacks. Resolved from the football-data match's teams + date.
+     * Returns a `found: false` envelope when no ESPN event matches, so the
+     * frontend falls back to the inferred timeline. See the
+     * `espn-keyless-football-api` note. football-data stays the source of record.
      */
     public function espn(string $id): JsonResponse
     {
@@ -150,12 +150,26 @@ class MatchController extends Controller
             return response()->json(['data' => $this->espnNormalizer->notFound()]);
         }
 
-        $scoreboard = $this->espn->scoreboard($slug, Date::parse($kickoff)->toDateString());
-
-        $resolved = $this->espnNormalizer->resolve($scoreboard, [
+        $teams = [
             'home' => ['tla' => $this->asString(data_get($match, 'home.tla')), 'name' => $this->asString(data_get($match, 'home.name'))],
             'away' => ['tla' => $this->asString(data_get($match, 'away.tla')), 'name' => $this->asString(data_get($match, 'away.name'))],
-        ]);
+        ];
+
+        // ESPN buckets a fixture by its own (US-leaning) calendar day, which can
+        // differ from football-data's UTC date for kickoffs near a day boundary
+        // (e.g. early-UTC World Cup matches). Probe the scheduled day and its
+        // neighbours — each scoreboard is briefly cached — so those still resolve.
+        $kickoffDate = Date::parse($kickoff);
+        $resolved = null;
+
+        foreach ([0, -1, 1] as $offset) {
+            $date = $kickoffDate->copy()->addDays($offset)->toDateString();
+            $resolved = $this->espnNormalizer->resolve($this->espn->scoreboard($slug, $date), $teams);
+
+            if ($resolved !== null) {
+                break;
+            }
+        }
 
         if ($resolved === null) {
             return response()->json(['data' => $this->espnNormalizer->notFound()]);
