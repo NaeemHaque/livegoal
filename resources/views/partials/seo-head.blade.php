@@ -54,7 +54,10 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0A0D12">
-{{-- iOS web push requires the site installed to the Home Screen (16.4+). --}}
+{{-- "Install to Home Screen" capability: the standard tag (Chrome warns when
+     only the Apple alias is present) plus the Apple alias that iOS Safari still
+     reads — iOS web push requires the installed Home-Screen app (16.4+). --}}
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="LiveGoal">
 
