@@ -1,9 +1,15 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import Crest from '@/components/Crest.vue';
-import { IcArrowR, IcCalendar, IcClock, IcTrophy } from '@/components/icons';
+import {
+    IcArrowR,
+    IcCalendar,
+    IcCheck,
+    IcClock,
+    IcTrophy,
+} from '@/components/icons';
 import InlineLoader from '@/components/InlineLoader.vue';
 import LivePulseBadge from '@/components/LivePulseBadge.vue';
 import MatchCard from '@/components/MatchCard.vue';
@@ -11,6 +17,7 @@ import NextKickoff from '@/components/NextKickoff.vue';
 import SectionHead from '@/components/SectionHead.vue';
 import StandingsTable from '@/components/StandingsTable.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
+import { useResults } from '@/composables/useResults';
 import { useScorers } from '@/composables/useScorers';
 import { useStandings } from '@/composables/useStandings';
 import { useTimeFormat } from '@/composables/useTimeFormat';
@@ -23,6 +30,7 @@ const matches = useMatchesStore();
 const favorites = useFavoritesStore();
 
 const { data: upcomingData, loading } = useUpcoming();
+const { data: resultsData } = useResults();
 const { data: standings } = useStandings('PL');
 const { data: wcScorers } = useScorers('WC');
 const { data: leagueScorers } = useScorers('PL');
@@ -53,8 +61,10 @@ const upcomingScheduled = computed(() =>
         (m) => !matches.byId(m.id) && !matches.finalById(m.id),
     ),
 );
-const upcoming = computed(() => upcomingScheduled.value.slice(0, 6));
 const nextMatch = computed(() => upcomingScheduled.value[0] ?? null);
+
+// Recent finished fixtures (server-aggregated, newest first) for the Finished tab.
+const finishedRecent = computed(() => resultsData.value ?? []);
 
 // Top of the table — a league standings snapshot.
 const tableRows = computed(() =>
@@ -81,21 +91,51 @@ const wcStartLabel = computed(() =>
     nextMatch.value ? time.date(nextMatch.value.kickoff) : null,
 );
 
-const upcomingGroups = computed(() => {
+// Fixture groups keyed by competition, each carrying up to 4 upcoming and 4
+// recent finished matches for the Upcoming / Finished tabs. Groups are defined
+// by the competitions that have upcoming fixtures, so a competition with only
+// old finished matches doesn't create a stale block.
+const fixtureGroups = computed(() => {
     const groups = new Map();
 
-    for (const m of upcoming.value) {
+    for (const m of upcomingScheduled.value) {
         const key = m.competition?.id ?? '?';
 
         if (!groups.has(key)) {
-            groups.set(key, { competition: m.competition, matches: [] });
+            groups.set(key, {
+                competition: m.competition,
+                upcoming: [],
+                finished: [],
+            });
         }
 
-        groups.get(key).matches.push(m);
+        const group = groups.get(key);
+
+        if (group.upcoming.length < 4) {
+            group.upcoming.push(m);
+        }
+    }
+
+    for (const m of finishedRecent.value) {
+        const group = groups.get(m.competition?.id ?? '?');
+
+        if (group && group.finished.length < 4) {
+            group.finished.push(m);
+        }
     }
 
     return [...groups.values()];
 });
+
+// Per-group tab selection (competition id -> 'upcoming' | 'finished').
+const fixtureTabs = ref({});
+const tabFor = (group) =>
+    fixtureTabs.value[group.competition?.id] ?? 'upcoming';
+const setFixtureTab = (group, tab) => {
+    fixtureTabs.value = { ...fixtureTabs.value, [group.competition?.id]: tab };
+};
+const groupMatches = (group) =>
+    tabFor(group) === 'finished' ? group.finished : group.upcoming;
 
 const openMatch = (m) => router.push(`/match/${m.id}`);
 const isFav = (m) => favorites.isMatchFavorite(m);
@@ -197,41 +237,58 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                     />
                 </div>
 
-                <!-- Upcoming today -->
+                <!-- Featured competition fixtures: Upcoming / Finished tabs -->
                 <div class="pp-section">
-                    <div class="pp-section-head">
-                        <span class="sh-title"
-                            ><IcClock :size="17" /> Upcoming</span
-                        >
-                        <span class="sh-line" />
-                        <button
-                            class="pp-btn ghost sm"
-                            type="button"
-                            @click="router.push('/matches')"
-                        >
-                            All fixtures <IcArrowR :size="14" />
-                        </button>
-                    </div>
-
                     <InlineLoader
                         v-if="loading"
                         label="Loading fixtures"
                         :min-height="180"
                     />
-                    <template v-else-if="upcomingGroups.length">
+                    <template v-else-if="fixtureGroups.length">
                         <div
-                            v-for="(group, i) in upcomingGroups"
+                            v-for="group in fixtureGroups"
                             :key="group.competition?.id"
-                            style="margin-bottom: 18px"
+                            class="pp-fixture-group"
                         >
-                            <SectionHead
-                                :competition="group.competition"
-                                :count="group.matches.length"
-                                :line="i !== 0"
-                            />
-                            <div class="pp-grid cols-2">
+                            <SectionHead :competition="group.competition">
+                                <button
+                                    class="pp-btn ghost sm"
+                                    type="button"
+                                    @click="router.push('/matches')"
+                                >
+                                    All fixtures <IcArrowR :size="14" />
+                                </button>
+                            </SectionHead>
+
+                            <div class="pp-tabs hub-fixture-tabs">
+                                <button
+                                    class="tab"
+                                    type="button"
+                                    :class="{
+                                        on: tabFor(group) === 'upcoming',
+                                    }"
+                                    @click="setFixtureTab(group, 'upcoming')"
+                                >
+                                    <IcClock :size="14" /> Upcoming
+                                </button>
+                                <button
+                                    class="tab"
+                                    type="button"
+                                    :class="{
+                                        on: tabFor(group) === 'finished',
+                                    }"
+                                    @click="setFixtureTab(group, 'finished')"
+                                >
+                                    <IcCheck :size="14" /> Finished
+                                </button>
+                            </div>
+
+                            <div
+                                v-if="groupMatches(group).length"
+                                class="pp-grid cols-2"
+                            >
                                 <MatchCard
-                                    v-for="m in group.matches"
+                                    v-for="m in groupMatches(group)"
                                     :key="m.id"
                                     :match="m"
                                     :fav="isFav(m)"
@@ -240,11 +297,24 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                                     @fav="toggleFav(m)"
                                 />
                             </div>
+                            <EmptyState
+                                v-else
+                                :title="
+                                    tabFor(group) === 'finished'
+                                        ? 'No finished matches yet'
+                                        : 'No upcoming fixtures'
+                                "
+                                :text="
+                                    tabFor(group) === 'finished'
+                                        ? 'Recent results will appear here.'
+                                        : 'Scheduled matches will appear here.'
+                                "
+                            />
                         </div>
                     </template>
                     <EmptyState
                         v-else
-                        title="No upcoming fixtures"
+                        title="No fixtures"
                         text="Scheduled matches will appear here as soon as they're announced."
                     />
                 </div>
@@ -366,5 +436,16 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
     font-weight: 800;
     color: var(--text-faint);
     line-height: 1;
+}
+
+/* Per-competition fixture block (FIFA World Cup … with Upcoming/Finished tabs). */
+.pp-fixture-group {
+    margin-bottom: 24px;
+}
+.pp-fixture-group:last-child {
+    margin-bottom: 0;
+}
+.hub-fixture-tabs {
+    margin: 6px 0 14px;
 }
 </style>
