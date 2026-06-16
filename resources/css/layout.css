@@ -423,6 +423,28 @@
     height: 1px;
     background: var(--border);
 }
+/* Collapsible section header (button reusing the section-head layout). */
+.pp-collapse-head {
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+.pp-collapse-chev {
+    flex: none;
+    color: var(--text-muted);
+    transition: transform var(--dur-fast);
+}
+.pp-collapse-chev.collapsed {
+    transform: rotate(-90deg);
+}
+.pp-collapse-head:hover .pp-collapse-chev {
+    color: var(--text);
+}
 .pp-grid {
     display: grid;
     gap: 12px;

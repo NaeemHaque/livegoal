@@ -2,13 +2,13 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
+import CollapsibleSection from '@/components/CollapsibleSection.vue';
 import CountryFilter from '@/components/CountryFilter.vue';
 import DateNavigator from '@/components/DateNavigator.vue';
 import FilterTabs from '@/components/FilterTabs.vue';
 import FormationLoader from '@/components/FormationLoader.vue';
 import { IcClock, IcLive, IcStar } from '@/components/icons';
 import MatchCard from '@/components/MatchCard.vue';
-import SectionHead from '@/components/SectionHead.vue';
 import EmptyState from '@/components/states/EmptyState.vue';
 import ErrorState from '@/components/states/ErrorState.vue';
 import { useDayMatches } from '@/composables/useDayMatches';
@@ -208,6 +208,22 @@ const showUpcoming = computed(
         (!dateSelected.value || all.value.length === 0),
 );
 
+// Cap the (potentially huge) cross-day upcoming list to a few days, revealed in
+// steps — the whole-tournament schedule otherwise means endless scrolling.
+const DAYS_STEP = 3;
+const visibleDays = ref(DAYS_STEP);
+const shownUpcomingDays = computed(() =>
+    upcomingByDate.value.slice(0, visibleDays.value),
+);
+const loadMoreDays = () => {
+    visibleDays.value += DAYS_STEP;
+};
+
+// Reset the day window whenever the view (tab / date / country filter) changes.
+watch([filter, date, countries], () => {
+    visibleDays.value = DAYS_STEP;
+});
+
 const open = (m) => router.push(`/match/${m.id}`);
 const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 </script>
@@ -268,14 +284,13 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                 >
                 <span class="sh-line" />
             </div>
-            <div v-for="g in upcomingByDate" :key="g.label" class="pp-section">
-                <div class="pp-section-head">
-                    <span class="sh-title" style="font-size: 14px">{{
-                        g.label
-                    }}</span>
-                    <span class="sh-count">{{ g.matches.length }}</span>
-                    <span class="sh-line" />
-                </div>
+            <CollapsibleSection
+                v-for="(g, i) in shownUpcomingDays"
+                :key="g.label"
+                :title="g.label"
+                :count="g.matches.length"
+                :default-open="i === 0"
+            >
                 <div class="pp-grid cols-2">
                     <MatchCard
                         v-for="m in g.matches"
@@ -286,7 +301,16 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         @fav="toggleFav(m)"
                     />
                 </div>
-            </div>
+            </CollapsibleSection>
+            <button
+                v-if="upcomingByDate.length > shownUpcomingDays.length"
+                type="button"
+                class="pp-btn ghost"
+                style="margin: 4px auto 8px; display: flex"
+                @click="loadMoreDays"
+            >
+                Load more days
+            </button>
         </template>
 
         <EmptyState
@@ -296,14 +320,14 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
         />
 
         <template v-else>
-            <div v-if="favMatches.length" class="pp-section">
-                <div class="pp-section-head">
-                    <span class="sh-title"
-                        ><IcStar :size="16" style="color: var(--draw)" />
-                        Following</span
-                    >
-                    <span class="sh-line" />
-                </div>
+            <CollapsibleSection
+                v-if="favMatches.length"
+                title="Following"
+                :count="favMatches.length"
+            >
+                <template #icon
+                    ><IcStar :size="16" style="color: var(--draw)"
+                /></template>
                 <div class="pp-grid cols-2">
                     <MatchCard
                         v-for="m in favMatches"
@@ -315,17 +339,15 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         @fav="toggleFav(m)"
                     />
                 </div>
-            </div>
+            </CollapsibleSection>
 
-            <div
-                v-for="group in restGroups"
+            <CollapsibleSection
+                v-for="(group, i) in restGroups"
                 :key="group.competition?.id"
-                class="pp-section"
+                :competition="group.competition"
+                :count="group.matches.length"
+                :default-open="i === 0"
             >
-                <SectionHead
-                    :competition="group.competition"
-                    :count="group.matches.length"
-                />
                 <div class="pp-grid cols-2">
                     <MatchCard
                         v-for="m in group.matches"
@@ -337,7 +359,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         @fav="toggleFav(m)"
                     />
                 </div>
-            </div>
+            </CollapsibleSection>
         </template>
     </div>
 </template>
