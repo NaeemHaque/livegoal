@@ -161,6 +161,33 @@ export const IcCheck = lineIcon([['path', { d: 'm4.5 12.5 5 5 10-11' }]]);
 
 export const IcArrowR = lineIcon([['path', { d: 'M4 12h15m-6-6 6 6-6 6' }]]);
 
+/**
+ * Substitution: the classic two-colour symbol — a green up arrow (player on)
+ * beside a red down arrow (player off). Two-tone, so it can't use `lineIcon`'s
+ * single currentColor.
+ */
+export const IcSubstitution = (props) =>
+    h(
+        'svg',
+        {
+            width: props.size ?? 20,
+            height: props.size ?? 20,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            'stroke-width': 1.9,
+            'stroke-linecap': 'round',
+            'stroke-linejoin': 'round',
+            'aria-hidden': 'true',
+        },
+        [
+            h('path', { d: 'M8 18.5V7', stroke: '#16a34a' }),
+            h('path', { d: 'M4.8 10.2 8 7l3.2 3.2', stroke: '#16a34a' }),
+            h('path', { d: 'M16 5.5V17', stroke: '#dc2626' }),
+            h('path', { d: 'M12.8 13.8 16 17l3.2-3.2', stroke: '#dc2626' }),
+        ],
+    );
+IcSubstitution.props = ['size'];
+
 export const IcClose = lineIcon([['path', { d: 'M6 6l12 12M18 6 6 18' }]]);
 
 export const IcUsers = lineIcon([

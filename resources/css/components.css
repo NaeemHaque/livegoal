@@ -955,10 +955,9 @@
     background: var(--accent);
     color: var(--accent-text);
 }
-/* Substitution icon (ESPN events). */
+/* Substitution icon box — neutral; the IcSubstitution arrows carry the colour. */
 .tl-ic.sub {
-    background: color-mix(in srgb, #22c55e 22%, var(--surface-3));
-    color: #16a34a;
+    background: var(--surface-3);
 }
 /* Booking cards (ESPN events) — a small coloured card instead of an icon. */
 .tl-card-badge {

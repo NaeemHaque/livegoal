@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 
 import Crest from '@/components/Crest.vue';
-import { IcBall, IcRefresh, IcWhistle } from '@/components/icons';
+import { IcBall, IcSubstitution, IcWhistle } from '@/components/icons';
 
 /**
  * Vertical match-events timeline (center spine, home events left, away events
@@ -121,7 +121,7 @@ const detail = (ev) => {
                             aria-label="Red card"
                         />
                         <span v-else class="tl-ic sub"
-                            ><IcRefresh :size="15"
+                            ><IcSubstitution :size="16"
                         /></span>
                         <Crest :team="team(ev.side)" :size="22" />
                         <span class="tl-txt">
