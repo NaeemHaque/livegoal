@@ -1016,6 +1016,31 @@
     z-index: 1;
     white-space: nowrap;
 }
+/* Mobile: the two-sided spine squeezes each card to ~140px, truncating names
+   and stacking text into tall blocks. Collapse to a single left-spine column
+   so every event card gets the full width. */
+@media (max-width: 640px) {
+    .pp-timeline::before {
+        left: 25px;
+    }
+    .pp-tl-row {
+        grid-template-columns: 50px 1fr;
+        gap: 10px;
+    }
+    .pp-tl-row .tl-side.home,
+    .pp-tl-row .tl-side.away {
+        grid-column: 2;
+        grid-row: 1;
+        justify-content: flex-start;
+    }
+    .pp-tl-row .tl-min {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .pp-tl-row .tl-card {
+        width: 100%;
+    }
+}
 
 /* ---------- Pitch / formation ---------- */
 .pp-formation {
