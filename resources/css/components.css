@@ -955,6 +955,23 @@
     background: var(--accent);
     color: var(--accent-text);
 }
+/* Substitution icon box — neutral; the IcSubstitution arrows carry the colour. */
+.tl-ic.sub {
+    background: var(--surface-3);
+}
+/* Booking cards (ESPN events) — a small coloured card instead of an icon. */
+.tl-card-badge {
+    width: 15px;
+    height: 21px;
+    border-radius: 3px;
+    flex: none;
+}
+.tl-card-badge.yellow {
+    background: #f4c20d;
+}
+.tl-card-badge.red {
+    background: #e0242b;
+}
 .tl-txt {
     display: flex;
     flex-direction: column;
@@ -998,6 +1015,31 @@
     border: 1px solid var(--border);
     z-index: 1;
     white-space: nowrap;
+}
+/* Mobile: the two-sided spine squeezes each card to ~140px, truncating names
+   and stacking text into tall blocks. Collapse to a single left-spine column
+   so every event card gets the full width. */
+@media (max-width: 640px) {
+    .pp-timeline::before {
+        left: 25px;
+    }
+    .pp-tl-row {
+        grid-template-columns: 50px 1fr;
+        gap: 10px;
+    }
+    .pp-tl-row .tl-side.home,
+    .pp-tl-row .tl-side.away {
+        grid-column: 2;
+        grid-row: 1;
+        justify-content: flex-start;
+    }
+    .pp-tl-row .tl-min {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .pp-tl-row .tl-card {
+        width: 100%;
+    }
 }
 
 /* ---------- Pitch / formation ---------- */

@@ -38,6 +38,15 @@ const id = computed(() => numericId(props.id));
 const { data: fetched, loading, error, reload } = useMatch(id);
 const matchesStore = useMatchesStore();
 
+// ESPN live layer — a real match clock and official event minutes (goals,
+// assists, cards, subs) that football-data's free tier lacks. Primary source
+// for the live header + timeline; football-data stays the fallback. See the
+// `espn-keyless-football-api` note.
+const { data: espn, reload: reloadEspn } = useApi(
+    () => `/matches/${id.value}/espn`,
+);
+const espnLive = computed(() => (espn.value?.found ? espn.value : null));
+
 // The site-wide live poll (matches store) is fresher than the cached
 // single-match endpoint, which can flap to SCHEDULED/null scores mid-match —
 // prefer the live entry's status, minute and score whenever it has this match.
@@ -46,21 +55,48 @@ const match = computed(() => {
     const base = fetched.value;
     const live = liveMatch.value;
 
-    if (!live) {
-        return base;
+    // Base: football-data + the (fresher) site-wide live poll.
+    let m = base ?? live;
+
+    if (base && live) {
+        m = {
+            ...base,
+            status: live.status,
+            minute: live.minute ?? base.minute,
+            homeScore: live.homeScore ?? base.homeScore,
+            awayScore: live.awayScore ?? base.awayScore,
+        };
     }
 
-    if (!base) {
-        return live;
+    if (!m) {
+        return null;
     }
 
-    return {
-        ...base,
-        status: live.status,
-        minute: live.minute ?? base.minute,
-        homeScore: live.homeScore ?? base.homeScore,
-        awayScore: live.awayScore ?? base.awayScore,
-    };
+    // ESPN is authoritative for the live clock/status/score when it resolved
+    // this match — football-data values remain the fallback.
+    const e = espnLive.value;
+
+    if (e) {
+        // Never let a stale/pre ESPN scoreboard revert an already-started match
+        // back to SCHEDULED: that flips isLive off and pauses the refresh poll,
+        // stranding the page. Forward transitions (LIVE→HT/FT) are still taken.
+        const started = ['LIVE', 'HT', 'ET', 'PEN', 'FT'].includes(m.status);
+        const status =
+            started && e.status === 'SCHEDULED'
+                ? m.status
+                : (e.status ?? m.status);
+
+        m = {
+            ...m,
+            status,
+            minute: e.minute ?? m.minute,
+            displayClock: e.displayClock ?? null,
+            homeScore: e.homeScore ?? m.homeScore,
+            awayScore: e.awayScore ?? m.awayScore,
+        };
+    }
+
+    return m;
 });
 
 usePageMeta(() => {
@@ -80,7 +116,14 @@ const isScheduled = computed(() =>
 
 // Live matches refresh every 20s while the tab is visible (ScoreDigit flips on change).
 const visibility = useDocumentVisibility();
-const { pause, resume } = useIntervalFn(reload, 20000, { immediate: false });
+const { pause, resume } = useIntervalFn(
+    () => {
+        reload();
+        reloadEspn();
+    },
+    20000,
+    { immediate: false },
+);
 watchEffect(() =>
     isLive.value && visibility.value === 'visible' ? resume() : pause(),
 );
@@ -109,9 +152,13 @@ const standingGroup = computed(() => {
     );
 });
 
-// Self-built goal/period events recorded by the live poller (no player names
-// on the free data tier).
-const events = computed(() => match.value?.events ?? []);
+// Timeline events: ESPN's rich events (scorer, assist, cards, subs, official
+// minutes) when available, else the poller's self-built goal/HT events.
+const timelineEvents = computed(() =>
+    espnLive.value?.events?.length
+        ? espnLive.value.events
+        : (match.value?.events ?? []),
+);
 
 const tabs = computed(() => [
     { id: 'summary', label: 'Summary', icon: IcBall },
@@ -126,7 +173,7 @@ const tabs = computed(() => [
 const summaryDefault = computed(
     () =>
         (isLive.value || match.value?.status === 'FT') &&
-        events.value.length > 0,
+        timelineEvents.value.length > 0,
 );
 
 const tab = ref('details');
@@ -315,9 +362,9 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                     </span>
                 </h3>
                 <MatchTimeline
-                    v-if="events.length"
+                    v-if="timelineEvents.length"
                     :match="match"
-                    :events="events"
+                    :events="timelineEvents"
                 />
                 <EmptyState
                     v-else

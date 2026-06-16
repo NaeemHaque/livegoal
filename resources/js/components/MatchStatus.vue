@@ -13,8 +13,12 @@ const props = defineProps({
 
 const time = useTimeFormat();
 const status = computed(() => props.match.status);
-const minuteLabel = computed(() =>
-    props.match.minute != null ? `${props.match.minute}'` : 'LIVE',
+// Prefer ESPN's display clock ("45'+2'") when present (set on the match-detail
+// view); otherwise the bare minute, or just "LIVE" until we have one.
+const minuteLabel = computed(
+    () =>
+        props.match.displayClock ||
+        (props.match.minute != null ? `${props.match.minute}'` : 'LIVE'),
 );
 const kickoffLabel = computed(() =>
     props.showDate
