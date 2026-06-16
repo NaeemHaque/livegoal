@@ -289,7 +289,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                 :key="g.label"
                 :title="g.label"
                 :count="g.matches.length"
-                :default-open="i === 0"
+                :default-open="i < 2"
             >
                 <div class="pp-grid cols-2">
                     <MatchCard
