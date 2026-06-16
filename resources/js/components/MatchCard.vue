@@ -6,6 +6,7 @@ import FavoriteStar from '@/components/FavoriteStar.vue';
 import { IcPin, IcWhistle } from '@/components/icons';
 import MatchStatus from '@/components/MatchStatus.vue';
 import ScoreDisplay from '@/components/ScoreDisplay.vue';
+import { useTimeFormat } from '@/composables/useTimeFormat';
 
 const props = defineProps({
     match: { type: Object, required: true },
@@ -18,9 +19,19 @@ const props = defineProps({
 
 const emit = defineEmits(['open', 'fav']);
 
+const { date } = useTimeFormat();
+
 const m = computed(() => props.match);
 const live = computed(() =>
     ['LIVE', 'HT', 'ET', 'PEN'].includes(m.value.status),
+);
+
+// On finished cards that request dates, show when the match was played next to
+// the FT badge (the status badge itself only shows "FT").
+const finishedDate = computed(() =>
+    props.showDate && m.value.status === 'FT' && m.value.kickoff
+        ? date(m.value.kickoff)
+        : null,
 );
 const winner = computed(() => {
     if (m.value.status !== 'FT') {
@@ -57,6 +68,9 @@ const open = () => emit('open', m.value);
                 }}<template v-if="m.group"> · {{ m.group }}</template>
             </span>
             <div class="mc-top-r">
+                <span v-if="finishedDate" class="mc-date">{{
+                    finishedDate
+                }}</span>
                 <MatchStatus :match="m" small :show-date="showDate" />
                 <FavoriteStar
                     v-if="favable"

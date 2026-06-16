@@ -373,6 +373,12 @@
     gap: 4px;
     flex: none;
 }
+.pp-matchcard .mc-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
 .pp-matchcard .mc-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
