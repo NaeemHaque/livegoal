@@ -423,7 +423,9 @@
     height: 1px;
     background: var(--border);
 }
-/* Collapsible section header (button reusing the section-head layout). */
+/* Collapsible section — the standard section-head line plus a right-side
+   disclosure chevron (down = open / right = collapsed). No box or fill, so it
+   reads like the page's other section headers, just collapsible. */
 .pp-collapse-head {
     width: 100%;
     padding: 0;
@@ -437,12 +439,15 @@
 .pp-collapse-chev {
     flex: none;
     color: var(--text-muted);
-    transition: transform var(--dur-fast);
+    transition:
+        transform var(--dur-fast),
+        color var(--dur-fast);
 }
 .pp-collapse-chev.collapsed {
     transform: rotate(-90deg);
 }
-.pp-collapse-head:hover .pp-collapse-chev {
+.pp-collapse-head:hover .pp-collapse-chev,
+.pp-collapse-head:hover .sh-title {
     color: var(--text);
 }
 .pp-grid {

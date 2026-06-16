@@ -4,9 +4,9 @@ import { ref } from 'vue';
 import { IcChevD } from '@/components/icons';
 
 /**
- * A section with a clickable header (competition or plain title + count) that
- * collapses its body. Used to tame long, grouped match lists — collapsed
- * sections shrink to a single tappable header showing the match count.
+ * A section whose header (the standard section-head line: title + match count +
+ * divider) toggles its body, with a right-side collapse chevron. No box/border
+ * — it reads like the page's other section headers, just collapsible.
  */
 const props = defineProps({
     competition: { type: Object, default: null },
@@ -23,6 +23,7 @@ const open = ref(props.defaultOpen);
         <button
             type="button"
             class="pp-section-head pp-collapse-head"
+            :class="{ open }"
             :aria-expanded="open"
             @click="open = !open"
         >
@@ -35,15 +36,17 @@ const open = ref(props.defaultOpen);
                 />
                 {{ competition ? competition.name : title }}
             </span>
-            <span v-if="count != null" class="sh-count">{{ count }}</span>
             <span class="sh-line" />
+            <span v-if="count != null" class="sh-count"
+                >{{ count }} {{ count === 1 ? 'match' : 'matches' }}</span
+            >
             <IcChevD
                 class="pp-collapse-chev"
                 :class="{ collapsed: !open }"
                 :size="18"
             />
         </button>
-        <div v-show="open" class="pp-collapse-body">
+        <div v-show="open">
             <slot />
         </div>
     </div>
