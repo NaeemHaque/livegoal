@@ -447,5 +447,9 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
 }
 .hub-fixture-tabs {
     margin: 6px 0 14px;
+    /* Only two tabs — they never scroll. Override .pp-tabs' overflow-x:auto,
+       which (per the CSS overflow quirk) computes overflow-y to auto and shows
+       a 1px phantom vertical scrollbar from the active-tab underline. */
+    overflow: visible;
 }
 </style>
