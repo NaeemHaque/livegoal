@@ -8,6 +8,14 @@ Releases are tagged on the `dev` line and deployed from there.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-06-18
+
+### Added
+
+- **Google Analytics (GA4)** — optional `gtag.js` tracking in the shared SEO head, enabled by setting
+  `GOOGLE_ANALYTICS_ID`. Renders only when configured (so dev/tests stay out of the property); GA4 enhanced
+  measurement tracks SPA navigations automatically. Runs alongside the existing Plausible option.
+
 ## [1.1.0] - 2026-06-16
 
 ### Added
@@ -78,7 +86,8 @@ Releases are tagged on the `dev` line and deployed from there.
 - Realtime is **poll-only** — no websockets/Pusher/Reverb/Echo/SSE/Redis. The poller has one commented
   `broadcast(...)` extension point for a future upgrade.
 
-[Unreleased]: https://github.com/NaeemHaque/livegoal/compare/v1.1.0...dev
+[Unreleased]: https://github.com/NaeemHaque/livegoal/compare/v1.1.1...dev
+[1.1.1]: https://github.com/NaeemHaque/livegoal/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/NaeemHaque/livegoal/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/NaeemHaque/livegoal/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/NaeemHaque/livegoal/compare/v1.0.0...v1.0.1
