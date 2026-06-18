@@ -70,3 +70,15 @@
 @if ($plausibleDomain = config('services.plausible.domain'))
     <script defer data-domain="{{ $plausibleDomain }}" src="{{ config('services.plausible.src') }}"></script>
 @endif
+
+{{-- Google Analytics (GA4). Renders only when configured (GOOGLE_ANALYTICS_ID).
+     GA4 enhanced measurement tracks SPA history navigations automatically. --}}
+@if ($gaId = config('services.google_analytics.id'))
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', '{{ $gaId }}');
+    </script>
+@endif
