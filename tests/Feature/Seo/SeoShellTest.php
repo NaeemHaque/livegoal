@@ -76,6 +76,27 @@ class SeoShellTest extends TestCase
             ->assertSee('href="'.url('/competition/PL').'"', false);
     }
 
+    // --- Analytics: the gtag snippet renders only when configured -----------
+
+    public function test_google_analytics_tag_renders_when_measurement_id_is_set(): void
+    {
+        config(['services.google_analytics.id' => 'G-TEST12345']);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('https://www.googletagmanager.com/gtag/js?id=G-TEST12345', false)
+            ->assertSee("gtag('config', 'G-TEST12345')", false);
+    }
+
+    public function test_google_analytics_tag_absent_when_unconfigured(): void
+    {
+        config(['services.google_analytics.id' => null]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertDontSee('googletagmanager.com/gtag', false);
+    }
+
     // --- Match page: rich, entity-specific meta -----------------------------
 
     public function test_cached_match_has_event_title_and_sportsevent_schema(): void

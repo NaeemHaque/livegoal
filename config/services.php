@@ -43,4 +43,11 @@ return [
         'src' => env('PLAUSIBLE_SRC', 'https://plausible.io/js/script.js'),
     ],
 
+    // Google Analytics (GA4). The gtag snippet only renders when a measurement
+    // ID is set, so dev/tests stay out of the property. GA4 enhanced measurement
+    // tracks SPA history (pushState) navigations automatically.
+    'google_analytics' => [
+        'id' => env('GOOGLE_ANALYTICS_ID'),
+    ],
+
 ];
