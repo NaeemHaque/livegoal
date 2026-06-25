@@ -699,6 +699,62 @@ class PollLiveScoresTest extends TestCase
             ->assertSuccessful();
     }
 
+    // --- 7c. scoped-feed live completeness -------------------------------------
+
+    public function test_a_match_live_in_the_scoped_feed_is_folded_in_when_the_bulk_feed_omits_it(): void
+    {
+        Date::setTestNow('2026-06-12T19:30:00Z');
+        $this->seedSchedule([$this->upstreamMatch(78, 'IN_PLAY', '2026-06-12T19:00:00Z', 1, 0)]);
+
+        Http::fake([
+            '*/matches/78' => Http::response(['ok' => true], 200),
+            '*/matches*' => Http::response(['matches' => []], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 1 match(es)')
+            ->assertSuccessful();
+
+        $m = Cache::get(PollLiveScores::CACHE_KEY)['matches'][0];
+
+        $this->assertSame('78', (string) $m['id']);
+        $this->assertSame('LIVE', $m['status']);
+        $this->assertSame(1, $m['homeScore']);
+        $this->assertSame(0, $m['awayScore']);
+    }
+
+    public function test_a_scoped_live_match_already_in_the_bulk_feed_is_not_duplicated(): void
+    {
+        Date::setTestNow('2026-06-12T19:30:00Z');
+        $this->seedSchedule([$this->upstreamMatch(78, 'IN_PLAY', '2026-06-12T19:00:00Z', 1, 0)]);
+
+        Http::fake([
+            '*/matches/78' => Http::response(['ok' => true], 200),
+            '*/matches*' => Http::response(['matches' => [$this->upstreamMatch(78, 'IN_PLAY', '2026-06-12T19:00:00Z', 1, 0)]], 200),
+        ]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 1 match(es)')
+            ->assertSuccessful();
+
+        $this->assertCount(1, Cache::get(PollLiveScores::CACHE_KEY)['matches']);
+    }
+
+    public function test_a_scoped_scheduled_or_finished_match_is_not_folded_in_as_live(): void
+    {
+        Date::setTestNow('2026-06-12T19:30:00Z');
+        $this->seedSchedule([
+            $this->upstreamMatch(80, 'FINISHED', '2026-06-12T16:00:00Z', 2, 1),
+            $this->upstreamMatch(81, 'TIMED', '2026-06-12T23:00:00Z'),
+        ]);
+
+        Http::fake(['*/matches*' => Http::response(['matches' => []], 200)]);
+
+        $this->artisan('app:poll-live-scores')
+            ->expectsOutputToContain('Live: 0 match(es)')
+            ->assertSuccessful();
+    }
+
     public function test_the_real_feed_entry_replaces_the_presumed_one(): void
     {
         Date::setTestNow('2026-06-12T19:05:00Z');
