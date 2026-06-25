@@ -214,7 +214,7 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                         style="
                             grid-template-columns: repeat(
                                 auto-fit,
-                                minmax(420px, 1fr)
+                                minmax(min(100%, 420px), 1fr)
                             );
                         "
                     >

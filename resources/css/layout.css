@@ -302,8 +302,13 @@
     white-space: nowrap;
     animation: tk-marquee 38s linear infinite;
 }
-.pp-ticker:hover .tk-track {
-    animation-play-state: paused;
+/* Pause-on-hover is a pointer affordance only. On touch devices :hover sticks
+   after a tap, which would freeze the marquee until you tap elsewhere — so gate
+   it to hover-capable input and let it keep scrolling on phones. */
+@media (hover: hover) {
+    .pp-ticker:hover .tk-track {
+        animation-play-state: paused;
+    }
 }
 @keyframes tk-marquee {
     from {
