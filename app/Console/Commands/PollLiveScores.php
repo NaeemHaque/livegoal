@@ -143,6 +143,9 @@ class PollLiveScores extends Command
 
         $matches = $normalizer->matches($raw);
 
+        // Add live matches the scoped feeds flag but the global feed dropped.
+        $matches = $this->withFeaturedLive($matches);
+
         // Upstream flap guard: a sudden "no live matches" while matches were
         // live is held back until confirmed by consecutive empty polls.
         if ($matches === [] && $this->holdUnconfirmedEmpty()) {
@@ -822,6 +825,35 @@ class PollLiveScores extends Command
         }
 
         return $m;
+    }
+
+    /**
+     * Add live matches the scoped feeds carry but the global IN_PLAY feed missed.
+     *
+     * @param  array<int, array<array-key, mixed>>  $matches
+     * @return array<int, array<array-key, mixed>>
+     */
+    private function withFeaturedLive(array $matches): array
+    {
+        $present = [];
+
+        foreach ($matches as $m) {
+            $present[$this->str($m['id'] ?? null)] = true;
+        }
+
+        foreach ($this->featured->all(allowFetch: false)['matches'] as $m) {
+            $id = $this->str($m['id'] ?? null);
+
+            if ($id === '' || isset($present[$id]) || ! in_array($this->str($m['status'] ?? null), ['LIVE', 'HT'], true)) {
+                continue;
+            }
+
+            $matches[] = $m;
+            $present[$id] = true;
+            Log::notice(sprintf('PollLiveScores: folding in %s (live in the scoped feed, absent from the bulk feed).', $id));
+        }
+
+        return $matches;
     }
 
     /**
