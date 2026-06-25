@@ -5,6 +5,7 @@ namespace App\Services\Push;
 use App\Models\PushSubscriber;
 use App\Notifications\GoalScored;
 use App\Notifications\MatchFullTime;
+use App\Notifications\MatchStarted;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Facades\Config;
@@ -18,6 +19,14 @@ use Illuminate\Support\Facades\Notification;
  */
 class MatchAlerts
 {
+    /**
+     * @param  array<array-key, mixed>  $m  A normalized live match (just kicked off).
+     */
+    public function kickoff(array $m): void
+    {
+        $this->notifyFollowers($m, fn (array $payload): BaseNotification => new MatchStarted($payload));
+    }
+
     /**
      * @param  array<array-key, mixed>  $m  A normalized live match.
      */

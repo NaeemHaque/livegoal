@@ -5,7 +5,9 @@ namespace Tests\Feature\Console;
 use App\Models\PushSubscriber;
 use App\Notifications\GoalScored;
 use App\Notifications\MatchFullTime;
+use App\Notifications\MatchStarted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
@@ -40,11 +42,11 @@ class PollLiveScoresPushTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function upstreamMatch(int $id, string $status, ?int $home, ?int $away): array
+    private function upstreamMatch(int $id, string $status, ?int $home, ?int $away, string $utcDate = '2026-06-11T19:00:00Z'): array
     {
         return [
             'id' => $id,
-            'utcDate' => '2026-06-11T19:00:00Z',
+            'utcDate' => $utcDate,
             'status' => $status,
             'stage' => 'GROUP_STAGE',
             'group' => 'GROUP_A',
@@ -139,5 +141,65 @@ class PollLiveScoresPushTest extends TestCase
         $this->artisan('app:poll-live-scores')->assertSuccessful();
 
         Notification::assertSentToTimes($fan, MatchFullTime::class, 1);
+    }
+
+    public function test_kickoff_pushes_match_start_to_followers_once(): void
+    {
+        // Freeze just after the presumed first whistle so the match reads ~1'.
+        $this->travelTo(Carbon::parse('2026-06-11T19:02:00Z'));
+
+        $fan = $this->fanOf('team', '769');
+        $bystander = $this->fanOf('team', '999');
+
+        Http::fake([
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 0, 0)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        Notification::assertSentToTimes($fan, MatchStarted::class, 1);
+        Notification::assertNotSentTo($bystander, MatchStarted::class);
+    }
+
+    public function test_kickoff_push_does_not_repeat_on_later_polls(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-11T19:02:00Z'));
+
+        $fan = $this->fanOf('team', '769');
+
+        Http::fake([
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 0, 0)]], 200)
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 0, 0)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        Notification::assertSentToTimes($fan, MatchStarted::class, 1);
+    }
+
+    public function test_kickoff_push_is_suppressed_for_a_match_first_seen_deep_in_play(): void
+    {
+        // First seen 50' in (poller gap / late-folded feed): anchor records, no stale push.
+        $this->travelTo(Carbon::parse('2026-06-11T19:50:00Z'));
+
+        $fan = $this->fanOf('team', '769');
+
+        Http::fake([
+            '*/matches/1' => Http::response(['ok' => true], 200),
+            '*/matches?*' => Http::sequence()
+                ->push(['matches' => [$this->upstreamMatch(1, 'IN_PLAY', 0, 0)]], 200)
+                ->whenEmpty(Http::response(['unexpected' => true], 500)),
+        ]);
+
+        $this->artisan('app:poll-live-scores')->assertSuccessful();
+
+        Notification::assertNotSentTo($fan, MatchStarted::class);
     }
 }

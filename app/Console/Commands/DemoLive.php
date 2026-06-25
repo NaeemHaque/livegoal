@@ -17,13 +17,14 @@ use Illuminate\Support\Facades\Date;
  * front-end picks them up; --goal bumps a score so the next poll fires the toast.
  *
  *   php artisan app:demo-live          # seed live matches (reload the browser)
+ *   php artisan app:demo-live --start  # kick-off: push the match-start alert to followers
  *   php artisan app:demo-live --goal   # score a goal (toast in visible tabs, push to hidden ones)
  *   php artisan app:demo-live --end    # full-time: clears the demo and pushes the final score
  *   php artisan app:demo-live --clear  # stop the demo
  */
 class DemoLive extends Command
 {
-    protected $signature = 'app:demo-live {--goal} {--end} {--clear}';
+    protected $signature = 'app:demo-live {--start} {--goal} {--end} {--clear}';
 
     protected $description = 'Seed fake live matches (and fire goals) to test the live UI locally';
 
@@ -48,6 +49,12 @@ class DemoLive extends Command
         }
 
         $current = $this->liveMatches();
+
+        if ($current !== [] && $this->option('start')) {
+            $this->startMatches($current);
+
+            return self::SUCCESS;
+        }
 
         if ($current !== [] && $this->option('goal')) {
             $this->scoreGoal($current);
@@ -79,6 +86,23 @@ class DemoLive extends Command
         }
 
         return array_values(array_filter($matches, is_array(...)));
+    }
+
+    /**
+     * Push the kick-off alert for every demo match, to their followers only.
+     *
+     * @param  list<array<array-key, mixed>>  $matches
+     */
+    private function startMatches(array $matches): void
+    {
+        foreach ($matches as $m) {
+            $this->alerts->kickoff($m);
+            $this->info(sprintf(
+                'Kick-off: %s vs %s',
+                $this->teamName($m['home'] ?? null),
+                $this->teamName($m['away'] ?? null),
+            ));
+        }
     }
 
     /**

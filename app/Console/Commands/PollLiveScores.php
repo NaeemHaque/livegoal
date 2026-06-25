@@ -111,6 +111,9 @@ class PollLiveScores extends Command
 
     private const PRESUME_KICKOFF_WINDOW_SECONDS = 2100;
 
+    /** Skip the kick-off push when a match is first seen past this minute — it was already in play. */
+    private const KICKOFF_PUSH_MAX_MINUTE = 15;
+
     protected $signature = 'app:poll-live-scores';
 
     protected $description = 'Poll in-play matches from football-data.org into cache for the whole site';
@@ -255,6 +258,12 @@ class PollLiveScores extends Command
 
         if ($status === 'LIVE' && ! $this->hasEvent($events, 'KICKOFF')) {
             $events[] = [...$this->timelineEvent('KICKOFF', $m), 'at' => $this->kickoffAnchor($m)];
+
+            // Push only a genuine fresh kickoff, never a match first seen deep in play.
+            $minute = $this->nullableInt($m['minute'] ?? null);
+            if ($minute !== null && $minute <= self::KICKOFF_PUSH_MAX_MINUTE) {
+                $this->alerts->kickoff($m);
+            }
         }
 
         // Back LIVE after a recorded half-time: the second half restarted.
