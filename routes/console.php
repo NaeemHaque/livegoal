@@ -15,6 +15,14 @@ Schedule::command('app:poll-live-scores')
     ->everyThirtySeconds()
     ->withoutOverlapping();
 
+// ESPN near-real-time overlay for the in-play set the poller surfaced, so the
+// home "Live now" rail freshens its status/minute/score as fast as the match
+// page (which already layers ESPN). Writes a side cache that GET /api/live
+// merges; the football-data poller above is left untouched. See HarvestLiveEspn.
+Schedule::command('app:harvest-live-espn')
+    ->everyThirtySeconds()
+    ->withoutOverlapping();
+
 // Sweep push subscribers whose endpoint expired (the webpush channel deletes
 // the subscription row on 404/410 sends; the owner row lingers a week).
 Schedule::command('model:prune')->daily();
