@@ -62,4 +62,16 @@
     @isset($updatedAt)
         <p>Last updated {{ \Illuminate\Support\Carbon::parse($updatedAt)->format('H:i, j M Y') }} UTC.</p>
     @endisset
+
+    {{-- Crawlable link graph to the World Cup money pages (purely additive for
+         crawlers — Vue replaces this body on mount). --}}
+    <nav aria-label="World Cup 2026">
+        <h2>World Cup 2026</h2>
+        <ul>
+            <li><a href="{{ url('/competition/WC') }}">World Cup 2026 scores, groups &amp; bracket</a></li>
+            <li><a href="{{ url('/scorers') }}">World Cup 2026 top scorers</a></li>
+            <li><a href="{{ url('/guides/world-cup-2026-format-explained') }}">How the World Cup 2026 format works</a></li>
+            <li><a href="{{ url('/guides/world-cup-2026-knockout-bracket-explained') }}">World Cup 2026 knockout bracket</a></li>
+        </ul>
+    </nav>
 </article>

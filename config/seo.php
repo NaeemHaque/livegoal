@@ -41,4 +41,9 @@ return [
 
     // Logo used in Organization JSON-LD (resolved to an absolute URL).
     'organization_logo' => env('SEO_ORGANIZATION_LOGO', '/apple-touch-icon.png'),
+
+    // Google News sitemap (Top Stories). The publication name must match the
+    // name registered in Google Publisher Center once the site is accepted.
+    'news_publication' => env('SEO_NEWS_PUBLICATION', 'LiveGoal'),
+    'news_language' => env('SEO_NEWS_LANGUAGE', 'en'),
 ];

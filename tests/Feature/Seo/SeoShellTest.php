@@ -64,6 +64,8 @@ class SeoShellTest extends TestCase
             ->assertSee('<link rel="canonical"', false)
             ->assertSee('property="og:title"', false)
             ->assertSee('name="twitter:card"', false)
+            ->assertSee('property="og:image:width" content="1200"', false)
+            ->assertSee('property="og:image:alt"', false)
             ->assertSee('"@type":"WebSite"', false)
             ->assertSee('"@type":"Organization"', false);
     }
@@ -106,7 +108,8 @@ class SeoShellTest extends TestCase
         $response = $this->get('/match/1');
 
         $response->assertOk()
-            ->assertSee('<title>Arsenal FC vs Chelsea FC', false)
+            // Competition folded into the title for the long tail.
+            ->assertSee('<title>Arsenal FC vs Chelsea FC — Premier League Live Score', false)
             // Canonical is the keyword-rich slug URL, not the bare id.
             ->assertSee('<link rel="canonical" href="'.url('/match/1-arsenal-fc-vs-chelsea-fc').'">', false)
             ->assertSee('"@type":"SportsEvent"', false)
@@ -115,6 +118,61 @@ class SeoShellTest extends TestCase
 
         // A cached, real entity is indexable.
         $response->assertDontSee('name="robots" content="noindex', false);
+    }
+
+    public function test_finished_match_sportsevent_carries_result_and_team_links(): void
+    {
+        $this->cacheUpstream('match:2', [
+            'id' => 2,
+            'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+            'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+            'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+            'status' => 'FINISHED',
+            'utcDate' => '2026-06-26T15:00:00Z',
+            'venue' => 'Estadio Azteca',
+            'score' => ['fullTime' => ['home' => 2, 'away' => 1], 'winner' => 'HOME_TEAM'],
+        ]);
+
+        $this->get('/match/2')
+            ->assertOk()
+            ->assertSee('"@type":"SportsEvent"', false)
+            // Factual result line in the schema description.
+            ->assertSee('Full time: Mexico 2', false)
+            // Home/away teams link to their LiveGoal pages.
+            ->assertSee(url('/team/1-mexico'), false)
+            ->assertSee('"endDate"', false)
+            // superEvent is an Event (not an Organization).
+            ->assertSee('"superEvent":{"@type":"SportsEvent"', false);
+    }
+
+    public function test_live_match_emits_liveblogposting_from_timeline(): void
+    {
+        $this->cacheUpstream('match:2', [
+            'id' => 2,
+            'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+            'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+            'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+            'status' => 'FINISHED',
+            'utcDate' => '2026-06-26T15:00:00Z',
+            'score' => ['fullTime' => ['home' => 1, 'away' => 0], 'winner' => 'HOME_TEAM'],
+        ]);
+
+        // The poller's self-built timeline for this match.
+        Cache::put('live:events:2', [
+            ['type' => 'KICKOFF', 'minute' => 0, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-26T15:00:00+00:00'],
+            ['type' => 'GOAL', 'minute' => 23, 'side' => 'home', 'homeScore' => 1, 'awayScore' => 0, 'at' => '2026-06-26T15:24:00+00:00'],
+            ['type' => 'FT', 'minute' => 90, 'side' => null, 'homeScore' => 1, 'awayScore' => 0, 'at' => '2026-06-26T16:55:00+00:00'],
+        ], 3600);
+
+        $this->get('/match/2')
+            ->assertOk()
+            ->assertSee('"@type":"LiveBlogPosting"', false)
+            ->assertSee('"liveBlogUpdate"', false)
+            ->assertSee('Goal! Mexico', false)
+            ->assertSee('"dateModified"', false)
+            // Article-family schema needs a publisher + image.
+            ->assertSee('"publisher":{"@type":"Organization"', false)
+            ->assertSee('"logo":{"@type":"ImageObject"', false);
     }
 
     public function test_match_canonical_is_slug_url_ignoring_query_string(): void
@@ -134,6 +192,51 @@ class SeoShellTest extends TestCase
             ->assertOk()
             ->assertSee('<title>Arsenal FC vs Chelsea FC', false)
             ->assertSee('<link rel="canonical" href="'.url('/match/1-arsenal-fc-vs-chelsea-fc').'">', false);
+    }
+
+    public function test_match_in_competition_feed_is_indexable_without_single_cache(): void
+    {
+        // Only the warmed competition feed is cached — NOT the per-match cache,
+        // which is written only on a real /api/matches/{id} visit. The page must
+        // still be indexable, or every sitemap'd fixture would be noindex.
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 77,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-28T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $this->get('/match/77')
+            ->assertOk()
+            ->assertSee('<title>Mexico vs Canada — FIFA World Cup Live Score', false)
+            ->assertSee('"@type":"SportsEvent"', false)
+            ->assertSee('data-seo-prerender', false)
+            ->assertDontSee('name="robots" content="noindex', false);
+    }
+
+    public function test_team_in_competition_feed_is_indexable_without_single_cache(): void
+    {
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 77,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-28T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $this->get('/team/1')
+            ->assertOk()
+            ->assertSee('<title>Mexico — Fixtures, Results', false)
+            ->assertSee('"@type":"SportsTeam"', false)
+            ->assertSee('<h1>Mexico</h1>', false)
+            ->assertDontSee('name="robots" content="noindex', false);
     }
 
     public function test_uncached_match_is_noindex_but_still_serves_the_shell(): void
@@ -156,6 +259,18 @@ class SeoShellTest extends TestCase
             ->assertOk()
             ->assertSee('<title>Premier League', false)
             ->assertSee('"@type":"SportsOrganization"', false)
+            ->assertDontSee('name="robots" content="noindex', false);
+    }
+
+    public function test_world_cup_hub_has_head_term_title(): void
+    {
+        $this->cacheUpstream('competition:WC', [
+            'id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP',
+        ]);
+
+        $this->get('/competition/WC')
+            ->assertOk()
+            ->assertSee('<title>World Cup 2026 — Live Scores, Schedule, Groups, Bracket', false)
             ->assertDontSee('name="robots" content="noindex', false);
     }
 

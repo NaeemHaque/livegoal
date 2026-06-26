@@ -2,10 +2,12 @@
 
 namespace App\Seo;
 
+use App\Console\Commands\PollLiveScores;
 use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\URL;
 
@@ -19,6 +21,15 @@ use Illuminate\Support\Facades\URL;
  */
 class SeoMetaResolver
 {
+    /**
+     * Memoized featured-matches aggregate (cache-only) for this request. The SEO
+     * head and the prerender body are two calls on the same instance, so the
+     * feeds are merged at most once per request.
+     *
+     * @var array{matches: list<array<string, mixed>>, lastUpdated: string|null, stale: bool, served: bool}|null
+     */
+    private ?array $aggregateCache = null;
+
     public function __construct(
         private readonly FootballData $football,
         private readonly Normalizer $normalizer,
@@ -95,19 +106,16 @@ class SeoMetaResolver
     public function match(string $id): SeoMeta
     {
         $numericId = Slug::id($id);
-        $raw = $this->football->peek("match:{$numericId}");
+        $resolved = $this->resolveMatch($numericId);
 
-        if ($raw === null) {
+        if ($resolved === null) {
             return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', URL::current());
         }
 
-        $m = $this->normalizer->match($raw);
+        $m = $resolved['match'];
+        $updatedAt = $resolved['updatedAt'];
         $home = $this->str(data_get($m, 'home.name'));
         $away = $this->str(data_get($m, 'away.name'));
-
-        if ($home === '' || $away === '') {
-            return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', URL::current());
-        }
 
         $canonical = Slug::url('match', $numericId, "{$home} vs {$away}");
         $competition = $this->nullableStr(data_get($m, 'competition.name'));
@@ -115,21 +123,37 @@ class SeoMetaResolver
         $venue = $this->nullableStr(data_get($m, 'venue'));
         $kickoff = $this->nullableStr(data_get($m, 'kickoff'));
 
-        $title = $this->brand("{$home} vs {$away} — Live Score & Result");
+        // Fold the competition into the title for the long tail ("Argentina vs
+        // Brazil — FIFA World Cup Live Score") — team names stay front-loaded.
+        $title = $this->brand($competition !== null
+            ? "{$home} vs {$away} — {$competition} Live Score & Result"
+            : "{$home} vs {$away} — Live Score & Result");
         $description = $this->matchDescription($home, $away, $status, $competition, $venue, $kickoff, $this->int(data_get($m, 'homeScore')), $this->int(data_get($m, 'awayScore')));
+
+        $jsonLd = [
+            $this->sportsEvent($m, $canonical),
+            $this->breadcrumb(array_values(array_filter([
+                [Config::string('seo.site_name'), url('/')],
+                $competition !== null ? [$competition, url('/matches')] : null,
+                ["{$home} vs {$away}", $canonical],
+            ]))),
+        ];
+
+        // A live/finished match with a self-built timeline also gets a
+        // LiveBlogPosting — the schema Google uses for live coverage and a
+        // strong Top Stories signal.
+        $liveBlog = $this->liveBlog($m, $canonical, $updatedAt);
+
+        if ($liveBlog !== null) {
+            $jsonLd[] = $liveBlog;
+        }
 
         return new SeoMeta(
             title: $title,
             description: $description,
             canonical: $canonical,
-            jsonLd: [
-                $this->sportsEvent($home, $away, $status, $competition, $venue, $kickoff, $canonical),
-                $this->breadcrumb(array_values(array_filter([
-                    [Config::string('seo.site_name'), url('/')],
-                    $competition !== null ? [$competition, url('/matches')] : null,
-                    ["{$home} vs {$away}", $canonical],
-                ]))),
-            ],
+            jsonLd: $jsonLd,
+            image: url('/og/match/'.$numericId),
         );
     }
 
@@ -143,14 +167,23 @@ class SeoMetaResolver
         }
 
         $name = $this->str(data_get($c, 'name'));
+        $code = $this->str(data_get($c, 'code'));
         $isCup = $this->str(data_get($c, 'kind')) === 'cup';
 
-        $title = $this->brand($isCup ? "{$name} — Fixtures, Results & Bracket" : "{$name} — Table, Fixtures & Results");
-        $description = sprintf(
-            'Live %s scores, %s, fixtures, results and top scorers. Follow every matchday on LiveGoal — free, no betting ads.',
-            $name,
-            $isCup ? 'groups and knockout bracket' : 'the full table',
-        );
+        if (strcasecmp($code, 'WC') === 0) {
+            // The World Cup hub owns the highest-volume "world cup 2026 ___"
+            // head terms (scores / schedule / groups / bracket / top scorers).
+            $title = $this->brand('World Cup 2026 — Live Scores, Schedule, Groups, Bracket & Top Scorers');
+            $description = 'World Cup 2026 live scores and today\'s schedule, plus group tables, the knockout bracket '
+                .'and the Golden Boot race. Every fixture and result, free and updated live on LiveGoal.';
+        } else {
+            $title = $this->brand($isCup ? "{$name} — Fixtures, Results & Bracket" : "{$name} — Table, Fixtures & Results");
+            $description = sprintf(
+                'Live %s scores, %s, fixtures, results and top scorers. Follow every matchday on LiveGoal — free, no betting ads.',
+                $name,
+                $isCup ? 'groups and knockout bracket' : 'the full table',
+            );
+        }
 
         return new SeoMeta(
             title: $title,
@@ -176,19 +209,14 @@ class SeoMetaResolver
     public function team(string $id): SeoMeta
     {
         $numericId = Slug::id($id);
-        $raw = $this->football->peek("team:{$numericId}");
+        $resolved = $this->resolveTeam($numericId);
 
-        if ($raw === null) {
+        if ($resolved === null) {
             return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', URL::current());
         }
 
-        $t = $this->normalizer->teamDetail($raw);
+        $t = $resolved['team'];
         $name = $this->str(data_get($t, 'name'));
-
-        if ($name === '') {
-            return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', URL::current());
-        }
-
         $canonical = Slug::url('team', $numericId, $name);
         $area = $this->nullableStr(data_get($t, 'area.name'));
         $crest = $this->nullableStr(data_get($t, 'crest'));
@@ -305,9 +333,14 @@ class SeoMetaResolver
     }
 
     /**
-     * Metadata for an editorial content page (guide / explainer / trust).
+     * Metadata for an editorial content page (guide / explainer / trust). When
+     * the page carries a question/answer set, a FAQPage block is emitted too —
+     * the answer-engine (AEO) lever for People Also Ask and AI Overviews. The
+     * answers must mirror the visible on-page copy (content parity).
+     *
+     * @param  list<array{q: string, a: string}>  $faq
      */
-    public function content(string $path, string $title, string $description): SeoMeta
+    public function content(string $path, string $title, string $description, array $faq = []): SeoMeta
     {
         $canonical = url($path);
 
@@ -319,6 +352,12 @@ class SeoMetaResolver
 
         $crumbs[] = [$title, $canonical];
 
+        $jsonLd = [$this->breadcrumb($crumbs)];
+
+        if ($faq !== []) {
+            $jsonLd[] = $this->faqPage($faq);
+        }
+
         // Trust pages ("About LiveGoal") already include the brand — don't double it.
         $brandedTitle = str_contains($title, Config::string('seo.site_name'))
             ? $title
@@ -328,7 +367,7 @@ class SeoMetaResolver
             title: $brandedTitle,
             description: $description,
             canonical: $canonical,
-            jsonLd: [$this->breadcrumb($crumbs)],
+            jsonLd: $jsonLd,
         );
     }
 
@@ -371,19 +410,13 @@ class SeoMetaResolver
      */
     public function matchBody(string $id): ?array
     {
-        $entry = $this->football->peekEntry('match:'.Slug::id($id));
+        $resolved = $this->resolveMatch(Slug::id($id));
 
-        if ($entry === null) {
+        if ($resolved === null) {
             return null;
         }
 
-        $m = $this->normalizer->match($entry['data']);
-
-        if ($this->str(data_get($m, 'home.name')) === '' || $this->str(data_get($m, 'away.name')) === '') {
-            return null;
-        }
-
-        return ['view' => 'seo.match', 'data' => ['match' => $m, 'updatedAt' => $entry['at']]];
+        return ['view' => 'seo.match', 'data' => ['match' => $resolved['match'], 'updatedAt' => $resolved['updatedAt']]];
     }
 
     /**
@@ -429,29 +462,21 @@ class SeoMetaResolver
      */
     public function teamBody(string $id): ?array
     {
-        $numericId = Slug::id($id);
-        $entry = $this->football->peekEntry("team:{$numericId}");
+        $resolved = $this->resolveTeam(Slug::id($id));
 
-        if ($entry === null) {
+        if ($resolved === null) {
             return null;
         }
 
-        $t = $this->normalizer->teamDetail($entry['data']);
-
-        if ($this->str(data_get($t, 'name')) === '') {
-            return null;
-        }
-
-        $matchesRaw = $this->football->peek("team:{$numericId}:matches");
-        $all = $matchesRaw !== null ? $this->normalizer->matches($matchesRaw) : [];
+        $all = $resolved['matches'];
 
         return [
             'view' => 'seo.team',
             'data' => [
-                'team' => $t,
+                'team' => $resolved['team'],
                 'upcoming' => $this->upcoming($all, 5),
                 'recent' => $this->recent($all, 5),
-                'updatedAt' => $entry['at'],
+                'updatedAt' => $resolved['updatedAt'],
             ],
         ];
     }
@@ -636,6 +661,99 @@ class SeoMetaResolver
     }
 
     /**
+     * The featured-matches aggregate, merged once per request (cache-only).
+     *
+     * @return array{matches: list<array<string, mixed>>, lastUpdated: string|null, stale: bool, served: bool}
+     */
+    private function aggregate(): array
+    {
+        return $this->aggregateCache ??= $this->featured->all(allowFetch: false);
+    }
+
+    /**
+     * Resolve a normalized match for the SEO layer: the warmed single-match
+     * cache first, then the featured competition feeds (which the schedulers keep
+     * warm). The feed fallback is what makes every sitemap'd fixture indexable
+     * without waiting for a human to open its detail page — the single-match
+     * cache is only written on a real /api/matches/{id} request.
+     *
+     * @return array{match: array<string, mixed>, updatedAt: string}|null
+     */
+    private function resolveMatch(string $id): ?array
+    {
+        $entry = $this->football->peekEntry("match:{$id}");
+
+        if ($entry !== null) {
+            $m = $this->normalizer->match($entry['data']);
+
+            if ($this->str(data_get($m, 'home.name')) !== '' && $this->str(data_get($m, 'away.name')) !== '') {
+                return ['match' => $m, 'updatedAt' => $entry['at']];
+            }
+        }
+
+        $agg = $this->aggregate();
+
+        foreach ($agg['matches'] as $m) {
+            if ($this->str(data_get($m, 'id')) === $id
+                && $this->str(data_get($m, 'home.name')) !== ''
+                && $this->str(data_get($m, 'away.name')) !== '') {
+                return ['match' => $m, 'updatedAt' => $agg['lastUpdated'] ?? Carbon::now()->toIso8601String()];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve a team + its matches for the SEO layer: the warmed team-detail
+     * cache first, then a minimal record assembled from the featured feeds (id,
+     * name, crest, and the team's fixtures), so a sitemap'd team page is
+     * indexable before anyone opens its detail page.
+     *
+     * @return array{team: array<string, mixed>, matches: list<array<string, mixed>>, updatedAt: string|null}|null
+     */
+    private function resolveTeam(string $id): ?array
+    {
+        $entry = $this->football->peekEntry("team:{$id}");
+
+        if ($entry !== null) {
+            $t = $this->normalizer->teamDetail($entry['data']);
+
+            if ($this->str(data_get($t, 'name')) !== '') {
+                $matchesRaw = $this->football->peek("team:{$id}:matches");
+                $matches = $matchesRaw !== null ? $this->normalizer->matches($matchesRaw) : [];
+
+                return ['team' => $t, 'matches' => $matches, 'updatedAt' => $entry['at']];
+            }
+        }
+
+        $agg = $this->aggregate();
+        $team = null;
+        $matches = [];
+
+        foreach ($agg['matches'] as $m) {
+            foreach (['home', 'away'] as $side) {
+                if ($this->str(data_get($m, "{$side}.id")) !== $id) {
+                    continue;
+                }
+
+                $team ??= [
+                    'id' => $id,
+                    'name' => $this->str(data_get($m, "{$side}.name")),
+                    'crest' => $this->nullableStr(data_get($m, "{$side}.crest")),
+                ];
+                $matches[] = $m;
+            }
+        }
+
+        if ($team === null || $this->str($team['name']) === '') {
+            return null;
+        }
+
+        return ['team' => $team, 'matches' => $matches, 'updatedAt' => $agg['lastUpdated']];
+    }
+
+    /**
      * Resolve a competition by code/id: try its cached detail, then fall back to
      * the warmed competitions list (so any of the ~13 free-tier competitions has
      * an indexable name even before its detail feed is warmed).
@@ -698,18 +816,30 @@ class SeoMetaResolver
     }
 
     /**
+     * The SportsEvent block for a match — enriched with the result so it can win
+     * a richer SERP treatment: linked home/away team nodes, a factual score line
+     * in the description, and an approximate end time for finished matches.
+     *
+     * @param  array<string, mixed>  $m  Normalized match.
      * @return array<string, mixed>
      */
-    private function sportsEvent(string $home, string $away, string $status, ?string $competition, ?string $venue, ?string $kickoff, string $canonical): array
+    private function sportsEvent(array $m, string $canonical): array
     {
+        $home = $this->str(data_get($m, 'home.name'));
+        $away = $this->str(data_get($m, 'away.name'));
+        $status = $this->str(data_get($m, 'status'));
+        $competition = $this->nullableStr(data_get($m, 'competition.name'));
+        $venue = $this->nullableStr(data_get($m, 'venue'));
+        $kickoff = $this->nullableStr(data_get($m, 'kickoff'));
+
         $event = [
             '@context' => 'https://schema.org',
             '@type' => 'SportsEvent',
             'name' => "{$home} vs {$away}",
             'sport' => 'Soccer',
             'url' => $canonical,
-            'homeTeam' => ['@type' => 'SportsTeam', 'name' => $home],
-            'awayTeam' => ['@type' => 'SportsTeam', 'name' => $away],
+            'homeTeam' => $this->teamNode($home, $this->str(data_get($m, 'home.id'))),
+            'awayTeam' => $this->teamNode($away, $this->str(data_get($m, 'away.id'))),
             'eventStatus' => $status === 'POSTPONED'
                 ? 'https://schema.org/EventPostponed'
                 : 'https://schema.org/EventScheduled',
@@ -719,15 +849,231 @@ class SeoMetaResolver
             $event['startDate'] = $kickoff;
         }
 
+        $isResult = in_array($status, ['FT', 'AET', 'PEN'], true);
+        $isLive = in_array($status, ['LIVE', 'HT', 'ET'], true);
+
+        if ($isResult || $isLive) {
+            $homeScore = $this->int(data_get($m, 'homeScore'));
+            $awayScore = $this->int(data_get($m, 'awayScore'));
+            $line = sprintf('%s: %s %d–%d %s', $isResult ? 'Full time' : 'Live', $home, $homeScore, $awayScore, $away);
+            $event['description'] = $line.($competition !== null ? " in the {$competition}." : '.');
+        }
+
+        if ($isResult && $kickoff !== null) {
+            // No real finish time on the free tier; approximate by result type —
+            // 90 + stoppage, extra time, or a shootout.
+            $minutes = match ($status) {
+                'PEN' => 150,
+                'AET' => 135,
+                default => 115,
+            };
+
+            try {
+                $event['endDate'] = Carbon::parse($kickoff)->addMinutes($minutes)->toIso8601String();
+            } catch (\Throwable) {
+                // Leave endDate off if the kickoff can't be parsed.
+            }
+        }
+
         if ($venue !== null) {
             $event['location'] = ['@type' => 'Place', 'name' => $venue];
         }
 
         if ($competition !== null) {
-            $event['superEvent'] = ['@type' => 'SportsOrganization', 'name' => $competition];
+            // superEvent's range is Event — the competition modelled as the
+            // tournament/season event, not an Organization.
+            $event['superEvent'] = ['@type' => 'SportsEvent', 'name' => $competition];
         }
 
         return $event;
+    }
+
+    /**
+     * A SportsTeam node, linked to its LiveGoal page when the id is known.
+     *
+     * @return array<string, mixed>
+     */
+    private function teamNode(string $name, string $id): array
+    {
+        $node = ['@type' => 'SportsTeam', 'name' => $name];
+
+        if ($id !== '') {
+            $node['url'] = Slug::url('team', $id, $name);
+        }
+
+        return $node;
+    }
+
+    /**
+     * A LiveBlogPosting for a live or finished match, built from the poller's
+     * self-built timeline (live:events:{id}). Returns null when the match has no
+     * recorded coverage, so we never emit an empty live blog. dateModified
+     * carries the fetch timestamp — the freshness signal for Top Stories.
+     *
+     * @param  array<string, mixed>  $m  Normalized match.
+     * @return array<string, mixed>|null
+     */
+    private function liveBlog(array $m, string $canonical, string $updatedAt): ?array
+    {
+        $status = $this->str(data_get($m, 'status'));
+        $isResult = in_array($status, ['FT', 'AET', 'PEN'], true);
+        $isLive = in_array($status, ['LIVE', 'HT', 'ET'], true);
+
+        if (! $isResult && ! $isLive) {
+            return null;
+        }
+
+        $home = $this->str(data_get($m, 'home.name'));
+        $away = $this->str(data_get($m, 'away.name'));
+
+        $updates = [];
+
+        foreach ($this->recordedEvents($this->str(data_get($m, 'id'))) as $event) {
+            $update = $this->liveBlogUpdate($event, $home, $away);
+
+            if ($update !== null) {
+                $updates[] = $update;
+            }
+        }
+
+        if ($updates === []) {
+            return null;
+        }
+
+        $kickoff = $this->nullableStr(data_get($m, 'kickoff'));
+
+        $blog = [
+            '@context' => 'https://schema.org',
+            '@type' => 'LiveBlogPosting',
+            'headline' => $isResult ? "{$home} vs {$away} — full-time report" : "{$home} vs {$away} — live",
+            'url' => $canonical,
+            'datePublished' => $kickoff ?? $updatedAt,
+            'dateModified' => $updatedAt,
+            'image' => url('/og/match/'.$this->str(data_get($m, 'id'))),
+            'publisher' => $this->publisher(),
+            'about' => ['@type' => 'SportsEvent', 'name' => "{$home} vs {$away}"],
+            'liveBlogUpdate' => $updates,
+        ];
+
+        if ($kickoff !== null) {
+            $blog['coverageStartTime'] = $kickoff;
+        }
+
+        if ($isResult) {
+            $lastAt = $updates[count($updates) - 1]['datePublished'] ?? null;
+
+            if (is_string($lastAt)) {
+                $blog['coverageEndTime'] = $lastAt;
+            }
+        }
+
+        return $blog;
+    }
+
+    /**
+     * One liveBlogUpdate (BlogPosting) from a recorded timeline event, or null
+     * when the event carries no timestamp.
+     *
+     * @param  array<array-key, mixed>  $event
+     * @return array<string, mixed>|null
+     */
+    private function liveBlogUpdate(array $event, string $home, string $away): ?array
+    {
+        $at = $this->nullableStr($event['at'] ?? null);
+
+        if ($at === null) {
+            return null;
+        }
+
+        $type = $this->str($event['type'] ?? null);
+        $side = $this->str($event['side'] ?? null);
+        $minute = $this->nullableStr($event['minute'] ?? null);
+        $homeScore = $this->nullableStr($event['homeScore'] ?? null);
+        $awayScore = $this->nullableStr($event['awayScore'] ?? null);
+        $scoreline = ($homeScore !== null && $awayScore !== null) ? "{$home} {$homeScore}–{$awayScore} {$away}" : null;
+        $prefix = $minute !== null ? "{$minute}' " : '';
+
+        $headline = match ($type) {
+            'KICKOFF' => 'Kick-off',
+            'GOAL' => trim($prefix.'Goal! '.$this->goalScorerSide($side, $home, $away).($scoreline !== null ? " ({$homeScore}–{$awayScore})" : '')),
+            'HT' => 'Half-time'.($scoreline !== null ? ": {$scoreline}" : ''),
+            'RESUME' => 'Second half under way',
+            'FT' => 'Full time'.($scoreline !== null ? ": {$scoreline}" : ''),
+            default => $type !== '' ? ucfirst(strtolower($type)) : 'Update',
+        };
+
+        return [
+            '@type' => 'BlogPosting',
+            'headline' => $headline,
+            'datePublished' => $at,
+        ];
+    }
+
+    /**
+     * The publisher node for Article-family schema (LiveBlogPosting) — required
+     * by Google's structured-data guidelines for live coverage.
+     *
+     * @return array<string, mixed>
+     */
+    private function publisher(): array
+    {
+        return [
+            '@type' => 'Organization',
+            'name' => Config::string('seo.site_name'),
+            'logo' => [
+                '@type' => 'ImageObject',
+                'url' => url(Config::string('seo.organization_logo')),
+            ],
+        ];
+    }
+
+    private function goalScorerSide(string $side, string $home, string $away): string
+    {
+        return match ($side) {
+            'home' => $home,
+            'away' => $away,
+            default => '',
+        };
+    }
+
+    /**
+     * The poller's self-built timeline events for a match, oldest first.
+     *
+     * @return list<array<array-key, mixed>>
+     */
+    private function recordedEvents(string $id): array
+    {
+        if ($id === '') {
+            return [];
+        }
+
+        $cached = Cache::get(PollLiveScores::eventsKey($id));
+
+        if (! is_array($cached)) {
+            return [];
+        }
+
+        return array_values(array_filter($cached, is_array(...)));
+    }
+
+    /**
+     * @param  list<array{q: string, a: string}>  $faq
+     * @return array<string, mixed>
+     */
+    private function faqPage(array $faq): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => array_map(
+                fn (array $item): array => [
+                    '@type' => 'Question',
+                    'name' => $item['q'],
+                    'acceptedAnswer' => ['@type' => 'Answer', 'text' => $item['a']],
+                ],
+                $faq,
+            ),
+        ];
     }
 
     /**

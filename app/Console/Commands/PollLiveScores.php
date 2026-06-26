@@ -6,6 +6,7 @@ use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
 use App\Services\Push\MatchAlerts;
+use App\Services\Seo\IndexNow;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -125,7 +126,7 @@ class PollLiveScores extends Command
         parent::__construct();
     }
 
-    public function handle(FootballData $football, Normalizer $normalizer): int
+    public function handle(FootballData $football, Normalizer $normalizer, IndexNow $indexNow): int
     {
         $raw = $football->get('/matches', ['status' => 'IN_PLAY,PAUSED']);
 
@@ -220,6 +221,10 @@ class PollLiveScores extends Command
         //     foreach ($changed as $m) {
         //         broadcast(new \App\Events\ScoreUpdated($m));
         //     }
+
+        // Ping IndexNow for changed results so Bing/Yandex recrawl within
+        // minutes (no-op unless INDEXNOW_KEY is configured).
+        $indexNow->submitMatches($changed);
 
         $this->info(sprintf('Live: %d match(es), %d score change(s).', count($matches), count($changed)));
 
