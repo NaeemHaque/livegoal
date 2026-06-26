@@ -5,6 +5,7 @@ namespace Tests\Feature\Push;
 use App\Models\PushSubscriber;
 use App\Notifications\GoalScored;
 use App\Notifications\MatchFullTime;
+use App\Notifications\MatchStarted;
 use App\Services\Push\MatchAlerts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -86,6 +87,19 @@ class MatchAlertsTest extends TestCase
         Notification::assertSentTo($fan, MatchFullTime::class);
     }
 
+    public function test_kickoff_uses_the_same_audience(): void
+    {
+        $homeFan = $this->subscriberFollowing('team', '769');
+        $compFan = $this->subscriberFollowing('competition', '2000');
+        $unrelated = $this->subscriberFollowing('team', '999');
+
+        app(MatchAlerts::class)->kickoff($this->match());
+
+        Notification::assertSentTo($homeFan, MatchStarted::class);
+        Notification::assertSentTo($compFan, MatchStarted::class);
+        Notification::assertNotSentTo($unrelated, MatchStarted::class);
+    }
+
     public function test_no_vapid_keys_means_no_sends(): void
     {
         Config::set('webpush.vapid.public_key', '');
@@ -121,6 +135,22 @@ class MatchAlertsTest extends TestCase
                 && $message['tag'] === 'match-537327'
                 && $message['data'] === ['url' => '/match/537327']
                 && $options['TTL'] === 600;
+        });
+    }
+
+    public function test_the_kickoff_payload_renders_the_fixture_and_click_target(): void
+    {
+        $fan = $this->subscriberFollowing('team', '769');
+
+        app(MatchAlerts::class)->kickoff($this->match());
+
+        Notification::assertSentTo($fan, MatchStarted::class, function (MatchStarted $notification) use ($fan): bool {
+            $message = $notification->toWebPush($fan, $notification)->toArray();
+
+            return $message['title'] === 'Kick-off: Mexico vs South Africa'
+                && $message['body'] === 'World Cup'
+                && $message['tag'] === 'match-537327'
+                && $message['data'] === ['url' => '/match/537327'];
         });
     }
 }
