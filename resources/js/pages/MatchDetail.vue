@@ -212,7 +212,7 @@ const meta = computed(() => {
                 ? m.stage.replaceAll('_', ' ')
                 : null,
         ],
-        ['group', m.group],
+        ['group', m.group ? m.group.replace(/^GROUP_/, 'Group ') : null],
         ['kick-off', m.kickoff ? dateTime(m.kickoff) : null],
         ['venue', m.venue],
         ['referee', m.referee],
