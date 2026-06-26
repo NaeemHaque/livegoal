@@ -1,6 +1,7 @@
 import { watchDebounced } from '@vueuse/core';
 import { ref } from 'vue';
 
+import { track } from '@/lib/analytics';
 import api from '@/services/api';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useSettingsStore } from '@/stores/settings';
@@ -130,6 +131,7 @@ export function usePush() {
 
         settings.pushEnabled = true;
         startFollowWatcher();
+        track('push_subscribe', { method: 'settings' });
 
         return true;
     };
