@@ -147,6 +147,7 @@ class SeoMetaResolver
             description: $description,
             canonical: $canonical,
             jsonLd: $jsonLd,
+            image: url('/og/match/'.$numericId),
         );
     }
 

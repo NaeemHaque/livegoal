@@ -2,7 +2,8 @@
     // Per-URL SEO metadata is injected by the controller (SeoShellController /
     // ContentController). The fallback keeps a view renderable without it.
     $seo ??= new \App\Seo\SeoMeta(config('seo.default_title'), config('seo.default_description'), url()->current());
-    $ogImage = config('seo.og_image');
+    // Prefer a per-page image (e.g. a dynamic match card) over the site default.
+    $ogImage = $seo->image ?: config('seo.og_image');
     $ogImage = $ogImage ? (\Illuminate\Support\Str::startsWith($ogImage, 'http') ? $ogImage : url($ogImage)) : null;
 @endphp
 

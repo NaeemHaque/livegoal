@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\OgImageController;
 use App\Http\Controllers\SchedulerController;
 use App\Http\Controllers\SeoShellController;
 use App\Http\Controllers\SitemapController;
@@ -20,6 +21,10 @@ Route::get('sitemap-core.xml', [SitemapController::class, 'core']);
 Route::get('sitemap-matches.xml', [SitemapController::class, 'matches']);
 Route::get('sitemap-teams.xml', [SitemapController::class, 'teams']);
 Route::get('sitemap-news.xml', [SitemapController::class, 'news']);
+
+// Dynamic Open Graph share images (per-match teams + score). Cache-only with a
+// static fallback, so a scraper hit never reaches the upstream API.
+Route::get('og/match/{id}', [OgImageController::class, 'match'])->name('og.match');
 
 // SPA routes. Each renders the Vue shell with per-URL SEO metadata resolved from
 // cached football data (see App\Http\Controllers\SeoShellController). Listing the
