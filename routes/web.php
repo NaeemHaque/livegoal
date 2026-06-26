@@ -26,6 +26,11 @@ Route::get('sitemap-news.xml', [SitemapController::class, 'news']);
 // static fallback, so a scraper hit never reaches the upstream API.
 Route::get('og/match/{id}', [OgImageController::class, 'match'])->name('og.match');
 
+// IndexNow ownership verification: serve the configured key at /{key}.txt. The
+// length floor keeps this from shadowing robots.txt / sitemap.xml above.
+Route::get('{indexnowKey}.txt', [SitemapController::class, 'indexNowKey'])
+    ->where('indexnowKey', '[A-Za-z0-9-]{16,128}');
+
 // SPA routes. Each renders the Vue shell with per-URL SEO metadata resolved from
 // cached football data (see App\Http\Controllers\SeoShellController). Listing the
 // real path shapes explicitly lets the fallback below return true 404s for

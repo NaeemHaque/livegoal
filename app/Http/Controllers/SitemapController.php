@@ -183,6 +183,19 @@ class SitemapController extends Controller
         return $this->xml($xml);
     }
 
+    /**
+     * Serve the IndexNow key file (/{key}.txt) when the requested name matches
+     * the configured key — the ownership proof IndexNow fetches.
+     */
+    public function indexNowKey(string $indexnowKey): Response
+    {
+        $configured = Config::get('services.indexnow.key');
+
+        abort_unless(is_string($configured) && $configured !== '' && hash_equals($configured, $indexnowKey), 404);
+
+        return response($indexnowKey, 200, ['Content-Type' => 'text/plain']);
+    }
+
     public function robots(): Response
     {
         $lines = [
