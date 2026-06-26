@@ -66,7 +66,8 @@ class ContentPagesTest extends TestCase
 
     public function test_sitemap_includes_content_pages(): void
     {
-        $body = (string) $this->get('/sitemap.xml')->getContent();
+        // Content pages live in the core child sitemap (the index just fans out).
+        $body = (string) $this->get('/sitemap-core.xml')->getContent();
 
         $this->assertStringContainsString('<loc>'.url('/guides').'</loc>', $body);
         $this->assertStringContainsString('<loc>'.url('/guides/world-cup-2026-format-explained').'</loc>', $body);
@@ -139,7 +140,7 @@ class ContentPagesTest extends TestCase
 
     public function test_sitemap_includes_glossary_and_watch_pages(): void
     {
-        $body = (string) $this->get('/sitemap.xml')->getContent();
+        $body = (string) $this->get('/sitemap-core.xml')->getContent();
 
         $this->assertStringContainsString('<loc>'.url('/guides/what-is-offside').'</loc>', $body);
         $this->assertStringContainsString('<loc>'.url('/guides/how-to-watch-world-cup-2026-free/uk').'</loc>', $body);

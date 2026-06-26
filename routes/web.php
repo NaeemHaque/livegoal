@@ -11,9 +11,15 @@ use Illuminate\Support\Facades\Route;
 // See docs/LIVE_POLLING.md.
 Route::get('scheduler/run', [SchedulerController::class, 'run'])->middleware('throttle:20,1');
 
-// Crawl-control surface (dynamic so URLs are environment-correct).
+// Crawl-control surface (dynamic so URLs are environment-correct). The sitemap
+// index fans out to child sitemaps so the high-volume match/team entity pages
+// get their own freshness-stamped lists.
 Route::get('robots.txt', [SitemapController::class, 'robots']);
 Route::get('sitemap.xml', [SitemapController::class, 'index']);
+Route::get('sitemap-core.xml', [SitemapController::class, 'core']);
+Route::get('sitemap-matches.xml', [SitemapController::class, 'matches']);
+Route::get('sitemap-teams.xml', [SitemapController::class, 'teams']);
+Route::get('sitemap-news.xml', [SitemapController::class, 'news']);
 
 // SPA routes. Each renders the Vue shell with per-URL SEO metadata resolved from
 // cached football data (see App\Http\Controllers\SeoShellController). Listing the
