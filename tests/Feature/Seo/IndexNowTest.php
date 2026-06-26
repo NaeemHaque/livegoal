@@ -41,6 +41,19 @@ class IndexNowTest extends TestCase
         });
     }
 
+    public function test_submit_dedupes_repeated_urls_within_the_window(): void
+    {
+        config(['services.indexnow.key' => 'abcdef0123456789abcdef0123456789']);
+        Http::fake();
+
+        $indexNow = app(IndexNow::class);
+        $indexNow->submitMatches($this->changedMatches());
+        // Same change again on the next poll — nothing new, so no second ping.
+        $indexNow->submitMatches($this->changedMatches());
+
+        Http::assertSentCount(1);
+    }
+
     public function test_submit_is_a_noop_without_a_key(): void
     {
         config(['services.indexnow.key' => null]);

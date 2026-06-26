@@ -21,6 +21,15 @@ use Illuminate\Support\Facades\URL;
  */
 class SeoMetaResolver
 {
+    /**
+     * Memoized featured-matches aggregate (cache-only) for this request. The SEO
+     * head and the prerender body are two calls on the same instance, so the
+     * feeds are merged at most once per request.
+     *
+     * @var array{matches: list<array<string, mixed>>, lastUpdated: string|null, stale: bool, served: bool}|null
+     */
+    private ?array $aggregateCache = null;
+
     public function __construct(
         private readonly FootballData $football,
         private readonly Normalizer $normalizer,
@@ -97,19 +106,16 @@ class SeoMetaResolver
     public function match(string $id): SeoMeta
     {
         $numericId = Slug::id($id);
-        $entry = $this->football->peekEntry("match:{$numericId}");
+        $resolved = $this->resolveMatch($numericId);
 
-        if ($entry === null) {
+        if ($resolved === null) {
             return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', URL::current());
         }
 
-        $m = $this->normalizer->match($entry['data']);
+        $m = $resolved['match'];
+        $updatedAt = $resolved['updatedAt'];
         $home = $this->str(data_get($m, 'home.name'));
         $away = $this->str(data_get($m, 'away.name'));
-
-        if ($home === '' || $away === '') {
-            return $this->cold('Match Centre — Live Football Score', 'Live football scores, lineups and results on LiveGoal.', URL::current());
-        }
 
         $canonical = Slug::url('match', $numericId, "{$home} vs {$away}");
         $competition = $this->nullableStr(data_get($m, 'competition.name'));
@@ -136,7 +142,7 @@ class SeoMetaResolver
         // A live/finished match with a self-built timeline also gets a
         // LiveBlogPosting — the schema Google uses for live coverage and a
         // strong Top Stories signal.
-        $liveBlog = $this->liveBlog($m, $canonical, $entry['at']);
+        $liveBlog = $this->liveBlog($m, $canonical, $updatedAt);
 
         if ($liveBlog !== null) {
             $jsonLd[] = $liveBlog;
@@ -203,19 +209,14 @@ class SeoMetaResolver
     public function team(string $id): SeoMeta
     {
         $numericId = Slug::id($id);
-        $raw = $this->football->peek("team:{$numericId}");
+        $resolved = $this->resolveTeam($numericId);
 
-        if ($raw === null) {
+        if ($resolved === null) {
             return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', URL::current());
         }
 
-        $t = $this->normalizer->teamDetail($raw);
+        $t = $resolved['team'];
         $name = $this->str(data_get($t, 'name'));
-
-        if ($name === '') {
-            return $this->cold('Team — Fixtures, Results & Squad', 'Football team fixtures, results, squad and live scores on LiveGoal.', URL::current());
-        }
-
         $canonical = Slug::url('team', $numericId, $name);
         $area = $this->nullableStr(data_get($t, 'area.name'));
         $crest = $this->nullableStr(data_get($t, 'crest'));
@@ -409,19 +410,13 @@ class SeoMetaResolver
      */
     public function matchBody(string $id): ?array
     {
-        $entry = $this->football->peekEntry('match:'.Slug::id($id));
+        $resolved = $this->resolveMatch(Slug::id($id));
 
-        if ($entry === null) {
+        if ($resolved === null) {
             return null;
         }
 
-        $m = $this->normalizer->match($entry['data']);
-
-        if ($this->str(data_get($m, 'home.name')) === '' || $this->str(data_get($m, 'away.name')) === '') {
-            return null;
-        }
-
-        return ['view' => 'seo.match', 'data' => ['match' => $m, 'updatedAt' => $entry['at']]];
+        return ['view' => 'seo.match', 'data' => ['match' => $resolved['match'], 'updatedAt' => $resolved['updatedAt']]];
     }
 
     /**
@@ -467,29 +462,21 @@ class SeoMetaResolver
      */
     public function teamBody(string $id): ?array
     {
-        $numericId = Slug::id($id);
-        $entry = $this->football->peekEntry("team:{$numericId}");
+        $resolved = $this->resolveTeam(Slug::id($id));
 
-        if ($entry === null) {
+        if ($resolved === null) {
             return null;
         }
 
-        $t = $this->normalizer->teamDetail($entry['data']);
-
-        if ($this->str(data_get($t, 'name')) === '') {
-            return null;
-        }
-
-        $matchesRaw = $this->football->peek("team:{$numericId}:matches");
-        $all = $matchesRaw !== null ? $this->normalizer->matches($matchesRaw) : [];
+        $all = $resolved['matches'];
 
         return [
             'view' => 'seo.team',
             'data' => [
-                'team' => $t,
+                'team' => $resolved['team'],
                 'upcoming' => $this->upcoming($all, 5),
                 'recent' => $this->recent($all, 5),
-                'updatedAt' => $entry['at'],
+                'updatedAt' => $resolved['updatedAt'],
             ],
         ];
     }
@@ -674,6 +661,99 @@ class SeoMetaResolver
     }
 
     /**
+     * The featured-matches aggregate, merged once per request (cache-only).
+     *
+     * @return array{matches: list<array<string, mixed>>, lastUpdated: string|null, stale: bool, served: bool}
+     */
+    private function aggregate(): array
+    {
+        return $this->aggregateCache ??= $this->featured->all(allowFetch: false);
+    }
+
+    /**
+     * Resolve a normalized match for the SEO layer: the warmed single-match
+     * cache first, then the featured competition feeds (which the schedulers keep
+     * warm). The feed fallback is what makes every sitemap'd fixture indexable
+     * without waiting for a human to open its detail page — the single-match
+     * cache is only written on a real /api/matches/{id} request.
+     *
+     * @return array{match: array<string, mixed>, updatedAt: string}|null
+     */
+    private function resolveMatch(string $id): ?array
+    {
+        $entry = $this->football->peekEntry("match:{$id}");
+
+        if ($entry !== null) {
+            $m = $this->normalizer->match($entry['data']);
+
+            if ($this->str(data_get($m, 'home.name')) !== '' && $this->str(data_get($m, 'away.name')) !== '') {
+                return ['match' => $m, 'updatedAt' => $entry['at']];
+            }
+        }
+
+        $agg = $this->aggregate();
+
+        foreach ($agg['matches'] as $m) {
+            if ($this->str(data_get($m, 'id')) === $id
+                && $this->str(data_get($m, 'home.name')) !== ''
+                && $this->str(data_get($m, 'away.name')) !== '') {
+                return ['match' => $m, 'updatedAt' => $agg['lastUpdated'] ?? Carbon::now()->toIso8601String()];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve a team + its matches for the SEO layer: the warmed team-detail
+     * cache first, then a minimal record assembled from the featured feeds (id,
+     * name, crest, and the team's fixtures), so a sitemap'd team page is
+     * indexable before anyone opens its detail page.
+     *
+     * @return array{team: array<string, mixed>, matches: list<array<string, mixed>>, updatedAt: string|null}|null
+     */
+    private function resolveTeam(string $id): ?array
+    {
+        $entry = $this->football->peekEntry("team:{$id}");
+
+        if ($entry !== null) {
+            $t = $this->normalizer->teamDetail($entry['data']);
+
+            if ($this->str(data_get($t, 'name')) !== '') {
+                $matchesRaw = $this->football->peek("team:{$id}:matches");
+                $matches = $matchesRaw !== null ? $this->normalizer->matches($matchesRaw) : [];
+
+                return ['team' => $t, 'matches' => $matches, 'updatedAt' => $entry['at']];
+            }
+        }
+
+        $agg = $this->aggregate();
+        $team = null;
+        $matches = [];
+
+        foreach ($agg['matches'] as $m) {
+            foreach (['home', 'away'] as $side) {
+                if ($this->str(data_get($m, "{$side}.id")) !== $id) {
+                    continue;
+                }
+
+                $team ??= [
+                    'id' => $id,
+                    'name' => $this->str(data_get($m, "{$side}.name")),
+                    'crest' => $this->nullableStr(data_get($m, "{$side}.crest")),
+                ];
+                $matches[] = $m;
+            }
+        }
+
+        if ($team === null || $this->str($team['name']) === '') {
+            return null;
+        }
+
+        return ['team' => $team, 'matches' => $matches, 'updatedAt' => $agg['lastUpdated']];
+    }
+
+    /**
      * Resolve a competition by code/id: try its cached detail, then fall back to
      * the warmed competitions list (so any of the ~13 free-tier competitions has
      * an indexable name even before its detail feed is warmed).
@@ -780,9 +860,16 @@ class SeoMetaResolver
         }
 
         if ($isResult && $kickoff !== null) {
+            // No real finish time on the free tier; approximate by result type —
+            // 90 + stoppage, extra time, or a shootout.
+            $minutes = match ($status) {
+                'PEN' => 150,
+                'AET' => 135,
+                default => 115,
+            };
+
             try {
-                // No real finish time on the free tier; ~115 min covers 90 + stoppage.
-                $event['endDate'] = Carbon::parse($kickoff)->addMinutes(115)->toIso8601String();
+                $event['endDate'] = Carbon::parse($kickoff)->addMinutes($minutes)->toIso8601String();
             } catch (\Throwable) {
                 // Leave endDate off if the kickoff can't be parsed.
             }
@@ -793,7 +880,9 @@ class SeoMetaResolver
         }
 
         if ($competition !== null) {
-            $event['superEvent'] = ['@type' => 'SportsOrganization', 'name' => $competition];
+            // superEvent's range is Event — the competition modelled as the
+            // tournament/season event, not an Organization.
+            $event['superEvent'] = ['@type' => 'SportsEvent', 'name' => $competition];
         }
 
         return $event;
@@ -860,6 +949,8 @@ class SeoMetaResolver
             'url' => $canonical,
             'datePublished' => $kickoff ?? $updatedAt,
             'dateModified' => $updatedAt,
+            'image' => url('/og/match/'.$this->str(data_get($m, 'id'))),
+            'publisher' => $this->publisher(),
             'about' => ['@type' => 'SportsEvent', 'name' => "{$home} vs {$away}"],
             'liveBlogUpdate' => $updates,
         ];
@@ -915,6 +1006,24 @@ class SeoMetaResolver
             '@type' => 'BlogPosting',
             'headline' => $headline,
             'datePublished' => $at,
+        ];
+    }
+
+    /**
+     * The publisher node for Article-family schema (LiveBlogPosting) — required
+     * by Google's structured-data guidelines for live coverage.
+     *
+     * @return array<string, mixed>
+     */
+    private function publisher(): array
+    {
+        return [
+            '@type' => 'Organization',
+            'name' => Config::string('seo.site_name'),
+            'logo' => [
+                '@type' => 'ImageObject',
+                'url' => url(Config::string('seo.organization_logo')),
+            ],
         ];
     }
 

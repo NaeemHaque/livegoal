@@ -21,12 +21,16 @@
 <meta property="og:locale" content="{{ config('seo.locale') }}">
 @if ($ogImage)
     <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="{{ $seo->title }}">
 @endif
 <meta name="twitter:card" content="{{ config('seo.og_image_wide') ? 'summary_large_image' : 'summary' }}">
 <meta name="twitter:title" content="{{ $seo->title }}">
 <meta name="twitter:description" content="{{ $seo->description }}">
 @if ($ogImage)
     <meta name="twitter:image" content="{{ $ogImage }}">
+    <meta name="twitter:image:alt" content="{{ $seo->title }}">
 @endif
 @if ($handle = config('seo.twitter'))
     <meta name="twitter:site" content="{{ $handle }}">

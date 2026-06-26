@@ -11,6 +11,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Renders dynamic Open Graph share images so a shared match link shows the teams
@@ -57,6 +58,12 @@ class OgImageController extends Controller
         );
 
         if (! is_string($png)) {
+            // The match resolved but rendering failed — GD or a TTF font is
+            // missing on the host. Surface it (throttled) so it's not silent.
+            if (Cache::add('og:render-failed-logged', true, 3600)) {
+                Log::warning('OG image render failed — check that ext-gd and a TTF font (e.g. fonts-dejavu-core) are installed.');
+            }
+
             return $this->fallback();
         }
 

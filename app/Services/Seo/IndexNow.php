@@ -3,6 +3,7 @@
 namespace App\Services\Seo;
 
 use App\Seo\Slug;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +15,9 @@ use Illuminate\Support\Facades\Log;
  */
 class IndexNow
 {
+    /** Don't resubmit the same URL within this window (seconds) — caps pings on busy days. */
+    private const DEDUP_TTL = 600;
+
     public function enabled(): bool
     {
         return $this->key() !== '';
@@ -62,20 +66,34 @@ class IndexNow
     public function submit(array $urls): void
     {
         $key = $this->key();
-        $urls = array_values(array_unique(array_filter($urls, fn (string $url): bool => $url !== '')));
 
-        if ($key === '' || $urls === []) {
+        if ($key === '') {
+            return;
+        }
+
+        // Drop URLs already submitted within the dedup window — Cache::add is
+        // only true the first time a key is set, so /, /matches and repeated
+        // match URLs aren't re-pinged on every 30s poll.
+        $fresh = [];
+
+        foreach (array_unique(array_filter($urls, fn (string $url): bool => $url !== '')) as $url) {
+            if (Cache::add('indexnow:sent:'.md5($url), true, self::DEDUP_TTL)) {
+                $fresh[] = $url;
+            }
+        }
+
+        if ($fresh === []) {
             return;
         }
 
         $host = (string) parse_url(url('/'), PHP_URL_HOST);
 
         try {
-            Http::asJson()->post(Config::string('services.indexnow.endpoint'), [
+            Http::asJson()->connectTimeout(3)->timeout(5)->post(Config::string('services.indexnow.endpoint'), [
                 'host' => $host,
                 'key' => $key,
                 'keyLocation' => url("/{$key}.txt"),
-                'urlList' => array_slice($urls, 0, 100),
+                'urlList' => array_slice($fresh, 0, 100),
             ]);
         } catch (\Throwable $e) {
             Log::warning('IndexNow submit failed', ['message' => $e->getMessage()]);

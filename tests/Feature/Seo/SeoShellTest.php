@@ -64,6 +64,8 @@ class SeoShellTest extends TestCase
             ->assertSee('<link rel="canonical"', false)
             ->assertSee('property="og:title"', false)
             ->assertSee('name="twitter:card"', false)
+            ->assertSee('property="og:image:width" content="1200"', false)
+            ->assertSee('property="og:image:alt"', false)
             ->assertSee('"@type":"WebSite"', false)
             ->assertSee('"@type":"Organization"', false);
     }
@@ -138,7 +140,9 @@ class SeoShellTest extends TestCase
             ->assertSee('Full time: Mexico 2', false)
             // Home/away teams link to their LiveGoal pages.
             ->assertSee(url('/team/1-mexico'), false)
-            ->assertSee('"endDate"', false);
+            ->assertSee('"endDate"', false)
+            // superEvent is an Event (not an Organization).
+            ->assertSee('"superEvent":{"@type":"SportsEvent"', false);
     }
 
     public function test_live_match_emits_liveblogposting_from_timeline(): void
@@ -165,7 +169,10 @@ class SeoShellTest extends TestCase
             ->assertSee('"@type":"LiveBlogPosting"', false)
             ->assertSee('"liveBlogUpdate"', false)
             ->assertSee('Goal! Mexico', false)
-            ->assertSee('"dateModified"', false);
+            ->assertSee('"dateModified"', false)
+            // Article-family schema needs a publisher + image.
+            ->assertSee('"publisher":{"@type":"Organization"', false)
+            ->assertSee('"logo":{"@type":"ImageObject"', false);
     }
 
     public function test_match_canonical_is_slug_url_ignoring_query_string(): void
@@ -185,6 +192,51 @@ class SeoShellTest extends TestCase
             ->assertOk()
             ->assertSee('<title>Arsenal FC vs Chelsea FC', false)
             ->assertSee('<link rel="canonical" href="'.url('/match/1-arsenal-fc-vs-chelsea-fc').'">', false);
+    }
+
+    public function test_match_in_competition_feed_is_indexable_without_single_cache(): void
+    {
+        // Only the warmed competition feed is cached — NOT the per-match cache,
+        // which is written only on a real /api/matches/{id} visit. The page must
+        // still be indexable, or every sitemap'd fixture would be noindex.
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 77,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-28T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $this->get('/match/77')
+            ->assertOk()
+            ->assertSee('<title>Mexico vs Canada — FIFA World Cup Live Score', false)
+            ->assertSee('"@type":"SportsEvent"', false)
+            ->assertSee('data-seo-prerender', false)
+            ->assertDontSee('name="robots" content="noindex', false);
+    }
+
+    public function test_team_in_competition_feed_is_indexable_without_single_cache(): void
+    {
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 77,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-28T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $this->get('/team/1')
+            ->assertOk()
+            ->assertSee('<title>Mexico — Fixtures, Results', false)
+            ->assertSee('"@type":"SportsTeam"', false)
+            ->assertSee('<h1>Mexico</h1>', false)
+            ->assertDontSee('name="robots" content="noindex', false);
     }
 
     public function test_uncached_match_is_noindex_but_still_serves_the_shell(): void

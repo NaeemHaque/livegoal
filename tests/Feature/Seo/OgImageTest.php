@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seo;
 
+use App\Seo\OgImage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -55,6 +56,30 @@ class OgImageTest extends TestCase
     public function test_uncached_match_og_image_falls_back_to_static(): void
     {
         $this->get('/og/match/999999')
+            ->assertRedirect(url(config('seo.og_image')));
+    }
+
+    public function test_render_failure_falls_back_to_static(): void
+    {
+        // Simulate a host without GD / a TTF font: the renderer returns null.
+        $this->app->instance(OgImage::class, new class extends OgImage
+        {
+            public function card(string $eyebrow, string $title, string $subtitle): ?string
+            {
+                return null;
+            }
+        });
+
+        $this->cacheUpstream('match:5', [
+            'id' => 5,
+            'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+            'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+            'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+            'status' => 'TIMED', 'utcDate' => '2026-06-28T18:00:00Z',
+            'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+        ]);
+
+        $this->get('/og/match/5')
             ->assertRedirect(url(config('seo.og_image')));
     }
 
