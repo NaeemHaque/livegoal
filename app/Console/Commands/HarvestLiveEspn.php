@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Football\EspnLiveOverlay;
+use App\Services\Push\LiveGoalAlerts;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
@@ -25,7 +26,7 @@ class HarvestLiveEspn extends Command
 
     protected $description = 'Harvest ESPN live data for in-play matches into the live-overlay cache';
 
-    public function handle(EspnLiveOverlay $overlay): int
+    public function handle(EspnLiveOverlay $overlay, LiveGoalAlerts $goalAlerts): int
     {
         $payload = Cache::get(PollLiveScores::CACHE_KEY);
         $matches = is_array($payload) && is_array($payload['matches'] ?? null)
@@ -44,6 +45,16 @@ class HarvestLiveEspn extends Command
         $map = $overlay->harvest($matches);
 
         Cache::put(self::OVERLAY_KEY, $map, self::OVERLAY_TTL);
+
+        // Push goals the instant ESPN shows them — deduped against the poller via
+        // the shared timeline cache, so football-data's lag never gates an alert.
+        foreach ($matches as $match) {
+            $id = is_scalar($match['id'] ?? null) ? (string) $match['id'] : '';
+
+            if ($id !== '' && isset($map[$id])) {
+                $goalAlerts->fromLive($match, $map[$id]);
+            }
+        }
 
         $this->info(sprintf('ESPN overlay refreshed for %d of %d live match(es).', count($map), count($matches)));
 
