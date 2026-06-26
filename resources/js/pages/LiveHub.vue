@@ -31,7 +31,8 @@ const favorites = useFavoritesStore();
 
 const { data: upcomingData, loading } = useUpcoming();
 const { data: resultsData } = useResults();
-const { data: standings } = useStandings('PL');
+const { data: wcStandings } = useStandings('WC');
+const { data: leagueStandings } = useStandings('PL');
 const { data: wcScorers } = useScorers('WC');
 const { data: leagueScorers } = useScorers('PL');
 const time = useTimeFormat();
@@ -79,16 +80,35 @@ const scorerTitle = computed(() =>
 const topScorers = computed(() =>
     ((wcCurrent.value ? wcScorers.value : leagueScorers.value) ?? []).slice(
         0,
-        5,
+        8,
     ),
 );
 const wcStartLabel = computed(() =>
     nextMatch.value ? time.date(nextMatch.value.kickoff) : null,
 );
 
-// Top of the table — a league standings snapshot.
+// Top of the table — World Cup leaders across every group while it's current,
+// else the featured league's table. Ranked by points, then GD, then goals for.
+const tableSource = computed(() =>
+    wcCurrent.value ? wcStandings.value : leagueStandings.value,
+);
 const tableRows = computed(() =>
-    (standings.value?.groups?.[0]?.rows ?? []).slice(0, 6),
+    (tableSource.value?.groups ?? [])
+        .flatMap((g) => g.rows ?? [])
+        .sort(
+            (a, b) =>
+                b.points - a.points ||
+                b.goalDifference - a.goalDifference ||
+                b.goalsFor - a.goalsFor,
+        )
+        .slice(0, 7)
+        .map((r, i) => ({ ...r, position: i + 1 })),
+);
+const tableLabel = computed(() =>
+    wcCurrent.value ? 'World Cup' : 'Premier League',
+);
+const tableHref = computed(() =>
+    wcCurrent.value ? '/competition/WC' : '/competition/PL',
 );
 
 // Fixture groups keyed by competition, each carrying up to 4 upcoming and 4
@@ -391,11 +411,9 @@ const toggleFav = (m) => favorites.toggleMatchFavorite(m);
                 <div v-if="tableRows.length" class="pp-rail-card">
                     <div class="rc-head">
                         <span>Top of the table</span>
-                        <span
-                            class="more"
-                            @click="router.push('/competition/PL')"
-                            >Premier League</span
-                        >
+                        <span class="more" @click="router.push(tableHref)">{{
+                            tableLabel
+                        }}</span>
                     </div>
                     <div class="rc-body">
                         <StandingsTable
