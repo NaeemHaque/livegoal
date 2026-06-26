@@ -117,6 +117,56 @@ class SeoShellTest extends TestCase
         $response->assertDontSee('name="robots" content="noindex', false);
     }
 
+    public function test_finished_match_sportsevent_carries_result_and_team_links(): void
+    {
+        $this->cacheUpstream('match:2', [
+            'id' => 2,
+            'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+            'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+            'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+            'status' => 'FINISHED',
+            'utcDate' => '2026-06-26T15:00:00Z',
+            'venue' => 'Estadio Azteca',
+            'score' => ['fullTime' => ['home' => 2, 'away' => 1], 'winner' => 'HOME_TEAM'],
+        ]);
+
+        $this->get('/match/2')
+            ->assertOk()
+            ->assertSee('"@type":"SportsEvent"', false)
+            // Factual result line in the schema description.
+            ->assertSee('Full time: Mexico 2', false)
+            // Home/away teams link to their LiveGoal pages.
+            ->assertSee(url('/team/1-mexico'), false)
+            ->assertSee('"endDate"', false);
+    }
+
+    public function test_live_match_emits_liveblogposting_from_timeline(): void
+    {
+        $this->cacheUpstream('match:2', [
+            'id' => 2,
+            'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+            'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+            'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+            'status' => 'FINISHED',
+            'utcDate' => '2026-06-26T15:00:00Z',
+            'score' => ['fullTime' => ['home' => 1, 'away' => 0], 'winner' => 'HOME_TEAM'],
+        ]);
+
+        // The poller's self-built timeline for this match.
+        Cache::put('live:events:2', [
+            ['type' => 'KICKOFF', 'minute' => 0, 'side' => null, 'homeScore' => 0, 'awayScore' => 0, 'at' => '2026-06-26T15:00:00+00:00'],
+            ['type' => 'GOAL', 'minute' => 23, 'side' => 'home', 'homeScore' => 1, 'awayScore' => 0, 'at' => '2026-06-26T15:24:00+00:00'],
+            ['type' => 'FT', 'minute' => 90, 'side' => null, 'homeScore' => 1, 'awayScore' => 0, 'at' => '2026-06-26T16:55:00+00:00'],
+        ], 3600);
+
+        $this->get('/match/2')
+            ->assertOk()
+            ->assertSee('"@type":"LiveBlogPosting"', false)
+            ->assertSee('"liveBlogUpdate"', false)
+            ->assertSee('Goal! Mexico', false)
+            ->assertSee('"dateModified"', false);
+    }
+
     public function test_match_canonical_is_slug_url_ignoring_query_string(): void
     {
         $this->cacheUpstream('match:1', $this->upstreamMatch());

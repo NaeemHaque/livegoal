@@ -64,6 +64,23 @@ class ContentPagesTest extends TestCase
         $this->get('/guides/does-not-exist')->assertNotFound();
     }
 
+    public function test_world_cup_guide_emits_faqpage_schema(): void
+    {
+        $this->get('/guides/world-cup-2026-format-explained')
+            ->assertOk()
+            ->assertSee('"@type":"FAQPage"', false)
+            ->assertSee('"@type":"Question"', false)
+            ->assertSee('How many teams are in the 2026 World Cup?', false);
+    }
+
+    public function test_watch_country_page_emits_faqpage_schema(): void
+    {
+        $this->get('/guides/how-to-watch-world-cup-2026-free/uk')
+            ->assertOk()
+            ->assertSee('"@type":"FAQPage"', false)
+            ->assertSee('Can I watch the World Cup 2026 free in the UK?', false);
+    }
+
     public function test_sitemap_includes_content_pages(): void
     {
         // Content pages live in the core child sitemap (the index just fans out).
