@@ -14,7 +14,7 @@ const prefersDark = usePreferredDark();
 
 const theme = useStorage('pp_theme', prefersDark.value ? 'dark' : 'light');
 const timezone = useStorage('pp_timezone', 'local'); // 'local' or an IANA name
-const refresh = useStorage('pp_refresh', 15); // live poll interval, seconds
+const refresh = useStorage('pp_refresh', 10); // live poll interval, seconds
 const paused = useStorage('pp_paused', false); // pause live polling
 const reduceMotion = useStorage('pp_reduce_motion', false);
 const pushEnabled = useStorage('pp_push', false); // match alerts (web push)
