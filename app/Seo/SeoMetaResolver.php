@@ -117,7 +117,11 @@ class SeoMetaResolver
         $venue = $this->nullableStr(data_get($m, 'venue'));
         $kickoff = $this->nullableStr(data_get($m, 'kickoff'));
 
-        $title = $this->brand("{$home} vs {$away} — Live Score & Result");
+        // Fold the competition into the title for the long tail ("Argentina vs
+        // Brazil — FIFA World Cup Live Score") — team names stay front-loaded.
+        $title = $this->brand($competition !== null
+            ? "{$home} vs {$away} — {$competition} Live Score & Result"
+            : "{$home} vs {$away} — Live Score & Result");
         $description = $this->matchDescription($home, $away, $status, $competition, $venue, $kickoff, $this->int(data_get($m, 'homeScore')), $this->int(data_get($m, 'awayScore')));
 
         $jsonLd = [
@@ -156,14 +160,23 @@ class SeoMetaResolver
         }
 
         $name = $this->str(data_get($c, 'name'));
+        $code = $this->str(data_get($c, 'code'));
         $isCup = $this->str(data_get($c, 'kind')) === 'cup';
 
-        $title = $this->brand($isCup ? "{$name} — Fixtures, Results & Bracket" : "{$name} — Table, Fixtures & Results");
-        $description = sprintf(
-            'Live %s scores, %s, fixtures, results and top scorers. Follow every matchday on LiveGoal — free, no betting ads.',
-            $name,
-            $isCup ? 'groups and knockout bracket' : 'the full table',
-        );
+        if (strcasecmp($code, 'WC') === 0) {
+            // The World Cup hub owns the highest-volume "world cup 2026 ___"
+            // head terms (scores / schedule / groups / bracket / top scorers).
+            $title = $this->brand('World Cup 2026 — Live Scores, Schedule, Groups, Bracket & Top Scorers');
+            $description = 'World Cup 2026 live scores and today\'s schedule, plus group tables, the knockout bracket '
+                .'and the Golden Boot race. Every fixture and result, free and updated live on LiveGoal.';
+        } else {
+            $title = $this->brand($isCup ? "{$name} — Fixtures, Results & Bracket" : "{$name} — Table, Fixtures & Results");
+            $description = sprintf(
+                'Live %s scores, %s, fixtures, results and top scorers. Follow every matchday on LiveGoal — free, no betting ads.',
+                $name,
+                $isCup ? 'groups and knockout bracket' : 'the full table',
+            );
+        }
 
         return new SeoMeta(
             title: $title,

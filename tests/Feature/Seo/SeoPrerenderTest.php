@@ -239,7 +239,9 @@ class SeoPrerenderTest extends TestCase
             ->assertSee('data-seo-prerender', false)
             ->assertSee('Mexico', false)   // today's fixture
             ->assertSee('Spain', false)    // upcoming fixture
-            ->assertSee('Last updated', false);
+            ->assertSee('Last updated', false)
+            // Crawlable internal links to the World Cup money pages.
+            ->assertSee('href="'.url('/competition/WC').'"', false);
 
         $this->travelBack();
     }

@@ -106,7 +106,8 @@ class SeoShellTest extends TestCase
         $response = $this->get('/match/1');
 
         $response->assertOk()
-            ->assertSee('<title>Arsenal FC vs Chelsea FC', false)
+            // Competition folded into the title for the long tail.
+            ->assertSee('<title>Arsenal FC vs Chelsea FC — Premier League Live Score', false)
             // Canonical is the keyword-rich slug URL, not the bare id.
             ->assertSee('<link rel="canonical" href="'.url('/match/1-arsenal-fc-vs-chelsea-fc').'">', false)
             ->assertSee('"@type":"SportsEvent"', false)
@@ -206,6 +207,18 @@ class SeoShellTest extends TestCase
             ->assertOk()
             ->assertSee('<title>Premier League', false)
             ->assertSee('"@type":"SportsOrganization"', false)
+            ->assertDontSee('name="robots" content="noindex', false);
+    }
+
+    public function test_world_cup_hub_has_head_term_title(): void
+    {
+        $this->cacheUpstream('competition:WC', [
+            'id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP',
+        ]);
+
+        $this->get('/competition/WC')
+            ->assertOk()
+            ->assertSee('<title>World Cup 2026 — Live Scores, Schedule, Groups, Bracket', false)
             ->assertDontSee('name="robots" content="noindex', false);
     }
 
