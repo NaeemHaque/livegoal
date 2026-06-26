@@ -144,18 +144,23 @@ class EspnNormalizerTest extends TestCase
     {
         $norm = new EspnNormalizer;
 
+        // ESPN's status.type as the feed really sends it. Crucially `detail` is
+        // an abbreviation ("HT"/"FT") while `name`/`description` spell the phase
+        // out — the mapping must read across all three (the abbreviated half-time
+        // is the bug that surfaced a finished first half as plain LIVE).
         $cases = [
-            ['pre', '', 'SCHEDULED'],
-            ['post', 'FT', 'FT'],
-            ['in', 'Halftime', 'HT'],
-            ['in', '2nd Half', 'LIVE'],
-            ['in', 'Penalties', 'PEN'],
-            ['in', '1st Extra Time', 'ET'],
+            [['state' => 'pre', 'name' => 'STATUS_SCHEDULED', 'detail' => 'Sat, June 11'], 'SCHEDULED'],
+            [['state' => 'post', 'name' => 'STATUS_FULL_TIME', 'description' => 'Full Time', 'detail' => 'FT'], 'FT'],
+            [['state' => 'in', 'name' => 'STATUS_HALFTIME', 'description' => 'Halftime', 'detail' => 'HT'], 'HT'],
+            [['state' => 'in', 'name' => 'STATUS_FIRST_HALF', 'description' => 'Halftime', 'detail' => 'Halftime'], 'HT'],
+            [['state' => 'in', 'name' => 'STATUS_SECOND_HALF', 'description' => '2nd Half', 'detail' => "67'"], 'LIVE'],
+            [['state' => 'in', 'name' => 'STATUS_SHOOTOUT', 'description' => 'Penalty Shootout', 'detail' => 'Pens'], 'PEN'],
+            [['state' => 'in', 'name' => 'STATUS_FIRST_EXTRA_TIME', 'description' => 'Extra Time', 'detail' => 'ET'], 'ET'],
         ];
 
-        foreach ($cases as [$state, $detail, $expected]) {
+        foreach ($cases as [$type, $expected]) {
             $sb = $this->scoreboard();
-            $sb['events'][0]['competitions'][0]['status']['type'] = ['state' => $state, 'detail' => $detail];
+            $sb['events'][0]['competitions'][0]['status']['type'] = $type;
 
             $resolved = $norm->resolve($sb, [
                 'home' => ['tla' => 'TUR', 'name' => 'Turkey'],
@@ -163,7 +168,7 @@ class EspnNormalizerTest extends TestCase
             ]);
             $this->assertNotNull($resolved);
 
-            $this->assertSame($expected, $norm->liveData($resolved, null)['status'], "state={$state} detail={$detail}");
+            $this->assertSame($expected, $norm->liveData($resolved, null)['status'], (string) json_encode($type));
         }
     }
 }
