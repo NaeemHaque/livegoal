@@ -175,14 +175,22 @@ class EspnNormalizer
     private function status(array $competition): string
     {
         $state = strtolower($this->str(data_get($competition, 'status.type.state')));
-        $detail = strtolower($this->str(data_get($competition, 'status.type.detail')));
+
+        // ESPN abbreviates `detail` ("HT") but spells the phase out in
+        // `name`/`description` ("STATUS_HALFTIME", "Halftime") — match across all
+        // three so an abbreviated half-time/penalties/extra-time isn't read LIVE.
+        $phase = strtolower(
+            $this->str(data_get($competition, 'status.type.name'))
+            .' '.$this->str(data_get($competition, 'status.type.description'))
+            .' '.$this->str(data_get($competition, 'status.type.detail'))
+        );
 
         return match (true) {
             $state === 'pre' => 'SCHEDULED',
             $state === 'post' => 'FT',
-            str_contains($detail, 'halftime') => 'HT',
-            str_contains($detail, 'penalt') => 'PEN',
-            str_contains($detail, 'extra') => 'ET',
+            str_contains($phase, 'halftime') => 'HT',
+            str_contains($phase, 'penalt'), str_contains($phase, 'shootout') => 'PEN',
+            str_contains($phase, 'extra'), str_contains($phase, 'overtime') => 'ET',
             default => 'LIVE',
         };
     }

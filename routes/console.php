@@ -17,10 +17,12 @@ Schedule::command('app:poll-live-scores')
 
 // ESPN near-real-time overlay for the in-play set the poller surfaced, so the
 // home "Live now" rail freshens its status/minute/score as fast as the match
-// page (which already layers ESPN). Writes a side cache that GET /api/live
-// merges; the football-data poller above is left untouched. See HarvestLiveEspn.
+// page (which already layers ESPN). Every 15s (matching the ESPN scoreboard TTL)
+// so goals/half-time reach the rail — and the goal push it dispatches — without
+// the football-data lag. Writes a side cache GET /api/live merges; the poller
+// above is left untouched. See HarvestLiveEspn.
 Schedule::command('app:harvest-live-espn')
-    ->everyThirtySeconds()
+    ->everyFifteenSeconds()
     ->withoutOverlapping();
 
 // Sweep push subscribers whose endpoint expired (the webpush channel deletes
