@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Seo\OgImage;
 use App\Seo\Slug;
+use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
 use Illuminate\Http\RedirectResponse;
@@ -24,6 +25,7 @@ class OgImageController extends Controller
     public function __construct(
         private readonly FootballData $football,
         private readonly Normalizer $normalizer,
+        private readonly FeaturedMatches $featured,
         private readonly OgImage $og,
     ) {}
 
@@ -32,11 +34,14 @@ class OgImageController extends Controller
         $numericId = Slug::id($id);
         $raw = $this->football->peek("match:{$numericId}");
 
-        if ($raw === null) {
+        // Prefer the per-match cache (fuller), else resolve from the warmed
+        // competition feeds so a card renders even before anyone opens the match.
+        $m = $raw !== null ? $this->normalizer->match($raw) : $this->featured->findById($numericId);
+
+        if ($m === null) {
             return $this->fallback();
         }
 
-        $m = $this->normalizer->match($raw);
         $home = $this->str(data_get($m, 'home.name'));
         $away = $this->str(data_get($m, 'away.name'));
 

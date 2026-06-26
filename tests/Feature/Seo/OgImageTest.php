@@ -53,6 +53,32 @@ class OgImageTest extends TestCase
         $this->assertSame(630, $size[1]);
     }
 
+    public function test_match_og_image_renders_from_feed_without_single_cache(): void
+    {
+        // Only the competition feed is warm — NOT the per-match cache. The OG
+        // card must still render (mirrors the SEO page's feed fallback), so a
+        // shared link shows the teams before anyone has opened the match.
+        $this->cacheUpstream('competition:WC:matches', [
+            'matches' => [[
+                'id' => 88,
+                'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+                'homeTeam' => ['id' => 1, 'name' => 'Mexico', 'tla' => 'MEX'],
+                'awayTeam' => ['id' => 2, 'name' => 'Canada', 'tla' => 'CAN'],
+                'status' => 'TIMED', 'utcDate' => '2026-06-28T18:00:00Z',
+                'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+            ]],
+        ]);
+
+        $response = $this->get('/og/match/88');
+
+        $response->assertOk();
+        $this->assertSame('image/png', $response->headers->get('Content-Type'));
+        $size = getimagesizefromstring((string) $response->getContent());
+        $this->assertIsArray($size);
+        $this->assertSame(1200, $size[0]);
+        $this->assertSame(630, $size[1]);
+    }
+
     public function test_uncached_match_og_image_falls_back_to_static(): void
     {
         $this->get('/og/match/999999')

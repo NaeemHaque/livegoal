@@ -129,6 +129,26 @@ class FeaturedMatches
     }
 
     /**
+     * Find a single normalized match by id in the cache-only aggregate (the same
+     * warmed feeds the entity sitemaps use), or null when it isn't in any feed.
+     * Lets callers resolve a match without its per-entity cache being warmed.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findById(string $id): ?array
+    {
+        foreach ($this->all(allowFetch: false)['matches'] as $match) {
+            $matchId = $match['id'] ?? null;
+
+            if (is_scalar($matchId) && (string) $matchId === $id) {
+                return $match;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Matches kicking off on the given date (Y-m-d), soonest first.
      *
      * @param  list<array<string, mixed>>  $matches
