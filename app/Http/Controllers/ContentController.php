@@ -56,7 +56,7 @@ class ContentController extends Controller
             ];
 
             $data = [
-                'seo' => $this->seo->content($page['path'], $page['title'], $page['description']),
+                'seo' => $this->seo->content($page['path'], $page['title'], $page['description'], $this->faqList($guide['faq'] ?? null)),
                 'page' => $page,
             ];
 
@@ -107,10 +107,73 @@ class ContentController extends Controller
         ];
 
         return $this->views->make('content.guides.watch-country', [
-            'seo' => $this->seo->content($page['path'], $page['title'], $page['description']),
+            'seo' => $this->seo->content($page['path'], $page['title'], $page['description'], $this->watchFaq($name, $data)),
             'page' => $page,
             'watch' => $data,
         ]);
+    }
+
+    /**
+     * Coerce a config FAQ block to a clean question/answer list.
+     *
+     * @return list<array{q: string, a: string}>
+     */
+    private function faqList(mixed $raw): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $out = [];
+
+        foreach ($raw as $item) {
+            if (is_array($item) && is_string($item['q'] ?? null) && is_string($item['a'] ?? null)) {
+                $out[] = ['q' => $item['q'], 'a' => $item['a']];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * The FAQ for a "how to watch free" country page, mirroring the visible copy.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return list<array{q: string, a: string}>
+     */
+    private function watchFaq(string $name, array $data): array
+    {
+        $scope = $this->str($data['scope'] ?? null);
+        $free = ($data['free'] ?? false) === true;
+
+        $faq = [
+            [
+                'q' => 'Can I watch the World Cup 2026 free in '.$name.'?',
+                'a' => ($free
+                    ? 'Yes — you can watch the 2026 World Cup free in '.$name.'. '
+                    : 'Some matches are free in '.$name.', but not all. ').$scope,
+            ],
+            [
+                'q' => 'Which channels show the World Cup 2026 free in '.$name.'?',
+                'a' => 'In '.$name.', the 2026 World Cup is shown free-to-air on '.$this->str($data['fta'] ?? null).'. '.$scope,
+            ],
+        ];
+
+        if ($this->str($data['streaming'] ?? null) !== '') {
+            $faq[] = [
+                'q' => 'Can I stream the World Cup 2026 free in '.$name.'?',
+                'a' => $this->str($data['streaming']),
+            ];
+        }
+
+        if ($this->str($data['paid'] ?? null) !== '') {
+            $faq[] = [
+                'q' => 'How can I watch every World Cup 2026 match in '.$name.'?',
+                'a' => $this->str($data['paid']),
+            ];
+        }
+
+        return $faq;
     }
 
     private function str(mixed $value): string

@@ -373,6 +373,12 @@
     gap: 4px;
     flex: none;
 }
+.pp-matchcard .mc-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
 .pp-matchcard .mc-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -892,17 +898,23 @@
 }
 .pp-tl-row .tl-side {
     display: flex;
+    min-width: 0;
 }
-.pp-tl-row.right .tl-side:first-child {
-    order: 3;
+/* Explicit lanes: home cards left of the spine, away cards right; the minute
+   chip always sits centered ON the spine (column 2, same row). */
+.pp-tl-row .tl-side.home {
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: flex-end;
 }
-.pp-tl-row.right {
-    direction: rtl;
-}
-.pp-tl-row.right .tl-card {
-    direction: ltr;
+.pp-tl-row .tl-side.away {
+    grid-column: 3;
+    grid-row: 1;
+    justify-content: flex-start;
 }
 .pp-tl-row .tl-min {
+    grid-column: 2;
+    grid-row: 1;
     display: flex;
     justify-content: center;
 }
@@ -916,8 +928,10 @@
     border: 1px solid var(--border);
     z-index: 1;
 }
-.pp-tl-row.left .tl-side:first-child {
-    justify-content: flex-end;
+.pp-tl-row.goal .tl-min .mono {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    font-weight: 800;
 }
 .pp-tl-card,
 .tl-card {
@@ -946,6 +960,23 @@
 .tl-ic.goal {
     background: var(--accent);
     color: var(--accent-text);
+}
+/* Substitution icon box — neutral; the IcSubstitution arrows carry the colour. */
+.tl-ic.sub {
+    background: var(--surface-3);
+}
+/* Booking cards (ESPN events) — a small coloured card instead of an icon. */
+.tl-card-badge {
+    width: 15px;
+    height: 21px;
+    border-radius: 3px;
+    flex: none;
+}
+.tl-card-badge.yellow {
+    background: #f4c20d;
+}
+.tl-card-badge.red {
+    background: #e0242b;
 }
 .tl-txt {
     display: flex;
@@ -990,6 +1021,31 @@
     border: 1px solid var(--border);
     z-index: 1;
     white-space: nowrap;
+}
+/* Mobile: the two-sided spine squeezes each card to ~140px, truncating names
+   and stacking text into tall blocks. Collapse to a single left-spine column
+   so every event card gets the full width. */
+@media (max-width: 640px) {
+    .pp-timeline::before {
+        left: 25px;
+    }
+    .pp-tl-row {
+        grid-template-columns: 50px 1fr;
+        gap: 10px;
+    }
+    .pp-tl-row .tl-side.home,
+    .pp-tl-row .tl-side.away {
+        grid-column: 2;
+        grid-row: 1;
+        justify-content: flex-start;
+    }
+    .pp-tl-row .tl-min {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .pp-tl-row .tl-card {
+        width: 100%;
+    }
 }
 
 /* ---------- Pitch / formation ---------- */
@@ -1693,4 +1749,70 @@
 .pp-datenav .dn-arrow,
 .pp-countryfilter .cf-btn {
     height: 32px;
+}
+
+/* ---------- Push pre-prompt banner ---------- */
+.pp-pushprompt {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 12px 14px;
+    background: var(--surface-raised, var(--surface));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgb(0 0 0 / 0.45);
+    color: var(--accent);
+}
+.pp-pushprompt .pq-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.pp-pushprompt .pq-text b {
+    font-size: 13px;
+    color: var(--text);
+}
+.pp-pushprompt .pq-text span {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.pp-pushprompt .pp-btn {
+    flex: none;
+}
+.pp-pushprompt .pq-dismiss {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: var(--text-muted);
+    transition: all var(--dur-fast);
+}
+.pp-pushprompt .pq-dismiss:hover {
+    background: var(--hover);
+    color: var(--text);
+}
+
+@media (max-width: 640px) {
+    .pp-pushprompt {
+        bottom: calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom, 0px));
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 640px) {
+    .pp-countryfilter .cf-pop {
+        left: 0;
+        right: auto;
+        width: min(300px, calc(100vw - 32px));
+    }
 }

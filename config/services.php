@@ -43,4 +43,19 @@ return [
         'src' => env('PLAUSIBLE_SRC', 'https://plausible.io/js/script.js'),
     ],
 
+    // Google Analytics (GA4). The gtag snippet only renders when a measurement
+    // ID is set, so dev/tests stay out of the property. GA4 enhanced measurement
+    // tracks SPA history (pushState) navigations automatically.
+    'google_analytics' => [
+        'id' => env('GOOGLE_ANALYTICS_ID'),
+    ],
+
+    // IndexNow: instant URL submission to Bing / Yandex / Seznam when a result
+    // changes. Disabled until a key is set (generate any 16–128 char hex string
+    // as INDEXNOW_KEY); the key is also served at /{key}.txt for verification.
+    'indexnow' => [
+        'key' => env('INDEXNOW_KEY'),
+        'endpoint' => env('INDEXNOW_ENDPOINT', 'https://api.indexnow.org/indexnow'),
+    ],
+
 ];

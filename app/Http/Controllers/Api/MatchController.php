@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Console\Commands\PollLiveScores;
+use App\Services\Football\EspnFootball;
+use App\Services\Football\EspnNormalizer;
 use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
@@ -18,6 +20,8 @@ class MatchController extends Controller
         private readonly FootballData $football,
         private readonly Normalizer $normalizer,
         private readonly FeaturedMatches $featured,
+        private readonly EspnFootball $espn,
+        private readonly EspnNormalizer $espnNormalizer,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -120,6 +124,65 @@ class MatchController extends Controller
                 'events' => $this->timelineEvents($id),
             ],
         );
+    }
+
+    /**
+     * Live data for this match from ESPN's keyless API — a real match clock and
+     * official event minutes (goals, assists, cards, subs) the football-data
+     * free tier lacks. Resolved from the football-data match's teams + date.
+     * Returns a `found: false` envelope when no ESPN event matches, so the
+     * frontend falls back to the inferred timeline. See the
+     * `espn-keyless-football-api` note. football-data stays the source of record.
+     */
+    public function espn(string $id): JsonResponse
+    {
+        $result = $this->football->cached("match:{$id}", Config::integer('football.ttl.match_live'), "/matches/{$id}");
+
+        if (! is_array($result->data)) {
+            return response()->json(['data' => $this->espnNormalizer->notFound()]);
+        }
+
+        $match = $this->normalizer->match($result->data);
+        $slug = $this->espn->slugFor($this->asString(data_get($match, 'competition.code')) ?? '');
+        $kickoff = $this->asString(data_get($match, 'kickoff'));
+
+        if ($slug === null || $kickoff === null) {
+            return response()->json(['data' => $this->espnNormalizer->notFound()]);
+        }
+
+        $teams = [
+            'home' => ['tla' => $this->asString(data_get($match, 'home.tla')), 'name' => $this->asString(data_get($match, 'home.name'))],
+            'away' => ['tla' => $this->asString(data_get($match, 'away.tla')), 'name' => $this->asString(data_get($match, 'away.name'))],
+        ];
+
+        // ESPN buckets a fixture by its own (US-leaning) calendar day, which can
+        // differ from football-data's UTC date for kickoffs near a day boundary
+        // (e.g. early-UTC World Cup matches). Probe the scheduled day and its
+        // neighbours — each scoreboard is briefly cached — so those still resolve.
+        $kickoffDate = Date::parse($kickoff);
+        $resolved = null;
+
+        foreach ([0, -1, 1] as $offset) {
+            $date = $kickoffDate->copy()->addDays($offset)->toDateString();
+            $resolved = $this->espnNormalizer->resolve($this->espn->scoreboard($slug, $date), $teams);
+
+            if ($resolved !== null) {
+                break;
+            }
+        }
+
+        if ($resolved === null) {
+            return response()->json(['data' => $this->espnNormalizer->notFound()]);
+        }
+
+        $summary = $this->espn->summary($slug, $this->asString(data_get($resolved, 'event.id')) ?? '');
+
+        return response()->json(['data' => $this->espnNormalizer->liveData($resolved, $summary)]);
+    }
+
+    private function asString(mixed $value): ?string
+    {
+        return is_string($value) ? $value : null;
     }
 
     /**

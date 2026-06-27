@@ -36,6 +36,8 @@ plus an appropriate status, and the SPA shows `ErrorState`/`OfflineState`.
 | `GET /api/teams/{id}` | Team detail (+ squad) | `/teams/{id}` | 12–24 h |
 | `GET /api/teams/{id}/matches` | Team fixtures/results (`?status=&dateFrom=&dateTo=`) | `/teams/{id}/matches` | 5–10 min |
 | `GET /api/persons/{id}` | Player profile | `/persons/{id}` | 12–24 h |
+| `POST /api/push/subscriptions` | Create/update an anonymous push subscription + follow snapshot | — (local) | never cached |
+| `DELETE /api/push/subscriptions` | Remove a push subscription (idempotent) | — (local) | never cached |
 
 Crest & flag URLs are passed straight through in payloads and loaded directly by the browser `<img>`
 (no API call, no rate-limit cost).

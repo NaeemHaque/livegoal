@@ -6,6 +6,9 @@
 
     @include('partials.seo-head')
 
+    {{-- Web Push: the VAPID public key the browser subscribes with (see docs/PUSH_NOTIFICATIONS.md). --}}
+    <meta name="vapid-public-key" content="{{ (string) config('webpush.vapid.public_key') }}">
+
     @vite(['resources/css/app.css', 'resources/js/main.js'])
 
     {{-- Full-page boot loader ("Formation build"). Paints instantly (inline,

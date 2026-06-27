@@ -1,120 +1,126 @@
-import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 /**
  * Shared live-match state, filled by the `useLiveMatches` polling composable and
  * read by the live hub, ticker, and match pages. Also detects goals across polls
  * to drive the goal toast / score-flip animation.
+ *
+ * A native reactive singleton — no Pinia. The state below is created once when
+ * this module is first imported, so every `useMatchesStore()` caller shares it.
+ * Vue unwraps the refs on access and assignment, so reads (`matches.live`) and
+ * writes (`matches.loading = true`) behave just like plain properties.
  */
-export const useMatchesStore = defineStore('matches', () => {
-    const live = ref([]);
-    const finals = ref([]);
-    const lastUpdated = ref(null);
-    const stale = ref(false);
-    const loading = ref(false);
-    const error = ref(null);
+const live = ref([]);
+const finals = ref([]);
+const lastUpdated = ref(null);
+const stale = ref(false);
+const loading = ref(false);
+const error = ref(null);
 
-    const lastGoal = ref(null); // { team, matchId, minute, scoreline }
-    const justScoredId = ref(null);
-    let justTimer = null;
+const lastGoal = ref(null); // { team, matchId, minute, scoreline }
+const justScoredId = ref(null);
+let justTimer = null;
 
-    const liveCount = computed(() => live.value.length);
+const liveCount = computed(() => live.value.length);
 
-    const byId = (id) =>
-        live.value.find((m) => String(m.id) === String(id)) ?? null;
+const byId = (id) =>
+    live.value.find((m) => String(m.id) === String(id)) ?? null;
 
-    const finalById = (id) =>
-        finals.value.find((m) => String(m.id) === String(id)) ?? null;
+const finalById = (id) =>
+    finals.value.find((m) => String(m.id) === String(id)) ?? null;
 
-    // Merge the (fresher) live feed over a fetched match list: upstream list
-    // endpoints can lag or misreport status mid-match (and at full time), so
-    // any match in the live feed — or recently finished per our own poller —
-    // takes its status, minute and score from there.
-    const overlay = (list) =>
-        (list ?? []).map((m) => {
-            const fresh = byId(m.id) ?? finalById(m.id);
+// Merge the (fresher) live feed over a fetched match list: upstream list
+// endpoints can lag or misreport status mid-match (and at full time), so any
+// match in the live feed — or recently finished per our own poller — takes its
+// status, minute and score from there.
+const overlay = (list) =>
+    (list ?? []).map((m) => {
+        const fresh = byId(m.id) ?? finalById(m.id);
 
-            return fresh
-                ? {
-                      ...m,
-                      status: fresh.status,
-                      minute: fresh.minute ?? null,
-                      homeScore: fresh.homeScore ?? m.homeScore,
-                      awayScore: fresh.awayScore ?? m.awayScore,
-                  }
-                : m;
-        });
+        return fresh
+            ? {
+                  ...m,
+                  status: fresh.status,
+                  minute: fresh.minute ?? null,
+                  homeScore: fresh.homeScore ?? m.homeScore,
+                  awayScore: fresh.awayScore ?? m.awayScore,
+              }
+            : m;
+    });
 
-    function detectGoals(previous, incoming) {
-        if (previous.length === 0) {
-            return; // no baseline on first poll — don't fire on initial load
+function detectGoals(previous, incoming) {
+    if (previous.length === 0) {
+        return; // no baseline on first poll — don't fire on initial load
+    }
+
+    const prevById = new Map(previous.map((m) => [String(m.id), m]));
+
+    for (const m of incoming) {
+        const before = prevById.get(String(m.id));
+
+        if (!before) {
+            continue;
         }
 
-        const prevById = new Map(previous.map((m) => [String(m.id), m]));
+        const now = (m.homeScore ?? 0) + (m.awayScore ?? 0);
+        const was = (before.homeScore ?? 0) + (before.awayScore ?? 0);
 
-        for (const m of incoming) {
-            const before = prevById.get(String(m.id));
+        if (now > was) {
+            const homeScored = (m.homeScore ?? 0) > (before.homeScore ?? 0);
 
-            if (!before) {
-                continue;
+            lastGoal.value = {
+                team: homeScored ? m.home : m.away,
+                matchId: String(m.id),
+                minute: m.minute,
+                scoreline: `${m.homeScore ?? 0}–${m.awayScore ?? 0}`,
+            };
+            justScoredId.value = String(m.id);
+
+            if (justTimer) {
+                clearTimeout(justTimer);
             }
 
-            const now = (m.homeScore ?? 0) + (m.awayScore ?? 0);
-            const was = (before.homeScore ?? 0) + (before.awayScore ?? 0);
-
-            if (now > was) {
-                const homeScored = (m.homeScore ?? 0) > (before.homeScore ?? 0);
-
-                lastGoal.value = {
-                    team: homeScored ? m.home : m.away,
-                    matchId: String(m.id),
-                    minute: m.minute,
-                    scoreline: `${m.homeScore ?? 0}–${m.awayScore ?? 0}`,
-                };
-                justScoredId.value = String(m.id);
-
-                if (justTimer) {
-                    clearTimeout(justTimer);
-                }
-
-                justTimer = setTimeout(() => (justScoredId.value = null), 1400);
-            }
+            justTimer = setTimeout(() => (justScoredId.value = null), 1400);
         }
     }
+}
 
-    function setLive(matches, meta = {}, finished = []) {
-        const incoming = Array.isArray(matches) ? matches : [];
-        detectGoals(live.value, incoming);
-        live.value = incoming;
-        finals.value = Array.isArray(finished) ? finished : [];
-        lastUpdated.value = meta.lastUpdated ?? null;
-        stale.value = meta.stale ?? false;
-        error.value = null;
-    }
+function setLive(matches, meta = {}, finished = []) {
+    const incoming = Array.isArray(matches) ? matches : [];
+    detectGoals(live.value, incoming);
+    live.value = incoming;
+    finals.value = Array.isArray(finished) ? finished : [];
+    lastUpdated.value = meta.lastUpdated ?? null;
+    stale.value = meta.stale ?? false;
+    error.value = null;
+}
 
-    function setError(err) {
-        error.value = err;
-    }
+function setError(err) {
+    error.value = err;
+}
 
-    function clearGoal() {
-        lastGoal.value = null;
-    }
+function clearGoal() {
+    lastGoal.value = null;
+}
 
-    return {
-        live,
-        finals,
-        lastUpdated,
-        stale,
-        loading,
-        error,
-        lastGoal,
-        justScoredId,
-        liveCount,
-        byId,
-        finalById,
-        overlay,
-        setLive,
-        setError,
-        clearGoal,
-    };
+const store = reactive({
+    live,
+    finals,
+    lastUpdated,
+    stale,
+    loading,
+    error,
+    lastGoal,
+    justScoredId,
+    liveCount,
+    byId,
+    finalById,
+    overlay,
+    setLive,
+    setError,
+    clearGoal,
 });
+
+export function useMatchesStore() {
+    return store;
+}

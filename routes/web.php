@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\OgImageController;
 use App\Http\Controllers\SchedulerController;
 use App\Http\Controllers\SeoShellController;
 use App\Http\Controllers\SitemapController;
@@ -11,9 +12,24 @@ use Illuminate\Support\Facades\Route;
 // See docs/LIVE_POLLING.md.
 Route::get('scheduler/run', [SchedulerController::class, 'run'])->middleware('throttle:20,1');
 
-// Crawl-control surface (dynamic so URLs are environment-correct).
+// Crawl-control surface (dynamic so URLs are environment-correct). The sitemap
+// index fans out to child sitemaps so the high-volume match/team entity pages
+// get their own freshness-stamped lists.
 Route::get('robots.txt', [SitemapController::class, 'robots']);
 Route::get('sitemap.xml', [SitemapController::class, 'index']);
+Route::get('sitemap-core.xml', [SitemapController::class, 'core']);
+Route::get('sitemap-matches.xml', [SitemapController::class, 'matches']);
+Route::get('sitemap-teams.xml', [SitemapController::class, 'teams']);
+Route::get('sitemap-news.xml', [SitemapController::class, 'news']);
+
+// Dynamic Open Graph share images (per-match teams + score). Cache-only with a
+// static fallback, so a scraper hit never reaches the upstream API.
+Route::get('og/match/{id}', [OgImageController::class, 'match'])->name('og.match');
+
+// IndexNow ownership verification: serve the configured key at /{key}.txt. The
+// length floor keeps this from shadowing robots.txt / sitemap.xml above.
+Route::get('{indexnowKey}.txt', [SitemapController::class, 'indexNowKey'])
+    ->where('indexnowKey', '[A-Za-z0-9-]{16,128}');
 
 // SPA routes. Each renders the Vue shell with per-URL SEO metadata resolved from
 // cached football data (see App\Http\Controllers\SeoShellController). Listing the
@@ -42,6 +58,7 @@ Route::get('/guides/{slug}', [ContentController::class, 'show'])->name('guides.s
 Route::get('/about', [ContentController::class, 'show'])->defaults('slug', 'about')->name('about');
 Route::get('/how-our-data-works', [ContentController::class, 'show'])->defaults('slug', 'how-our-data-works')->name('data');
 Route::get('/contact', [ContentController::class, 'show'])->defaults('slug', 'contact')->name('contact');
+Route::get('/privacy', [ContentController::class, 'show'])->defaults('slug', 'privacy')->name('privacy');
 
 // Unknown paths: render the shell (so the SPA's NotFound page shows on a direct
 // hit) but with a real 404 status, keeping junk URLs out of the index.

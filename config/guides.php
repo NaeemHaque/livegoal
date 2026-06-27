@@ -21,6 +21,11 @@ return [
         'nav' => 'World Cup 2026 format',
         'listed' => true,
         'live' => 'WC',
+        'faq' => [
+            ['q' => 'How many teams are in the 2026 World Cup?', 'a' => '48 teams play 104 matches over 39 days, up from 32 teams and 64 matches at Qatar 2022.'],
+            ['q' => 'How does the World Cup 2026 group stage work?', 'a' => 'The 48 teams are split into 12 groups of four (A–L). Each team plays the other three once, so every team is guaranteed three matches. The top two from each group plus the eight best third-placed teams advance — 32 teams in total.'],
+            ['q' => 'Where is the 2026 World Cup held?', 'a' => 'It is the first World Cup hosted by three countries — the United States, Canada and Mexico — across 16 host cities. The final is on 19 July 2026 at MetLife Stadium near New York.'],
+        ],
     ],
 
     'world-cup-2026-groups-and-qualification' => [
@@ -32,6 +37,11 @@ return [
         'nav' => 'Groups & qualification',
         'listed' => true,
         'live' => 'WC',
+        'faq' => [
+            ['q' => 'Who advances from each World Cup 2026 group?', 'a' => 'The top two teams in every group qualify automatically — 24 teams — plus the eight best third-placed teams across all 12 groups, making 32 for the Round of 32.'],
+            ['q' => 'How are the third-placed teams ranked at the 2026 World Cup?', 'a' => 'The 12 third-placed teams are compared by points first, then goal difference, then goals scored. The top eight advance and the bottom four are eliminated.'],
+            ['q' => 'What are the World Cup 2026 group tiebreakers?', 'a' => 'FIFA separates teams level on points by, in order: goal difference, goals scored, head-to-head points among the tied teams, then head-to-head goal difference and goals, then fair-play points, and finally drawing of lots.'],
+        ],
     ],
 
     'world-cup-2026-knockout-bracket-explained' => [
@@ -43,6 +53,10 @@ return [
         'nav' => 'Knockout bracket',
         'listed' => true,
         'live' => 'WC',
+        'faq' => [
+            ['q' => 'What are the World Cup 2026 knockout rounds?', 'a' => 'Round of 32 (new for 2026), Round of 16, quarter-finals, semi-finals and the final, plus a third-place play-off. The final is at MetLife Stadium near New York on 19 July 2026.'],
+            ['q' => 'What happens if a World Cup 2026 knockout match is a draw?', 'a' => 'If the score is level after 90 minutes, two 15-minute periods of extra time are played. If still level, a penalty shootout (best of five, then sudden death) decides who advances.'],
+        ],
     ],
 
     'how-to-watch-world-cup-2026-free' => [
@@ -92,6 +106,15 @@ return [
         'view' => 'content.pages.contact',
         'group' => 'LiveGoal',
         'nav' => 'Contact',
+        'listed' => false,
+    ],
+    'privacy' => [
+        'path' => '/privacy',
+        'title' => 'Privacy Policy',
+        'description' => 'How LiveGoal handles your data: no accounts, privacy-friendly analytics, locally stored settings, and anonymous push subscriptions. Free and ad-free.',
+        'view' => 'content.pages.privacy',
+        'group' => 'LiveGoal',
+        'nav' => 'Privacy',
         'listed' => false,
     ],
 ];

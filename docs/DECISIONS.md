@@ -66,6 +66,40 @@ stays local). Purchase `livegoal.win` and run the go-live steps (DNS, HTTPS, `AP
 **Why:** User direction — test locally now, buy the domain and deploy when ready. Keeps everything
 host-agnostic per `BUILD_PROMPT` Appendix C; no cost until launch.
 
+## D8 — Web Push for match alerts (no third-party push service)
+
+**Decision:** Goal/full-time alerts for followed teams & competitions ship as **Web Push API +
+self-generated VAPID keys** through Laravel's notifications framework with the MIT
+`laravel-notification-channels/webpush` channel. Subscriptions stay **anonymous** (no user accounts):
+one `push_subscribers` row per browser endpoint carrying its own follow snapshot in a queryable
+`push_follows` pivot (not JSON — SQLite can't index JSON containment). Pushes dispatch from the live
+poller at the exact points where GOAL/FT timeline events are appended, inheriting every existing
+flap/dedupe guard. Full design: `docs/PUSH_NOTIFICATIONS.md`.
+
+**Why:** $0 forever and no vendor: browser push services are part of the web platform, VAPID is
+self-signed, the package is open source. FCM-direct/OneSignal/Pusher Beams add accounts and lock-in
+for nothing (the Pusher family is excluded by the build rules anyway). Dispatching at the
+timeline-append points avoids inventing a second dedupe layer for an upstream that flaps scores.
+Rejected: user accounts (overkill for a bookmark-style follow feature), JSON follow storage
+(unindexable in SQLite), SSE/WebSockets (excluded; can't reach closed tabs anyway).
+
+## D9 — Frontend state: native reactive singletons (remove Pinia)
+
+**Decision:** Drop **Pinia**. Shared client state lives in module-level `reactive()` singletons under
+`resources/js/stores/` (`settings`, `favorites`, `matches`), each exposed through an unchanged
+`useXStore()` accessor. Supersedes the Pinia choice in D1.
+
+**Why:** The app's shared state is three small stores over simple data (the live feed, user prefs,
+favorites). Pinia's value-add — devtools, plugins, SSR-safe per-request instancing — buys nothing in a
+client-only SPA this size, so native Vue reactivity is the right-sized tool: one fewer dependency and no
+extra concepts. Vue's own State Management guide endorses `reactive()` singletons for exactly this case.
+Ergonomics are unchanged — a Pinia setup store is itself `reactive()` over unwrapped refs, so components
+read and write `store.prop` (and `store.method()`) identically. User direction.
+
+**Impact:** Remove `pinia` and `createPinia()` from `resources/js/main.js`. No consumer changes were
+needed — nothing used a Pinia-only API (`$patch`, `$reset`, `storeToRefs`, …), so the swap is internal to
+the three store modules.
+
 ## Resolved inputs
 
 - **`FOOTBALL_DATA_TOKEN`** — ✅ provided and **verified** (2026-06-07): HTTP 200, 13 free competitions,

@@ -1,5 +1,5 @@
 <script setup>
-import { useStorage } from '@vueuse/core';
+import { useStorage, watchDebounced } from '@vueuse/core';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -12,6 +12,7 @@ import {
     IcTrophy,
 } from '@/components/icons';
 import { useSearchIndex } from '@/composables/useSearchIndex';
+import { track } from '@/lib/analytics';
 import { FEATURED } from '@/lib/featured';
 
 const props = defineProps({
@@ -52,6 +53,20 @@ const competitions = computed(() => {
 
 // Keep the highlighted row valid whenever the result set changes.
 watch(results, () => (sel.value = 0));
+
+// Report a settled search term to GA4 (debounced so refining a query doesn't
+// fire on every keystroke).
+watchDebounced(
+    q,
+    (value) => {
+        const term = value.trim();
+
+        if (term.length >= 2) {
+            track('search', { search_term: term });
+        }
+    },
+    { debounce: 900 },
+);
 
 // Reset + focus on open; lock body scroll while the palette is up.
 watch(

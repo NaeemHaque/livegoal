@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Console\Commands\HarvestLiveEspn;
 use App\Console\Commands\PollLiveScores;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -151,5 +152,30 @@ class LiveTest extends TestCase
         $response->assertJsonPath('meta.lastUpdated', null);
         $response->assertJsonPath('meta.stale', false);
         $response->assertJsonPath('meta.cached', true);
+    }
+
+    public function test_it_overlays_espn_freshness_onto_the_live_set_without_touching_the_wire(): void
+    {
+        // Poller (football-data) still reads the match as half-time...
+        Cache::put(PollLiveScores::CACHE_KEY, [
+            'matches' => [['id' => '101', 'status' => 'PAUSED', 'minute' => 45, 'homeScore' => 1, 'awayScore' => 0]],
+            'count' => 1,
+            'lastUpdated' => '2026-06-08T05:00:00+00:00',
+        ], 70);
+
+        // ...while the harvest schedule's ESPN overlay already has the 2nd half.
+        Cache::put(HarvestLiveEspn::OVERLAY_KEY, [
+            '101' => ['status' => 'LIVE', 'minute' => 47, 'displayClock' => "47'", 'homeScore' => 1, 'awayScore' => 0],
+        ], 120);
+
+        $response = $this->getJson('/api/live');
+
+        $response->assertOk();
+        $response->assertJsonPath('data.matches.0.status', 'LIVE');
+        $response->assertJsonPath('data.matches.0.minute', 47);
+        $response->assertJsonPath('data.matches.0.displayClock', "47'");
+
+        // The merge is cache-only — the endpoint must never call upstream.
+        Http::assertNothingSent();
     }
 }

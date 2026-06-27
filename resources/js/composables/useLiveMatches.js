@@ -32,7 +32,19 @@ export function useLiveMatches() {
         }
     }
 
-    const interval = computed(() => Math.max(5, settings.refresh) * 1000);
+    // While something is live the rail should feel live, so poll every 5s
+    // (matching the /api/live cache + the ESPN harvest) regardless of the user's
+    // general Auto-refresh — which they set to conserve requests when idle, and
+    // which we honour again once nothing is in play.
+    const LIVE_INTERVAL = 5;
+    const interval = computed(() => {
+        const base = Math.max(5, settings.refresh);
+
+        return (
+            (matches.live.length > 0 ? Math.min(base, LIVE_INTERVAL) : base) *
+            1000
+        );
+    });
     const { pause, resume } = useIntervalFn(poll, interval, {
         immediate: false,
     });

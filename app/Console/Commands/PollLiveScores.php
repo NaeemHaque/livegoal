@@ -2,8 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Football\FeaturedMatches;
 use App\Services\Football\FootballData;
 use App\Services\Football\Normalizer;
+use App\Services\Push\MatchAlerts;
+use App\Services\Seo\IndexNow;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -83,11 +86,47 @@ class PollLiveScores extends Command
 
     private const PRESUME_SECOND_HALF_AFTER_SECONDS = 960;
 
+    /**
+     * The feed flips matches to IN_PLAY minutes after the real kickoff
+     * (observed +6 to +15 across WC 2026 matchdays). Once the scheduled
+     * kickoff is this far past, surface the match as live (0-0, presumed)
+     * until the feed confirms; presumed entries are stateless — rebuilt from
+     * the schedule every poll, never held, never recorded as events.
+     */
+    private const PRESUME_KICKOFF_AFTER_SECONDS = 60;
+
+    /**
+     * First feed signal within this window of the scheduled kickoff means the
+     * match started on time and the feed was merely lagging — anchor the
+     * clock at the schedule. Later than this, the start was genuinely
+     * delayed (opening ceremonies): anchor at the signal.
+     */
+    private const KICKOFF_TRUST_SCHEDULE_SECONDS = 600;
+
+    /**
+     * Real first whistles trail the scheduled hour by the pre-match ceremony
+     * (+2 to +3 minutes observed across WC 2026 matchdays, never on the hour
+     * itself). Starting the clock here turns a consistent +3 drift into ±1.
+     */
+    private const KICKOFF_WHISTLE_DELAY_SECONDS = 120;
+
+    private const PRESUME_KICKOFF_WINDOW_SECONDS = 2100;
+
+    /** Skip the kick-off push when a match is first seen past this minute — it was already in play. */
+    private const KICKOFF_PUSH_MAX_MINUTE = 15;
+
     protected $signature = 'app:poll-live-scores';
 
     protected $description = 'Poll in-play matches from football-data.org into cache for the whole site';
 
-    public function handle(FootballData $football, Normalizer $normalizer): int
+    public function __construct(
+        private readonly MatchAlerts $alerts,
+        private readonly FeaturedMatches $featured,
+    ) {
+        parent::__construct();
+    }
+
+    public function handle(FootballData $football, Normalizer $normalizer, IndexNow $indexNow): int
     {
         $raw = $football->get('/matches', ['status' => 'IN_PLAY,PAUSED']);
 
@@ -108,6 +147,9 @@ class PollLiveScores extends Command
 
         $matches = $normalizer->matches($raw);
 
+        // Add live matches the scoped feeds flag but the global feed dropped.
+        $matches = $this->withFeaturedLive($matches);
+
         // Upstream flap guard: a sudden "no live matches" while matches were
         // live is held back until confirmed by consecutive empty polls.
         if ($matches === [] && $this->holdUnconfirmedEmpty()) {
@@ -122,6 +164,11 @@ class PollLiveScores extends Command
         foreach ($matches as $i => $m) {
             $id = $this->str($m['id'] ?? null);
             $previous = $prior[$id] ?? null;
+
+            // The single-match record often publishes a goal minutes before
+            // the bulk feed does — adopt whichever source knows it first.
+            $m = $this->withRecordScores($m, $id, $football);
+            $matches[$i] = $m;
 
             // Upstream nodes disagree mid-match and can serve yesterday's
             // score; never let a score go backwards without confirmation.
@@ -150,6 +197,10 @@ class PollLiveScores extends Command
             $matches[$i] = $this->withPresumedSecondHalf($m);
         }
 
+        // The feed also lags real kickoffs by minutes: surface scheduled
+        // matches whose kickoff has passed as presumed-live until confirmed.
+        $matches = $this->withPresumedKickoffs($matches);
+
         // Self-built timelines: the free tier has no event feed, so derive
         // kickoff / goal / half-time events from the polls themselves —
         // after the holds, so a held half-time still records its HT event.
@@ -171,6 +222,10 @@ class PollLiveScores extends Command
         //         broadcast(new \App\Events\ScoreUpdated($m));
         //     }
 
+        // Ping IndexNow for changed results so Bing/Yandex recrawl within
+        // minutes (no-op unless INDEXNOW_KEY is configured).
+        $indexNow->submitMatches($changed);
+
         $this->info(sprintf('Live: %d match(es), %d score change(s).', count($matches), count($changed)));
 
         return self::SUCCESS;
@@ -191,6 +246,11 @@ class PollLiveScores extends Command
      */
     private function recordTimelineEvents(array $m): void
     {
+        // Presumed entries carry no real data: no anchors, no goals, no pushes.
+        if (($m['presumed'] ?? false) === true) {
+            return;
+        }
+
         $id = $this->str($m['id'] ?? null);
         $status = $this->str($m['status'] ?? null);
 
@@ -202,7 +262,13 @@ class PollLiveScores extends Command
         $before = count($events);
 
         if ($status === 'LIVE' && ! $this->hasEvent($events, 'KICKOFF')) {
-            $events[] = $this->timelineEvent('KICKOFF', $m);
+            $events[] = [...$this->timelineEvent('KICKOFF', $m), 'at' => $this->kickoffAnchor($m)];
+
+            // Push only a genuine fresh kickoff, never a match first seen deep in play.
+            $minute = $this->nullableInt($m['minute'] ?? null);
+            if ($minute !== null && $minute <= self::KICKOFF_PUSH_MAX_MINUTE) {
+                $this->alerts->kickoff($m);
+            }
         }
 
         // Back LIVE after a recorded half-time: the second half restarted.
@@ -223,6 +289,7 @@ class PollLiveScores extends Command
             if ($current !== null && $previous !== null && $current > $previous
                 && ! $this->hasGoalForSide($events, $side, $current)) {
                 $events[] = $this->timelineEvent('GOAL', $m, $side);
+                $this->alerts->goalScored($m);
             }
         }
 
@@ -338,11 +405,11 @@ class PollLiveScores extends Command
     {
         $existing = Cache::get(self::CACHE_KEY);
 
-        $hasLiveMatches = is_array($existing)
-            && is_array($existing['matches'] ?? null)
-            && $existing['matches'] !== [];
+        $confirmed = is_array($existing) && is_array($existing['matches'] ?? null)
+            ? array_filter($existing['matches'], fn ($m): bool => is_array($m) && ($m['presumed'] ?? false) !== true)
+            : [];
 
-        if (! $hasLiveMatches) {
+        if ($confirmed === []) {
             return false;
         }
 
@@ -402,7 +469,7 @@ class PollLiveScores extends Command
 
             $id = $this->str($m['id'] ?? null);
 
-            if ($id === '' || isset($present[$id])) {
+            if ($id === '' || isset($present[$id]) || ($m['presumed'] ?? false) === true) {
                 continue;
             }
 
@@ -426,14 +493,14 @@ class PollLiveScores extends Command
     {
         // The poller runs sub-minute; cache each match's verification lookup
         // briefly so vanished matches cost at most ~1 upstream call a minute.
-        $verifyKey = 'live:verify:'.$id;
-        $detail = Cache::get($verifyKey);
+        $recordKey = 'live:record:'.$id;
+        $detail = Cache::get($recordKey);
 
         if (! is_array($detail)) {
             $detail = $football->get('/matches/'.$id);
 
             if (is_array($detail)) {
-                Cache::put($verifyKey, $detail, 55);
+                Cache::put($recordKey, $detail, 55);
             }
         }
 
@@ -661,6 +728,7 @@ class PollLiveScores extends Command
         $events = $this->recordedEvents($id);
 
         if (! $this->hasEvent($events, 'FT')) {
+            $this->alerts->fullTime($final);
             $events[] = [
                 'type' => 'FT',
                 'minute' => null,
@@ -726,6 +794,138 @@ class PollLiveScores extends Command
     }
 
     /**
+     * Raise a live match's score from its own record when that is fresher.
+     *
+     * Record consults are cached ~55s per match (every other poll at the
+     * 30s cadence), keeping even four simultaneous kickoffs inside the
+     * 10 req/min budget. Scores only ever go UP from the record — stale-node
+     * decreases stay with the bulk answer and the drop guard, and status
+     * transitions remain owned by the bulk feed + vanish verification.
+     *
+     * @param  array<array-key, mixed>  $m
+     * @return array<array-key, mixed>
+     */
+    private function withRecordScores(array $m, string $id, FootballData $football): array
+    {
+        if ($id === '' || ($m['status'] ?? null) !== 'LIVE' || ($m['presumed'] ?? false) === true) {
+            return $m;
+        }
+
+        $recordKey = 'live:record:'.$id;
+        $detail = Cache::get($recordKey);
+
+        if (! is_array($detail)) {
+            $detail = $football->get('/matches/'.$id);
+
+            if (is_array($detail)) {
+                Cache::put($recordKey, $detail, 55);
+            }
+        }
+
+        $score = is_array($detail) ? ($detail['score'] ?? null) : null;
+        $fullTime = is_array($score) ? ($score['fullTime'] ?? null) : null;
+
+        if (! is_array($fullTime)) {
+            return $m;
+        }
+
+        foreach (['home' => 'homeScore', 'away' => 'awayScore'] as $side => $key) {
+            $record = $fullTime[$side] ?? null;
+            $bulk = $m[$key] ?? null;
+
+            if (is_int($record) && is_int($bulk) && $record > $bulk) {
+                $m[$key] = $record;
+            }
+        }
+
+        return $m;
+    }
+
+    /**
+     * Add live matches the scoped feeds carry but the global IN_PLAY feed missed.
+     *
+     * @param  array<int, array<array-key, mixed>>  $matches
+     * @return array<int, array<array-key, mixed>>
+     */
+    private function withFeaturedLive(array $matches): array
+    {
+        $present = [];
+
+        foreach ($matches as $m) {
+            $present[$this->str($m['id'] ?? null)] = true;
+        }
+
+        foreach ($this->featured->all(allowFetch: false)['matches'] as $m) {
+            $id = $this->str($m['id'] ?? null);
+
+            if ($id === '' || isset($present[$id]) || ! in_array($this->str($m['status'] ?? null), ['LIVE', 'HT'], true)) {
+                continue;
+            }
+
+            $matches[] = $m;
+            $present[$id] = true;
+            Log::notice(sprintf('PollLiveScores: folding in %s (live in the scoped feed, absent from the bulk feed).', $id));
+        }
+
+        return $matches;
+    }
+
+    /**
+     * Surface scheduled matches whose kickoff has passed as presumed-live.
+     *
+     * Stateless: rebuilt from the (cache-only) featured schedule every poll
+     * and replaced by the real feed entry the moment the upstream confirms,
+     * which is also when the KICKOFF anchor and any pushes begin.
+     *
+     * @param  array<int, array<array-key, mixed>>  $matches
+     * @return array<int, array<array-key, mixed>>
+     */
+    private function withPresumedKickoffs(array $matches): array
+    {
+        $present = [];
+
+        foreach ($matches as $m) {
+            $present[$this->str($m['id'] ?? null)] = true;
+        }
+
+        $now = Date::now()->getTimestamp();
+
+        foreach ($this->featured->all(allowFetch: false)['matches'] as $m) {
+            $id = $this->str($m['id'] ?? null);
+            $kickoff = $m['kickoff'] ?? null;
+
+            if (($m['status'] ?? null) !== 'SCHEDULED' || $id === '' || isset($present[$id]) || ! is_string($kickoff)) {
+                continue;
+            }
+
+            $sinceKickoff = $now - Date::parse($kickoff)->getTimestamp();
+
+            if ($sinceKickoff < self::PRESUME_KICKOFF_AFTER_SECONDS || $sinceKickoff > self::PRESUME_KICKOFF_WINDOW_SECONDS) {
+                continue;
+            }
+
+            Log::notice(sprintf(
+                'PollLiveScores: match %s kicked off %ds ago with no feed signal; presuming live.',
+                $id,
+                $sinceKickoff,
+            ));
+
+            $matches[] = [
+                ...$m,
+                'status' => 'LIVE',
+                'homeScore' => 0,
+                'awayScore' => 0,
+                'minute' => max(1, min((int) floor(($sinceKickoff - self::KICKOFF_WHISTLE_DELAY_SECONDS) / 60), 120)),
+                'prevHomeScore' => null,
+                'prevAwayScore' => null,
+                'presumed' => true,
+            ];
+        }
+
+        return $matches;
+    }
+
+    /**
      * Approximate live minute (free tier has no real minute).
      *
      * Anchored to transitions this poller observed itself — the recorded
@@ -768,7 +968,42 @@ class PollLiveScores extends Command
             return null;
         }
 
-        return max(1, min($this->minutesSince($kickoff), 120));
+        // No anchor recorded (presumed entries, expired event caches): count
+        // from the presumed real whistle, not the scheduled hour.
+        $whistle = Date::parse($kickoff)
+            ->addSeconds(self::KICKOFF_WHISTLE_DELAY_SECONDS)
+            ->toIso8601String();
+
+        return max(1, min($this->minutesSince($whistle), 120));
+    }
+
+    /**
+     * Where the match clock starts: the presumed real whistle (schedule plus
+     * the ceremony delay) when the feed's first live signal arrived within
+     * the trust window (on-time start, lagging feed — observed +6/+7
+     * minutes), otherwise the signal time.
+     *
+     * @param  array<array-key, mixed>  $m
+     */
+    private function kickoffAnchor(array $m): string
+    {
+        $scheduled = $m['kickoff'] ?? null;
+
+        if (is_string($scheduled)) {
+            $lag = Date::now()->getTimestamp() - Date::parse($scheduled)->getTimestamp();
+
+            if ($lag >= 0 && $lag <= self::KICKOFF_TRUST_SCHEDULE_SECONDS) {
+                $whistle = Date::parse($scheduled)->addSeconds(self::KICKOFF_WHISTLE_DELAY_SECONDS);
+
+                // A signal beating the presumed whistle means play already
+                // started — the whistle can never be later than the signal.
+                return $whistle->isAfter(Date::now())
+                    ? Date::now()->toIso8601String()
+                    : $whistle->toIso8601String();
+            }
+        }
+
+        return Date::now()->toIso8601String();
     }
 
     /**

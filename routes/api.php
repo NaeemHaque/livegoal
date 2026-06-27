@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\CompetitionController;
 use App\Http\Controllers\Api\LiveController;
 use App\Http\Controllers\Api\MatchController;
 use App\Http\Controllers\Api\PersonController;
+use App\Http\Controllers\Api\PushSubscriptionController;
 use App\Http\Controllers\Api\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,8 +25,13 @@ Route::get('matches/day', [MatchController::class, 'day'])->middleware('cache.ap
 Route::get('matches/upcoming', [MatchController::class, 'upcoming'])->middleware('cache.api:120');
 Route::get('matches/results', [MatchController::class, 'results'])->middleware('cache.api:120');
 Route::get('matches/{id}', [MatchController::class, 'show'])->middleware('cache.api:30');
+Route::get('matches/{id}/espn', [MatchController::class, 'espn'])->middleware('cache.api:15');
 
 Route::get('teams/{id}', [TeamController::class, 'show'])->middleware('cache.api:3600');
 Route::get('teams/{id}/matches', [TeamController::class, 'matches'])->middleware('cache.api:120');
 
 Route::get('persons/{id}', [PersonController::class, 'show'])->middleware('cache.api:3600');
+
+// Anonymous web-push subscriptions (POST/DELETE — never cached; see docs/PUSH_NOTIFICATIONS.md).
+Route::post('push/subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:30,1');
+Route::delete('push/subscriptions', [PushSubscriptionController::class, 'destroy'])->middleware('throttle:30,1');

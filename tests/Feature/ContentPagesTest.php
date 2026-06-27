@@ -57,6 +57,7 @@ class ContentPagesTest extends TestCase
         $this->get('/about')->assertOk()->assertSee('About LiveGoal', false);
         $this->get('/how-our-data-works')->assertOk()->assertSee('football-data.org', false);
         $this->get('/contact')->assertOk()->assertSee('Contact LiveGoal', false);
+        $this->get('/privacy')->assertOk()->assertSee('Privacy Policy', false);
     }
 
     public function test_unknown_guide_returns_404(): void
@@ -64,9 +65,27 @@ class ContentPagesTest extends TestCase
         $this->get('/guides/does-not-exist')->assertNotFound();
     }
 
+    public function test_world_cup_guide_emits_faqpage_schema(): void
+    {
+        $this->get('/guides/world-cup-2026-format-explained')
+            ->assertOk()
+            ->assertSee('"@type":"FAQPage"', false)
+            ->assertSee('"@type":"Question"', false)
+            ->assertSee('How many teams are in the 2026 World Cup?', false);
+    }
+
+    public function test_watch_country_page_emits_faqpage_schema(): void
+    {
+        $this->get('/guides/how-to-watch-world-cup-2026-free/uk')
+            ->assertOk()
+            ->assertSee('"@type":"FAQPage"', false)
+            ->assertSee('Can I watch the World Cup 2026 free in the UK?', false);
+    }
+
     public function test_sitemap_includes_content_pages(): void
     {
-        $body = (string) $this->get('/sitemap.xml')->getContent();
+        // Content pages live in the core child sitemap (the index just fans out).
+        $body = (string) $this->get('/sitemap-core.xml')->getContent();
 
         $this->assertStringContainsString('<loc>'.url('/guides').'</loc>', $body);
         $this->assertStringContainsString('<loc>'.url('/guides/world-cup-2026-format-explained').'</loc>', $body);
@@ -139,7 +158,7 @@ class ContentPagesTest extends TestCase
 
     public function test_sitemap_includes_glossary_and_watch_pages(): void
     {
-        $body = (string) $this->get('/sitemap.xml')->getContent();
+        $body = (string) $this->get('/sitemap-core.xml')->getContent();
 
         $this->assertStringContainsString('<loc>'.url('/guides/what-is-offside').'</loc>', $body);
         $this->assertStringContainsString('<loc>'.url('/guides/how-to-watch-world-cup-2026-free/uk').'</loc>', $body);

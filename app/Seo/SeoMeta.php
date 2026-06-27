@@ -15,6 +15,7 @@ class SeoMeta
      * @param  string  $robots  Robots directive, e.g. "index,follow" or "noindex,follow".
      * @param  string  $ogType  Open Graph object type ("website", "profile", ...).
      * @param  list<array<string, mixed>>  $jsonLd  JSON-LD blocks to emit as <script> tags.
+     * @param  string|null  $image  Per-page Open Graph image URL (absolute); null uses the site default.
      */
     public function __construct(
         public readonly string $title,
@@ -23,6 +24,7 @@ class SeoMeta
         public readonly string $robots = 'index,follow',
         public readonly string $ogType = 'website',
         public readonly array $jsonLd = [],
+        public readonly ?string $image = null,
     ) {}
 
     /**

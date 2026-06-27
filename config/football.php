@@ -74,4 +74,41 @@ return [
     | cron (point free cron-job.org at it every minute). Empty disables the route.
     */
     'scheduler_token' => env('SCHEDULER_TOKEN', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | ESPN keyless soccer API (proof-of-concept live source)
+    |--------------------------------------------------------------------------
+    | Unofficial, free, no key. Unlike football-data's free tier it exposes a
+    | real match clock and official event minutes. Used only to augment the
+    | live layer; football-data stays the source of record + fallback. See
+    | docs / memory `espn-keyless-football-api`.
+    */
+    'espn' => [
+        'base_url' => env('ESPN_BASE_URL', 'https://site.api.espn.com/apis/site/v2/sports/soccer'),
+        'timeout' => (int) env('ESPN_TIMEOUT', 8),
+        'connect_timeout' => (int) env('ESPN_CONNECT_TIMEOUT', 3),
+
+        'ttl' => [
+            'scoreboard' => 10,
+            'summary' => 15,
+        ],
+
+        // football-data.org competition code => ESPN league slug.
+        'slugs' => [
+            'WC' => 'fifa.world',
+            'CL' => 'uefa.champions',
+            'EC' => 'uefa.euro',
+            'CLI' => 'conmebol.libertadores',
+            'PL' => 'eng.1',
+            'ELC' => 'eng.2',
+            'PD' => 'esp.1',
+            'SA' => 'ita.1',
+            'BL1' => 'ger.1',
+            'FL1' => 'fra.1',
+            'DED' => 'ned.1',
+            'PPL' => 'por.1',
+            'BSA' => 'bra.1',
+        ],
+    ],
 ];

@@ -133,6 +133,35 @@ class SchedulerTest extends TestCase
         $this->assertSame(30, $event->repeatSeconds);
     }
 
+    public function test_it_registers_the_espn_overlay_harvest_every_five_seconds_without_overlapping(): void
+    {
+        $schedule = app(Schedule::class);
+
+        $events = collect($schedule->events())
+            ->filter(fn ($event): bool => str_contains((string) $event->command, 'app:harvest-live-espn'));
+
+        $this->assertCount(1, $events, 'app:harvest-live-espn should be scheduled exactly once.');
+
+        $event = $events->first();
+
+        // Every 5s: re-snapshots the 10s-cached ESPN scoreboard often enough that
+        // the home rail tracks the per-match feed within a few seconds.
+        $this->assertSame('* * * * *', $event->expression);
+        $this->assertSame(5, $event->repeatSeconds);
+        $this->assertTrue($event->withoutOverlapping);
+    }
+
+    public function test_it_registers_a_daily_model_prune(): void
+    {
+        $schedule = app(Schedule::class);
+
+        $event = collect($schedule->events())
+            ->first(fn ($event): bool => str_contains((string) $event->command, 'model:prune'));
+
+        $this->assertNotNull($event, 'model:prune should be scheduled.');
+        $this->assertSame('0 0 * * *', $event->expression);
+    }
+
     public function test_the_live_poller_is_scheduled_without_overlapping(): void
     {
         $schedule = app(Schedule::class);

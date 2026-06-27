@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Authoritative spec:** [`docs/BUILD_PROMPT.md`](docs/BUILD_PROMPT.md). **Plan + design + decisions:** [`docs/PLAN.md`](docs/PLAN.md) and the docs it references (`ARCHITECTURE`, `API`, `DATA_MODEL`, `DESIGN`, `LIVE_POLLING`, `DECISIONS`). Read those before building.
 
-> **Architecture transition (in progress).** The repo started as the `laravel/blank-vue-starter-kit` (**Inertia v3 + Wayfinder + TypeScript**). Per [`docs/DECISIONS.md`](docs/DECISIONS.md), the target is a **Vue Router + Pinia + axios SPA in plain JavaScript** consuming `/api` JSON — **Inertia and Wayfinder are being removed in Phase 0**, and TypeScript (`vue-tsc`) is dropped from the gate. Until Phase 0 lands, parts of the "Architecture" section below still describe the Inertia scaffold; trust `docs/` for the target.
+> **Architecture transition (in progress).** The repo started as the `laravel/blank-vue-starter-kit` (**Inertia v3 + Wayfinder + TypeScript**). Per [`docs/DECISIONS.md`](docs/DECISIONS.md), the target is a **Vue Router + axios SPA in plain JavaScript** (shared state in native `reactive()` singletons under `resources/js/stores/` — no Pinia, per D9) consuming `/api` JSON — **Inertia and Wayfinder are being removed in Phase 0**, and TypeScript (`vue-tsc`) is dropped from the gate. Until Phase 0 lands, parts of the "Architecture" section below still describe the Inertia scaffold; trust `docs/` for the target.
 
 ## Commands
 
@@ -164,13 +164,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 # Deployment
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
-
-=== herd rules ===
-
-# Laravel Herd
-
-- The application is served by Laravel Herd at `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs. Never run commands to serve the site. It is always available.
-- Use the `herd` CLI to manage services, PHP versions, and sites (e.g. `herd sites`, `herd services:start <service>`, `herd php:list`). Run `herd list` to discover all available commands.
 
 === tests rules ===
 

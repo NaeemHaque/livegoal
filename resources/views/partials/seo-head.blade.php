@@ -2,7 +2,8 @@
     // Per-URL SEO metadata is injected by the controller (SeoShellController /
     // ContentController). The fallback keeps a view renderable without it.
     $seo ??= new \App\Seo\SeoMeta(config('seo.default_title'), config('seo.default_description'), url()->current());
-    $ogImage = config('seo.og_image');
+    // Prefer a per-page image (e.g. a dynamic match card) over the site default.
+    $ogImage = $seo->image ?: config('seo.og_image');
     $ogImage = $ogImage ? (\Illuminate\Support\Str::startsWith($ogImage, 'http') ? $ogImage : url($ogImage)) : null;
 @endphp
 
@@ -20,12 +21,16 @@
 <meta property="og:locale" content="{{ config('seo.locale') }}">
 @if ($ogImage)
     <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="{{ $seo->title }}">
 @endif
 <meta name="twitter:card" content="{{ config('seo.og_image_wide') ? 'summary_large_image' : 'summary' }}">
 <meta name="twitter:title" content="{{ $seo->title }}">
 <meta name="twitter:description" content="{{ $seo->description }}">
 @if ($ogImage)
     <meta name="twitter:image" content="{{ $ogImage }}">
+    <meta name="twitter:image:alt" content="{{ $seo->title }}">
 @endif
 @if ($handle = config('seo.twitter'))
     <meta name="twitter:site" content="{{ $handle }}">
@@ -52,6 +57,14 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0A0D12">
+{{-- "Install to Home Screen" capability: the standard tag (Chrome warns when
+     only the Apple alias is present) plus the Apple alias that iOS Safari still
+     reads — iOS web push requires the installed Home-Screen app (16.4+). --}}
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LiveGoal">
 
 {{-- Crests/emblems are loaded from here on nearly every page. Fonts are
      self-hosted (bundled via @fontsource in app.css), so there's no
@@ -61,4 +74,16 @@
 {{-- Privacy-friendly, cookieless analytics. Renders only when configured (PLAUSIBLE_DOMAIN). --}}
 @if ($plausibleDomain = config('services.plausible.domain'))
     <script defer data-domain="{{ $plausibleDomain }}" src="{{ config('services.plausible.src') }}"></script>
+@endif
+
+{{-- Google Analytics (GA4). Renders only when configured (GOOGLE_ANALYTICS_ID).
+     GA4 enhanced measurement tracks SPA history navigations automatically. --}}
+@if ($gaId = config('services.google_analytics.id'))
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', '{{ $gaId }}');
+    </script>
 @endif

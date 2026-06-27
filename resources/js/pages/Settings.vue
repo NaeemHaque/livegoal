@@ -1,8 +1,38 @@
 <script setup>
+import { ref } from 'vue';
+
 import { IcMoon, IcSun } from '@/components/icons';
+import { usePush } from '@/composables/usePush';
 import { useSettingsStore } from '@/stores/settings';
 
 const settings = useSettingsStore();
+const push = usePush();
+
+const pushBusy = ref(false);
+
+// iOS only delivers web push to Home Screen installs (16.4+).
+const needsIosInstall =
+    (/iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) &&
+    window.navigator.standalone !== true;
+
+const togglePush = async () => {
+    if (pushBusy.value) {
+        return;
+    }
+
+    pushBusy.value = true;
+
+    try {
+        if (settings.pushEnabled) {
+            await push.disable();
+        } else {
+            await push.enable();
+        }
+    } finally {
+        pushBusy.value = false;
+    }
+};
 
 const zones = [
     { id: 'local', label: 'Local' },
@@ -147,6 +177,54 @@ const intervals = [10, 15, 30];
                     aria-label="Auto-refresh live scores"
                     @click="settings.paused = !settings.paused"
                 />
+            </div>
+
+            <div class="pp-setrow">
+                <div>
+                    <div class="sr-label">Match alerts</div>
+                    <div class="sr-desc">
+                        <template v-if="!push.supported">
+                            Not supported in this browser
+                        </template>
+                        <template
+                            v-else-if="push.permission.value === 'denied'"
+                        >
+                            Blocked — allow notifications in your browser's site
+                            settings first
+                        </template>
+                        <template v-else-if="push.lastError.value">
+                            {{ push.lastError.value }}
+                        </template>
+                        <template v-else>
+                            Goal &amp; final-score notifications for teams and
+                            competitions you follow, even when the tab is closed
+                        </template>
+                    </div>
+                </div>
+                <button
+                    class="pp-switch"
+                    :class="{ on: settings.pushEnabled }"
+                    type="button"
+                    role="switch"
+                    :aria-checked="settings.pushEnabled"
+                    aria-label="Match alerts"
+                    :disabled="
+                        !push.supported ||
+                        pushBusy ||
+                        push.permission.value === 'denied'
+                    "
+                    @click="togglePush"
+                />
+            </div>
+
+            <div v-if="needsIosInstall" class="pp-setrow">
+                <div>
+                    <div class="sr-desc">
+                        On iPhone/iPad, alerts need LiveGoal on your Home Screen
+                        first: tap Share, then “Add to Home Screen”, and enable
+                        alerts from the installed app.
+                    </div>
+                </div>
             </div>
 
             <div class="pp-setrow">
