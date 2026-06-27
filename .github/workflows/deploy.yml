@@ -1,0 +1,91 @@
+name: Deploy to production
+
+# Auto-deploys when a GitHub Release is published — the release's tag is what
+# ships, so deploys are always a deliberate, versioned act. workflow_dispatch
+# gives a manual button for redeploys/rollbacks (deploy any existing tag).
+#
+# NOTE: release-triggered workflows run from the DEFAULT branch (main), so this
+# file must live on main to fire. It still deploys whatever commit the release
+# tag points to, on the server, as www-data. See docs/DEPLOYMENT_GUIDE.md.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag to deploy (e.g. v1.2.0) — for a manual redeploy or rollback'
+        required: true
+
+permissions:
+  contents: read
+
+# Never let two deploys overlap; queue a new one behind a running one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.event.release.tag_name || inputs.ref }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Resolve the tag to deploy
+        id: ref
+        run: |
+          REF="${{ github.event.release.tag_name || inputs.ref }}"
+          if [ -z "$REF" ]; then echo "::error::No tag to deploy."; exit 1; fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Deploying **$REF** to production." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy on the server (as www-data)
+        env:
+          REF: ${{ steps.ref.outputs.ref }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "sudo -u www-data bash -s -- '$REF'" <<'REMOTE'
+          set -euo pipefail
+          DEPLOY_REF="$1"
+          export COMPOSER_HOME=/tmp/.composer
+          export npm_config_cache=/tmp/.npm
+          cd /var/www/livegoal
+          echo ">> fetch tags"
+          git fetch origin --tags --prune
+          echo ">> checkout $DEPLOY_REF"
+          git checkout -f "$DEPLOY_REF"
+          echo ">> composer install"
+          composer install --no-dev -o --no-interaction
+          echo ">> npm ci + build"
+          npm ci --include=dev
+          npm run build
+          echo ">> migrate + caches"
+          php artisan migrate --force
+          php artisan optimize:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          echo "DEPLOY-OK $(git rev-parse --short HEAD)"
+          REMOTE
+
+      - name: Restart the queue worker
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            'sudo systemctl restart livegoal-queue && systemctl is-active livegoal-queue'
+
+      - name: Health check
+        run: |
+          set -e
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://livegoal.win/)
+          echo "homepage HTTP $code"
+          test "$code" = "200"
+          curl -fsS --max-time 15 https://livegoal.win/api/live > /dev/null
+          echo "✅ deploy healthy (homepage 200, /api/live served)" >> "$GITHUB_STEP_SUMMARY"
