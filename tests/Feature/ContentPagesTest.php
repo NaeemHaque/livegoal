@@ -57,6 +57,7 @@ class ContentPagesTest extends TestCase
         $this->get('/about')->assertOk()->assertSee('About LiveGoal', false);
         $this->get('/how-our-data-works')->assertOk()->assertSee('football-data.org', false);
         $this->get('/contact')->assertOk()->assertSee('Contact LiveGoal', false);
+        $this->get('/privacy')->assertOk()->assertSee('Privacy Policy', false);
     }
 
     public function test_unknown_guide_returns_404(): void
