@@ -108,4 +108,13 @@ return [
         'nav' => 'Contact',
         'listed' => false,
     ],
+    'privacy' => [
+        'path' => '/privacy',
+        'title' => 'Privacy Policy',
+        'description' => 'How LiveGoal handles your data: no accounts, privacy-friendly analytics, locally stored settings, and anonymous push subscriptions. Free and ad-free.',
+        'view' => 'content.pages.privacy',
+        'group' => 'LiveGoal',
+        'nav' => 'Privacy',
+        'listed' => false,
+    ],
 ];

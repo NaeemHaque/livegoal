@@ -3,6 +3,7 @@ import { useEventListener, useOnline } from '@vueuse/core';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
+import AppFooter from '@/components/AppFooter.vue';
 import GoalToast from '@/components/GoalToast.vue';
 import {
     IcBell,
@@ -165,6 +166,7 @@ useEventListener(window, 'keydown', (e) => {
                         <component :is="Component" :key="route.path" />
                     </Transition>
                 </RouterView>
+                <AppFooter />
             </main>
         </div>
 
