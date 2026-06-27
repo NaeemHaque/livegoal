@@ -90,7 +90,7 @@ return [
         'connect_timeout' => (int) env('ESPN_CONNECT_TIMEOUT', 3),
 
         'ttl' => [
-            'scoreboard' => 15,
+            'scoreboard' => 10,
             'summary' => 15,
         ],
 

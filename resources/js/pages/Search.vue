@@ -1,5 +1,5 @@
 <script setup>
-import { useStorage } from '@vueuse/core';
+import { useStorage, watchDebounced } from '@vueuse/core';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -13,6 +13,7 @@ import {
 } from '@/components/icons';
 import StateBlock from '@/components/states/StateBlock.vue';
 import { useSearchIndex } from '@/composables/useSearchIndex';
+import { track } from '@/lib/analytics';
 
 const router = useRouter();
 const { index, loading } = useSearchIndex();
@@ -22,6 +23,20 @@ const input = ref(null);
 const recent = useStorage('pp_recent_searches', []);
 
 onMounted(() => input.value?.focus());
+
+// Report a settled search term to GA4 (debounced so refining a query doesn't
+// fire on every keystroke).
+watchDebounced(
+    q,
+    (value) => {
+        const term = value.trim();
+
+        if (term.length >= 2) {
+            track('search', { search_term: term });
+        }
+    },
+    { debounce: 900 },
+);
 
 const results = computed(() => {
     const needle = q.value.trim().toLowerCase();

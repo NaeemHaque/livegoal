@@ -1,6 +1,8 @@
 import { useStorage } from '@vueuse/core';
 import { computed, reactive } from 'vue';
 
+import { track } from '@/lib/analytics';
+
 /**
  * Followed teams and competitions, persisted to localStorage.
  * Each entry is `{ type: 'team' | 'competition', id: string }`.
@@ -15,14 +17,21 @@ const isFavorite = (type, id) =>
 
 const toggle = (type, id) => {
     const key = String(id);
+    const adding = !isFavorite(type, key);
 
-    if (isFavorite(type, key)) {
+    if (adding) {
+        items.value = [...items.value, { type, id: key }];
+    } else {
         items.value = items.value.filter(
             (f) => !(f.type === type && f.id === key),
         );
-    } else {
-        items.value = [...items.value, { type, id: key }];
     }
+
+    track('favorite', {
+        method: adding ? 'add' : 'remove',
+        content_type: type,
+        item_id: key,
+    });
 };
 
 /** A match counts as followed when either side is a followed team. */

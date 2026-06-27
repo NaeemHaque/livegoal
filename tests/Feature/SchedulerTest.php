@@ -133,7 +133,7 @@ class SchedulerTest extends TestCase
         $this->assertSame(30, $event->repeatSeconds);
     }
 
-    public function test_it_registers_the_espn_overlay_harvest_every_fifteen_seconds_without_overlapping(): void
+    public function test_it_registers_the_espn_overlay_harvest_every_five_seconds_without_overlapping(): void
     {
         $schedule = app(Schedule::class);
 
@@ -144,10 +144,10 @@ class SchedulerTest extends TestCase
 
         $event = $events->first();
 
-        // Every 15s (was 30s): keeps the home rail and the goal push it dispatches
-        // in step with the per-match ESPN layer instead of the football-data lag.
+        // Every 5s: re-snapshots the 10s-cached ESPN scoreboard often enough that
+        // the home rail tracks the per-match feed within a few seconds.
         $this->assertSame('* * * * *', $event->expression);
-        $this->assertSame(15, $event->repeatSeconds);
+        $this->assertSame(5, $event->repeatSeconds);
         $this->assertTrue($event->withoutOverlapping);
     }
 
