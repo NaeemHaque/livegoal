@@ -674,6 +674,11 @@
     gap: 2px;
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
+    overflow-y: hidden; /* kill the 1px phantom vertical scroll from the active underline */
+    scrollbar-width: none;
+}
+.pp-tabs::-webkit-scrollbar {
+    display: none;
 }
 .pp-tabs .tab {
     display: inline-flex;
