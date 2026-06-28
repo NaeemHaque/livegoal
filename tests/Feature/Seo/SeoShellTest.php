@@ -141,8 +141,35 @@ class SeoShellTest extends TestCase
             // Home/away teams link to their LiveGoal pages.
             ->assertSee(url('/team/1-mexico'), false)
             ->assertSee('"endDate"', false)
+            // Required + recommended Event fields are present.
+            ->assertSee('"location":{"@type":"Place","name":"Estadio Azteca"}', false)
+            ->assertSee('"organizer":{"@type":"Organization","name":"FIFA"}', false)
+            ->assertSee('"image":"'.url('/og/match/2').'"', false)
             // superEvent is an Event (not an Organization).
             ->assertSee('"superEvent":{"@type":"SportsEvent"', false);
+    }
+
+    public function test_match_without_venue_falls_back_to_competition_host_location(): void
+    {
+        // The free tier returns no venue for most matches; the Event's required
+        // 'location' must still be present — filled from the competition host.
+        $this->cacheUpstream('match:3', [
+            'id' => 3,
+            'competition' => ['id' => 2000, 'name' => 'FIFA World Cup', 'code' => 'WC', 'type' => 'CUP'],
+            'homeTeam' => ['id' => 1, 'name' => 'Spain', 'tla' => 'ESP'],
+            'awayTeam' => ['id' => 2, 'name' => 'Cape Verde Islands', 'tla' => 'CPV'],
+            'status' => 'TIMED', 'utcDate' => '2026-06-28T18:00:00Z', 'venue' => null,
+            'score' => ['fullTime' => ['home' => null, 'away' => null], 'winner' => null],
+        ]);
+
+        $this->get('/match/3')
+            ->assertOk()
+            ->assertSee('"location":{"@type":"Place","name":"United States, Canada and Mexico"}', false)
+            ->assertSee('"organizer":{"@type":"Organization","name":"FIFA"}', false)
+            ->assertSee('"image":"'.url('/og/match/3').'"', false)
+            // Recommended fields present even on a scheduled match.
+            ->assertSee('"description"', false)
+            ->assertSee('"endDate"', false);
     }
 
     public function test_live_match_emits_liveblogposting_from_timeline(): void

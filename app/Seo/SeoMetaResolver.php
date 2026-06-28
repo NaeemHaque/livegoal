@@ -816,9 +816,12 @@ class SeoMetaResolver
     }
 
     /**
-     * The SportsEvent block for a match — enriched with the result so it can win
-     * a richer SERP treatment: linked home/away team nodes, a factual score line
-     * in the description, and an approximate end time for finished matches.
+     * The SportsEvent block for a match. Carries everything Google's Event spec
+     * needs — required name/startDate/location and the recommended description,
+     * endDate, image, organizer and eventStatus — plus linked home/away team
+     * nodes and a factual result line. The free tier rarely returns a venue, so
+     * `location` falls back to the competition's host (config) to keep the
+     * required field present on every match.
      *
      * @param  array<string, mixed>  $m  Normalized match.
      * @return array<string, mixed>
@@ -829,8 +832,10 @@ class SeoMetaResolver
         $away = $this->str(data_get($m, 'away.name'));
         $status = $this->str(data_get($m, 'status'));
         $competition = $this->nullableStr(data_get($m, 'competition.name'));
+        $code = $this->str(data_get($m, 'competition.code'));
         $venue = $this->nullableStr(data_get($m, 'venue'));
         $kickoff = $this->nullableStr(data_get($m, 'kickoff'));
+        $id = $this->str(data_get($m, 'id'));
 
         $event = [
             '@context' => 'https://schema.org',
@@ -838,6 +843,7 @@ class SeoMetaResolver
             'name' => "{$home} vs {$away}",
             'sport' => 'Soccer',
             'url' => $canonical,
+            'description' => $this->matchDescription($home, $away, $status, $competition, $venue, $kickoff, $this->int(data_get($m, 'homeScore')), $this->int(data_get($m, 'awayScore'))),
             'homeTeam' => $this->teamNode($home, $this->str(data_get($m, 'home.id'))),
             'awayTeam' => $this->teamNode($away, $this->str(data_get($m, 'away.id'))),
             'eventStatus' => $status === 'POSTPONED'
@@ -847,19 +853,7 @@ class SeoMetaResolver
 
         if ($kickoff !== null) {
             $event['startDate'] = $kickoff;
-        }
 
-        $isResult = in_array($status, ['FT', 'AET', 'PEN'], true);
-        $isLive = in_array($status, ['LIVE', 'HT', 'ET'], true);
-
-        if ($isResult || $isLive) {
-            $homeScore = $this->int(data_get($m, 'homeScore'));
-            $awayScore = $this->int(data_get($m, 'awayScore'));
-            $line = sprintf('%s: %s %d–%d %s', $isResult ? 'Full time' : 'Live', $home, $homeScore, $awayScore, $away);
-            $event['description'] = $line.($competition !== null ? " in the {$competition}." : '.');
-        }
-
-        if ($isResult && $kickoff !== null) {
             // No real finish time on the free tier; approximate by result type —
             // 90 + stoppage, extra time, or a shootout.
             $minutes = match ($status) {
@@ -875,8 +869,22 @@ class SeoMetaResolver
             }
         }
 
-        if ($venue !== null) {
-            $event['location'] = ['@type' => 'Place', 'name' => $venue];
+        // location is required for an Event. Use the venue when the feed gives
+        // one, else the competition's host country/region so it's never missing.
+        $place = $venue ?? $this->competitionMeta($code, 'host');
+
+        if ($place !== null) {
+            $event['location'] = ['@type' => 'Place', 'name' => $place];
+        }
+
+        if ($id !== '') {
+            $event['image'] = url('/og/match/'.$id);
+        }
+
+        $organizer = $this->competitionMeta($code, 'organizer') ?? $competition;
+
+        if ($organizer !== null) {
+            $event['organizer'] = ['@type' => 'Organization', 'name' => $organizer];
         }
 
         if ($competition !== null) {
@@ -886,6 +894,21 @@ class SeoMetaResolver
         }
 
         return $event;
+    }
+
+    /**
+     * A configured display-meta value for a competition (host, organizer, …), or
+     * null when not set. See config/football.php `meta`.
+     */
+    private function competitionMeta(string $code, string $key): ?string
+    {
+        if ($code === '') {
+            return null;
+        }
+
+        $value = Config::get("football.meta.{$code}.{$key}");
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /**
