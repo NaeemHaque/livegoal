@@ -6,7 +6,7 @@ const year = new Date().getFullYear();
 
 <template>
     <footer class="pp-footer">
-        <span class="pf-copy">© {{ year }} LiveGoal · Open source (MIT)</span>
+        <span class="pf-copy">© {{ year }} LiveGoal</span>
         <nav class="pf-links" aria-label="Footer">
             <a href="/about">About</a>
             <a href="/contact">Contact</a>

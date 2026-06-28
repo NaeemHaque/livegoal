@@ -40,10 +40,6 @@
         <li><strong>No cross-site ad tracking.</strong></li>
     </ul>
 
-    <h2>Open source</h2>
-    <p>LiveGoal is open source under the MIT licence — you can read exactly how it works, or contribute, on
-        <a href="https://github.com/NaeemHaque/livegoal" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
-
     <h2>Changes &amp; contact</h2>
     <p>If this policy changes, the updated version will appear here. Questions about privacy? Reach us via the
         <a href="{{ url('/contact') }}">contact page</a>.</p>

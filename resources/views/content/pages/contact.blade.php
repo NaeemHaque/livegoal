@@ -6,7 +6,7 @@
 
     @php($email = config('seo.contact_email'))
 
-    <p>LiveGoal is open source, so the best way to report a problem or suggest a feature is to
+    <p>The quickest way to report a problem or suggest a feature is to
         <a href="https://github.com/NaeemHaque/livegoal/issues/new" target="_blank" rel="noopener noreferrer">open
             an issue on GitHub</a>. To help us look into a data issue quickly, please include the match, team or
         competition and a link to the page.</p>
