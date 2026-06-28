@@ -37,7 +37,8 @@ return [
     'locale' => env('SEO_LOCALE', 'en_US'),
 
     // Public contact address shown on the Contact page (null hides it).
-    'contact_email' => env('SEO_CONTACT_EMAIL'),
+    // Override via SEO_CONTACT_EMAIL to swap to a project address later.
+    'contact_email' => env('SEO_CONTACT_EMAIL', 'naeemhaque248@gmail.com'),
 
     // Logo used in Organization JSON-LD (resolved to an absolute URL).
     'organization_logo' => env('SEO_ORGANIZATION_LOGO', '/apple-touch-icon.png'),
