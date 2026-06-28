@@ -453,10 +453,6 @@
     align-items: center;
     gap: 5px;
 }
-/* Referee sits left, venue (stadium) is pushed to the right edge. */
-.pp-matchcard .mc-venue {
-    margin-left: auto;
-}
 .pp-matchcard .mc-liveline {
     position: absolute;
     left: 0;

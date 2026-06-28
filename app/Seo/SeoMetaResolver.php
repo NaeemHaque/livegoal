@@ -790,8 +790,8 @@ class SeoMetaResolver
         $in = $competition !== null ? " in the {$competition}" : '';
 
         return match ($status) {
-            'LIVE', 'HT' => sprintf('Live: %s %d–%d %s%s. Follow the score minute by minute on LiveGoal.', $home, $homeScore, $awayScore, $away, $in),
-            'FT' => sprintf('Full time: %s %d–%d %s%s. Result, stats and standings on LiveGoal.', $home, $homeScore, $awayScore, $away, $in),
+            'LIVE', 'HT', 'ET' => sprintf('Live: %s %d–%d %s%s. Follow the score minute by minute on LiveGoal.', $home, $homeScore, $awayScore, $away, $in),
+            'FT', 'AET', 'PEN' => sprintf('Full time: %s %d–%d %s%s. Result, stats and standings on LiveGoal.', $home, $homeScore, $awayScore, $away, $in),
             default => sprintf(
                 '%s vs %s%s%s. Live score, lineups and result on LiveGoal.',
                 $home,
