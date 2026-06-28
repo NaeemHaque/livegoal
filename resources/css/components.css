@@ -224,6 +224,10 @@
 .pp-fav.on {
     color: var(--draw);
 }
+/* Followed = filled star (same colour as the outline), not just a coloured outline. */
+.pp-fav.on svg {
+    fill: currentColor;
+}
 .pp-fav.on:hover {
     color: var(--draw);
 }
