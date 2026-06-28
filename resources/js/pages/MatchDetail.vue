@@ -26,6 +26,7 @@ import { useBack } from '@/composables/useBack';
 import { useMatch } from '@/composables/useMatch';
 import { usePageMeta } from '@/composables/usePageMeta';
 import { useTimeFormat } from '@/composables/useTimeFormat';
+import { stageLabel } from '@/lib/bracket';
 import { numericId } from '@/lib/slugs';
 import { useMatchesStore } from '@/stores/matches';
 
@@ -115,6 +116,8 @@ const isLive = computed(() =>
 const isScheduled = computed(() =>
     ['SCHEDULED', 'TIMED', 'POSTPONED'].includes(match.value?.status),
 );
+
+const stageName = computed(() => stageLabel(match.value?.stage));
 
 // Live matches refresh every 20s while the tab is visible (ScoreDigit flips on change).
 const visibility = useDocumentVisibility();
@@ -208,12 +211,7 @@ const meta = computed(() => {
     }
 
     return [
-        [
-            'stage',
-            m.stage && m.stage !== 'REGULAR_SEASON'
-                ? m.stage.replaceAll('_', ' ')
-                : null,
-        ],
+        ['stage', stageName.value],
         ['group', m.group ? m.group.replace(/^GROUP_/, 'Group ') : null],
         ['kick-off', m.kickoff ? dateTime(m.kickoff) : null],
         ['venue', m.venue],
@@ -255,12 +253,8 @@ const openTeam = (teamId) => teamId && router.push(`/team/${teamId}`);
                 <div class="mh-top">
                     <span
                         >{{ match.competition?.name
-                        }}<template
-                            v-if="
-                                match.stage && match.stage !== 'REGULAR_SEASON'
-                            "
-                        >
-                            · {{ match.stage.replaceAll('_', ' ') }}</template
+                        }}<template v-if="stageName">
+                            · {{ stageName }}</template
                         ></span
                     >
                     <LivePulseBadge

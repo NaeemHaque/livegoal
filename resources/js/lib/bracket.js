@@ -102,3 +102,29 @@ export function buildKnockoutRounds(matches) {
         ties: aggregateTies(byStage.get(stage.key)),
     }));
 }
+
+/**
+ * Human label for a competition stage code (e.g. LAST_32 -> "Round of 32"),
+ * reusing the bracket round titles. Returns null for the league default so
+ * callers can hide it.
+ *
+ * @param {string|null|undefined} stage
+ * @returns {string|null}
+ */
+export function stageLabel(stage) {
+    if (!stage || stage === 'REGULAR_SEASON') {
+        return null;
+    }
+
+    const round = KO_ORDER.find((s) => s.key === stage);
+
+    if (round) {
+        return round.title;
+    }
+
+    if (stage === 'GROUP_STAGE') {
+        return 'Group stage';
+    }
+
+    return stage.replaceAll('_', ' ');
+}
