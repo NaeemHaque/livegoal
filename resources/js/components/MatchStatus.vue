@@ -45,28 +45,28 @@ const kickoffLabel = computed(() =>
         class="pp-status ht"
         :class="{ sm: small }"
     >
-        <IcClock :size="small ? 11 : 13" /> HT
+        <IcClock :size="small ? 11 : 13" /> Half-time
     </span>
     <span
         v-else-if="status === 'PEN'"
         class="pp-status pen"
         :class="{ sm: small }"
     >
-        <IcBall :size="small ? 11 : 13" /> PENS
+        <IcBall :size="small ? 11 : 13" /> Penalties
     </span>
     <span
         v-else-if="status === 'FT'"
         class="pp-status ft"
         :class="{ sm: small }"
     >
-        <IcCheck :size="small ? 11 : 13" /> FT
+        <IcCheck :size="small ? 11 : 13" /> Full-time
     </span>
     <span
         v-else-if="status === 'POSTPONED'"
         class="pp-status pp"
         :class="{ sm: small }"
     >
-        <IcAlert :size="small ? 11 : 13" /> PP
+        <IcAlert :size="small ? 11 : 13" /> Postponed
     </span>
     <span v-else class="pp-status sched" :class="{ sm: small }">
         <IcClock :size="small ? 11 : 13" /> {{ kickoffLabel }}

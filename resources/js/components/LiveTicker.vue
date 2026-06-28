@@ -10,7 +10,7 @@ const track = computed(() => [...props.matches, ...props.matches]);
 
 const minuteLabel = (m) => {
     if (m.status === 'HT') {
-        return 'HT';
+        return 'Half-time';
     }
 
     return m.minute != null ? `${m.minute}'` : '';
