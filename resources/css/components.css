@@ -421,7 +421,14 @@
 .pp-matchcard .mc-score {
     display: flex;
     justify-content: center;
+    align-items: center;
+    /* Reserve the score's height so the "vs" (upcoming) card matches the
+       scored (finished) card — no height jump when switching tabs. */
+    min-height: 34px;
     padding: 0 4px;
+}
+.pp-matchcard.expanded .mc-score {
+    min-height: 40px;
 }
 .pp-matchcard.expanded .mc-team .t-name {
     font-size: 15.5px;
