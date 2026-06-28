@@ -23,6 +23,7 @@ class EspnNormalizerTest extends TestCase
                 'id' => '760421',
                 'competitions' => [[
                     'status' => ['displayClock' => "67'", 'type' => ['state' => 'in', 'detail' => '2nd Half']],
+                    'venue' => ['fullName' => 'SoFi Stadium'],
                     'competitors' => [
                         ['homeAway' => 'home', 'score' => '2', 'team' => ['id' => '628', 'abbreviation' => 'AUS', 'displayName' => 'Australia', 'shortDisplayName' => 'Australia']],
                         ['homeAway' => 'away', 'score' => '1', 'team' => ['id' => '465', 'abbreviation' => 'TUR', 'displayName' => 'Türkiye', 'shortDisplayName' => 'Türkiye']],
@@ -74,6 +75,9 @@ class EspnNormalizerTest extends TestCase
         // Scores re-oriented: Turkey (our home) 1, Australia (our away) 2.
         $this->assertSame(1, $live['homeScore']);
         $this->assertSame(2, $live['awayScore']);
+
+        // Stadium comes from ESPN (football-data leaves venue null for the WC).
+        $this->assertSame('SoFi Stadium', $live['venue']);
     }
 
     public function test_it_maps_events_with_official_minutes_and_sides(): void

@@ -63,7 +63,7 @@ class EspnNormalizer
      *
      * @param  array{event: array<array-key, mixed>, homeTeamId: ?string, awayTeamId: ?string}  $resolved
      * @param  array<array-key, mixed>|null  $summary  ESPN summary payload (keyEvents)
-     * @return array{found: bool, espnId: ?string, status: string, minute: ?int, displayClock: ?string, homeScore: ?int, awayScore: ?int, events: list<array<array-key, mixed>>}
+     * @return array{found: bool, espnId: ?string, status: string, minute: ?int, displayClock: ?string, homeScore: ?int, awayScore: ?int, venue: ?string, events: list<array<array-key, mixed>>}
      */
     public function liveData(array $resolved, ?array $summary): array
     {
@@ -79,14 +79,28 @@ class EspnNormalizer
             'displayClock' => $this->displayClock($competition),
             'homeScore' => $this->scoreFor($competition, $resolved['homeTeamId']),
             'awayScore' => $this->scoreFor($competition, $resolved['awayTeamId']),
+            'venue' => $this->venue($competition),
             'events' => $this->events($summary, $resolved['homeTeamId'], $resolved['awayTeamId']),
         ];
     }
 
     /**
+     * The stadium name for an ESPN competition, or null. football-data leaves
+     * venue null for the World Cup, so ESPN is our only source for it.
+     *
+     * @param  array<array-key, mixed>  $competition
+     */
+    private function venue(array $competition): ?string
+    {
+        $name = $this->str(data_get($competition, 'venue.fullName'));
+
+        return $name !== '' ? $name : null;
+    }
+
+    /**
      * Empty live-data envelope for when no ESPN event resolves.
      *
-     * @return array{found: bool, espnId: null, status: null, minute: null, displayClock: null, homeScore: null, awayScore: null, events: list<never>}
+     * @return array{found: bool, espnId: null, status: null, minute: null, displayClock: null, homeScore: null, awayScore: null, venue: null, events: list<never>}
      */
     public function notFound(): array
     {
@@ -98,6 +112,7 @@ class EspnNormalizer
             'displayClock' => null,
             'homeScore' => null,
             'awayScore' => null,
+            'venue' => null,
             'events' => [],
         ];
     }

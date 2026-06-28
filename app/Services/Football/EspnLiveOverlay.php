@@ -30,7 +30,7 @@ class EspnLiveOverlay
      * scheduled harvest command, never from a request.
      *
      * @param  list<array<array-key, mixed>>  $matches
-     * @return array<string, array{status: string, minute: ?int, displayClock: ?string, homeScore: ?int, awayScore: ?int}>
+     * @return array<string, array{status: string, minute: ?int, displayClock: ?string, homeScore: ?int, awayScore: ?int, venue: ?string}>
      */
     public function harvest(array $matches): array
     {
@@ -85,6 +85,7 @@ class EspnLiveOverlay
                 'displayClock' => $espn['displayClock'] ?? null,
                 'homeScore' => $espn['homeScore'] ?? ($match['homeScore'] ?? null),
                 'awayScore' => $espn['awayScore'] ?? ($match['awayScore'] ?? null),
+                'venue' => $espn['venue'] ?? ($match['venue'] ?? null),
             ];
         }, $matches);
     }
@@ -96,7 +97,7 @@ class EspnLiveOverlay
      * (each scoreboard is briefly cached) — mirrors MatchController::espn.
      *
      * @param  array<array-key, mixed>  $match
-     * @return array{status: string, minute: ?int, displayClock: ?string, homeScore: ?int, awayScore: ?int}|null
+     * @return array{status: string, minute: ?int, displayClock: ?string, homeScore: ?int, awayScore: ?int, venue: ?string}|null
      */
     private function liveFor(array $match): ?array
     {
@@ -127,6 +128,7 @@ class EspnLiveOverlay
                     'displayClock' => $data['displayClock'],
                     'homeScore' => $data['homeScore'],
                     'awayScore' => $data['awayScore'],
+                    'venue' => $data['venue'],
                 ];
             }
         }

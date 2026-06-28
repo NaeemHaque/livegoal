@@ -436,7 +436,8 @@
 .pp-matchcard .mc-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
+    justify-content: space-between;
+    gap: 6px 14px;
     margin-top: 12px;
     padding-top: 11px;
     border-top: 1px solid var(--border);
@@ -447,6 +448,10 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
+}
+/* Referee sits left, venue (stadium) is pushed to the right edge. */
+.pp-matchcard .mc-venue {
+    margin-left: auto;
 }
 .pp-matchcard .mc-liveline {
     position: absolute;

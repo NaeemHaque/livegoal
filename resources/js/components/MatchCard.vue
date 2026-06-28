@@ -110,10 +110,12 @@ const open = () => emit('open', m.value);
             </div>
         </div>
 
-        <div v-if="expanded && (m.venue || m.referee)" class="mc-meta">
-            <span v-if="m.venue"><IcPin :size="13" />{{ m.venue }}</span>
+        <div v-if="expanded && (m.referee || m.venue)" class="mc-meta">
             <span v-if="m.referee"
                 ><IcWhistle :size="13" />{{ m.referee }}</span
+            >
+            <span v-if="m.venue" class="mc-venue"
+                ><IcPin :size="13" />{{ m.venue }}</span
             >
         </div>
 

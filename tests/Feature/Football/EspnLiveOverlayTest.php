@@ -47,7 +47,7 @@ class EspnLiveOverlayTest extends TestCase
         Http::preventStrayRequests();
 
         $matches = [$this->liveMatch(['status' => 'PAUSED', 'minute' => 45, 'homeScore' => 0, 'awayScore' => 0])];
-        $espnMap = ['777' => ['status' => 'LIVE', 'minute' => 47, 'displayClock' => "47'", 'homeScore' => 1, 'awayScore' => 0]];
+        $espnMap = ['777' => ['status' => 'LIVE', 'minute' => 47, 'displayClock' => "47'", 'homeScore' => 1, 'awayScore' => 0, 'venue' => 'SoFi Stadium']];
 
         $result = $this->overlay()->overlay($matches, $espnMap);
 
@@ -56,6 +56,7 @@ class EspnLiveOverlayTest extends TestCase
         $this->assertSame("47'", $result[0]['displayClock']);
         $this->assertSame(1, $result[0]['homeScore']);
         $this->assertSame(0, $result[0]['awayScore']);
+        $this->assertSame('SoFi Stadium', $result[0]['venue']); // ESPN venue (football-data leaves it null)
 
         Http::assertNothingSent();
     }
@@ -96,6 +97,7 @@ class EspnLiveOverlayTest extends TestCase
         $this->assertSame(67, $map['777']['minute']);
         $this->assertSame(2, $map['777']['homeScore']); // Australia (our home)
         $this->assertSame(1, $map['777']['awayScore']); // Turkey (our away)
+        $this->assertSame('SoFi Stadium', $map['777']['venue']);
     }
 
     public function test_harvest_skips_matches_espn_cannot_resolve(): void
@@ -128,6 +130,7 @@ class EspnLiveOverlayTest extends TestCase
                 'id' => '760421',
                 'competitions' => [[
                     'status' => ['displayClock' => "67'", 'type' => ['state' => 'in', 'detail' => '2nd Half']],
+                    'venue' => ['fullName' => 'SoFi Stadium'],
                     'competitors' => [
                         ['homeAway' => 'home', 'score' => '2', 'team' => ['id' => '628', 'abbreviation' => 'AUS', 'displayName' => 'Australia', 'shortDisplayName' => 'Australia']],
                         ['homeAway' => 'away', 'score' => '1', 'team' => ['id' => '465', 'abbreviation' => 'TUR', 'displayName' => 'Türkiye', 'shortDisplayName' => 'Türkiye']],

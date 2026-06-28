@@ -93,6 +93,8 @@ const match = computed(() => {
             displayClock: e.displayClock ?? null,
             homeScore: e.homeScore ?? m.homeScore,
             awayScore: e.awayScore ?? m.awayScore,
+            // football-data leaves venue null for the World Cup; ESPN has it.
+            venue: e.venue ?? m.venue,
         };
     }
 
